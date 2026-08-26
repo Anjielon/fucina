@@ -1,0 +1,4 @@
+__pycache__/
+fucina-lavoro/
+*.gguf
+*.npy
