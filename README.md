@@ -1,61 +1,101 @@
-# FUCINA — forgia ternaria generale per modelli MoE
+# FUCINA — A General Ternary Forge for Mixture-of-Experts Models
 
-Ternarizza **qualsiasi** modello MoE in formato GGUF al 2-piani TQ1_0
-(1,69-3,38 bit/peso), applicando automaticamente le leve di quantizzazione
-validate sul campo — nata dalla costruzione di **ODINO** (Ornith-1.5-397B
-intero, 512 esperti, ~88 GiB, residente in 96 GiB di VRAM UMA).
+**Fucina** (Italian for *forge*) turns any GGUF Mixture-of-Experts model into a
+**two-plane ternary** model (TQ1_0, 1.69–3.38 bits/weight) that runs on
+llama.cpp with Vulkan — built and battle-tested by fitting **ODINO**
+(Ornith-1.5-397B, all 512 experts, no pruning) into the 96 GiB unified memory
+of a single AMD Ryzen AI Max+ 395 desktop, at ~10 tok/s.
 
-## Il metodo (misurato, non promesso)
+Every technique in this repository carries its **measured** effect on real
+weights — not the paper's promise, our number — and every technique credits
+the research it came from. See [docs/LEVERS.md](docs/LEVERS.md) for the full
+catalogue (29 levers, each with prior, cost, verdict and citation) and
+[docs/LESSONS.md](docs/LESSONS.md) for the engineering rules we paid for.
 
-- **2 piani ternari congiunti** `W ≈ d1·T1 + d2·T2` (blocchi da 256, scala f16)
-  SOLO sugli esperti **caldi** (i più instradati, dai `counts` dell'imatrix):
-  il 3% più caldo cattura ~18% del traffico.
-- **GPTQ con Hessiane vere** (H=XXᵀ misurata sulle attivazioni) per il piano
-  dedicato dei freddi: 37,95% → 28,13% d'errore (la co-adattazione del piano-1
-  congiunto è la trappola n.1).
-- **Riordino caldi-primi alla nascita** (esperti + righe del router): il motore
-  assume che il piano-2 copra il prefisso 0..K-1.
-- **Verifica al confine per-strato**: il caldo n.1 ricostruito dai 2 piani
-  DEVE combaciare con la sorgente (assert, non speranza).
-- Attenzione/embedding/router: copiati alla qualità della sorgente (Q6/Q8).
+## The method
 
-## Moduli
+A weight matrix is approximated as the sum of two ternary planes:
 
-| file | cosa fa |
-|---|---|
-| `forgia_gguf.py` | la forgia: GGUF sorgente → GGUF TQ1_0 a 2 piani, giornale di ripresa |
-| `ternario_gpu.py` | quantizzatore GPU: 2 piani congiunti + GPTQ a propagazione intera |
-| `tq1_pack.py` | impacchettamento TQ1_0 su GPU + permutazioni (autotest vs decodificatore ufficiale) |
-| `due_piani.py` | preparazione Hessiane (Cholesky, smorzamento) |
-| `costruisci_hessiane.py` | dai dump delle attivazioni alle H per-strato |
-| `leve.py` | registro delle 29 leve note (prior, costo, fonte scientifica) |
-| `fucina.py` | orchestratore: applica e MISURA ogni leva sul modello corrente |
-
-## Uso
-
-```bash
-python3 forgia_gguf.py --sorgente modello.gguf --uscita modello-tern.gguf \
-    --caldi 28 --imatrix imatrix.gguf [--hessiane DIR]
+```
+W ≈ d₁·T₁ + d₂·T₂        T ∈ {-1, 0, +1},  256-weight blocks,  f16 scales
 ```
 
-Serve il motore llama.cpp con supporto TQ1_0 + 2° piano
-(`*_exps2`, metadato `<arch>.expert_count2`) e i kernel Vulkan TQ1_0
-(mul_mm **e** mul_mat_vec/(id) — collaudarli SEPARATAMENTE con
-`test-backend-ops`, con offset non nulli e n=1: sono shader diversi).
+- **Hot experts get both planes; cold experts get one.** Routing frequency is
+  taken from the imatrix `counts`: on Ornith-397B the hottest 3% of experts
+  capture ~18% of the traffic, and frequency beats sensitivity as an
+  allocation criterion (32.6% vs 38.2% output error, measured).
+- **Cold experts get a *dedicated* single-plane GPTQ quantization.** The first
+  plane of a joint two-plane optimization is co-adapted to its partner and
+  loses ~10 points when used alone (37.95% → 28.13% measured). This is the
+  single most important trap in multi-plane ternary quantization.
+- **GPTQ with true Hessians** (H = XXᵀ accumulated from the residual stream on
+  the target model, 16,640 samples/layer), full-matrix error propagation
+  across blocks. Scales are computed from the *compensated* block.
+- **Fragile tensors are kept high-precision.** On hybrid-attention models
+  (GatedDeltaNet), the linear-attention projections inherited at ~1.7 bit were
+  47–51% wrong; promoting them to Q8_0 cut model-level output error from
+  25.4% to 17.1% for +3 GiB — the best byte-for-byte lever we measured
+  (2.77 points/GiB). No sub-4-bit state-space scan has ever been demonstrated
+  (cf. Quamba); do not try.
+- **Experts are written hot-first at birth** (router rows permuted to match):
+  the inference engine assumes the second plane covers the expert prefix
+  `0..K-1`. See LESSONS — assuming this without an assert cost us a full day.
+- **Per-layer boundary verification**: the hottest expert, reconstructed from
+  the two written planes, must match the source within threshold — an assert
+  inside the forge, not a hope.
 
-## Le 7 regole del collaudo (imparate a caro prezzo, 26/8/2026)
+## What's in the box
 
-1. Ogni convenzione condivisa fra due componenti → **assert al confine**.
-2. La **prova di fumo** (4 domande verificabili) è parte della forgia.
-3. Mai chirurgia sul file senza copia dei byte toccati.
-4. Campionamento low-bit anche nei test (temp 0.6, min_p 0.03, presence 1.5).
-5. Il **thinking** si collauda a parte (sotto 2 bit può rompersi da solo).
-6. Un tipo quantizzato nuovo entra in `test-backend-ops` il giorno stesso.
-7. Matrice e vettore sono shader diversi: il collaudo dell'uno non copre l'altro.
+| file | role |
+|---|---|
+| `forgia_gguf.py` | the forge: source GGUF → two-plane TQ1_0 GGUF, resumable via journal |
+| `ternario_gpu.py` | GPU quantizer: joint two-plane optimization + full-propagation GPTQ |
+| `tq1_pack.py` | GPU TQ1_0 bit-packing + hot-first permutation (self-tested against the reference decoder) |
+| `due_piani.py` | Hessian preparation (damping, Cholesky) |
+| `costruisci_hessiane.py` | activation dumps → per-layer Hessians (reports anisotropy α) |
+| `leve.py` | the lever registry: 29 techniques with prior, test protocol, cost, source |
+| `fucina.py` | orchestrator: applies each lever *only if it wins its own test on the current model* |
 
-## Riferimenti scientifici
+## Usage
 
-PTQTP (arXiv 2509.16989) · PT²-LLM · GPTQ (2210.17323) · QuantEase ·
-Super Weight (2411.07191) · Norm Tweaking · QESC · HOBBIT (2411.01433) ·
-Quamba — catalogo completo con le misure in `docs/RICERCA_TERNARIZZAZIONE.md`
-del progetto MOGAVIS (~85 lavori letti, ogni leva misurata su pesi veri).
+```bash
+python3 forgia_gguf.py \
+    --sorgente  model.gguf          # any GGUF MoE (weights are dequantized per expert)
+    --uscita    model-ternary.gguf
+    --caldi     28                  # experts that receive the second plane
+    --imatrix   imatrix.gguf        # must contain per-expert routing counts
+    --hessiane  H_DIR/              # optional: enables GPTQ on gate/up projections
+```
+
+Runtime requirements: a llama.cpp build with TQ1_0 Vulkan kernels **and** the
+two-plane extension (optional `*_exps2` tensors summed inside `build_moe_ffn`,
+metadata key `<arch>.expert_count2`). Kernel checklist before trusting any
+output: `test-backend-ops` must pass MUL_MAT **and** MUL_MAT_ID for TQ1_0
+with non-zero view offsets and n=1 — matrix and vector paths are *different
+shaders* with different offset conventions (see LESSONS, bug #3).
+
+Recommended sampling below 2 bits (measured, converges with Unsloth's advice):
+`temp 0.6 · min_p 0.03 · top_p 0.9 · presence_penalty 1.5`, thinking enabled
+per request; never XTC.
+
+## Case study: ODINO
+
+| | |
+|---|---|
+| source | Ornith-1.5-397B-A17B (MIT), 512 experts × 60 layers, hybrid GatedDeltaNet attention |
+| output | 88.17 GiB (vs ~740 GiB bf16): 484 cold experts @ 1 dedicated plane, 28 hot @ 2 joint planes, attention @ Q8_0 |
+| forge time | 7.6 h end-to-end on one consumer GPU (Radeon 8060S, Vulkan), NAS-fed at ~50 MB/s |
+| quality | multi-step arithmetic and logic traps solved with reasoning enabled; per-expert weight error 21.5% (2-plane) / 28.1% (1-plane dedicated) |
+| speed | ~10 tok/s decode, fully resident in 96 GiB UMA |
+
+## Credits
+
+This work stands on: GPTQ (Frantar et al.), QuantEase, GPTAQ, QEP, the Babai
+ordering result, SpinQuant/QuaRot, MagR, PT²-LLM, PTQTP, BOF4, DynaExq, MoPEQ,
+MXMoE, EAC-MoE (QESC), Norm Tweaking, QZO, EoRA, ROMER, Super Weight, Quamba,
+HOBBIT, and the llama.cpp/ggml project (TQ1_0 format by Francis Couture-Harpin).
+Full per-technique citations with arXiv identifiers: [docs/LEVERS.md](docs/LEVERS.md).
+
+## License
+
+MIT. The source model of the case study (Ornith-1.5) is MIT-licensed.
