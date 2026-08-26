@@ -3,7 +3,7 @@ import glob, os, re, sys
 import numpy as np
 D = sys.argv[1] if len(sys.argv) > 1 else "/mnt/models/gguf/odino-dumps"
 OUT = sys.argv[2] if len(sys.argv) > 2 else "/mnt/models/gguf/odino-hessiane"
-NDIM = 4096
+NDIM = int(__import__("os").getenv("NDIM", "4096"))
 os.makedirs(OUT, exist_ok=True)
 for f in sorted(glob.glob(f"{D}/*attn_post_norm*.f32")):
     m = re.search(r"attn_post_norm-(\d+)", f) or re.search(r"(\d+)", os.path.basename(f))

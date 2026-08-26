@@ -66,8 +66,12 @@ def main():
     strati = sorted({int(n.split(".")[1]) for n in tensori if ".ffn_gate_exps.weight" in n})
     t0e = tensori[f"blk.{strati[0]}.ffn_gate_exps.weight"]
     E = int(t0e.shape[2])
+    senza_counts = sorted(set(strati) - set(caldi_ord))
     log(f"arch={arch} · strati MoE={len(strati)} · esperti={E} · caldi={K}")
-    assert set(strati) <= set(caldi_ord), "imatrix senza counts per alcuni strati MoE"
+    if senza_counts:
+        # es. lo strato MTP/nextn: mai eseguito nel forward normale → zero
+        # counts nell'imatrix. Niente caldi, niente 2° piano, solo piano-1.
+        log(f"⚠️ strati SENZA counts (probabile MTP/nextn): {senza_counts} → solo piano-1")
 
     def hchol(L):
         if not A.hessiane: return None
@@ -93,7 +97,7 @@ def main():
         if exp:
             forma = [int(x) for x in t.shape]
             piano.append((nome, forma, "forgia"))
-            if K:
+            if K and int(nome.split(".")[1]) in caldi_ord:
                 f2 = list(forma); f2[2] = K
                 piano.append((nome.replace(".weight", "2.weight"), f2, "forgia2"))
         else:
@@ -130,7 +134,7 @@ def main():
         if i < riprendi: continue
         if come == "copia":
             t = tensori[nome]
-            if K and nome.endswith(".ffn_gate_inp.weight"):
+            if K and nome.endswith(".ffn_gate_inp.weight") and int(nome.split(".")[1]) in caldi_ord:
                 L = int(nome.split(".")[1])
                 rt = np.asarray(t.data)
                 assert rt.ndim == 2 and rt.shape[0] == E
@@ -155,30 +159,45 @@ def main():
                     d1, q1 = G.quantizza_un_piano(Wt, H, pezzo=A.pezzo)
                 else:
                     r = G.quantizza(Wt, None, giri=2, pezzo=A.pezzo); d1, q1 = r[0], r[1]
-                perm, caldi = perm_di(L)
-                sel = np.concatenate([np.arange(e*out_, (e+1)*out_) for e in caldi])
-                Wc = torch.from_numpy(np.ascontiguousarray(W.reshape(-1, ind)[sel])).float()
-                j1d, j1q, d2, q2 = G.quantizza(Wc, H, giri=2, pezzo=A.pezzo)
-                del Wc, Wt
                 p1 = impacchetta(d1.reshape(-1, 1), q1.reshape(-1, 256))
-                pj1 = impacchetta(j1d.reshape(-1, 1), j1q.reshape(-1, 256))
-                v1 = p1.reshape(E, nb_e, 54)
-                for s, e in enumerate(caldi):
-                    v1[int(e)] = pj1[s*nb_e:(s+1)*nb_e]
-                p1 = riordina_esperti(v1.reshape(-1, 54), perm)
-                p2 = impacchetta(d2.reshape(-1, 1), q2.reshape(-1, 256))
-                # verifica al confine: caldo n.1 (ora pos.0) vs sorgente dequant
-                ric = GQ.dequantize(p1[:nb_e], T.TQ1_0).reshape(out_, ind) \
-                    + GQ.dequantize(p2[:nb_e], T.TQ1_0).reshape(out_, ind)
-                Wv = W[caldi[0]].astype(np.float32)
-                err = float(np.linalg.norm(ric - Wv) / np.linalg.norm(Wv))
+                if L in caldi_ord:
+                    perm, caldi = perm_di(L)
+                    sel = np.concatenate([np.arange(e*out_, (e+1)*out_) for e in caldi])
+                    Wc = torch.from_numpy(np.ascontiguousarray(W.reshape(-1, ind)[sel])).float()
+                    j1d, j1q, d2, q2 = G.quantizza(Wc, H, giri=2, pezzo=A.pezzo)
+                    del Wc
+                    pj1 = impacchetta(j1d.reshape(-1, 1), j1q.reshape(-1, 256))
+                    v1 = p1.reshape(E, nb_e, 54)
+                    for s, e in enumerate(caldi):
+                        v1[int(e)] = pj1[s*nb_e:(s+1)*nb_e]
+                    p1 = riordina_esperti(v1.reshape(-1, 54), perm)
+                    p2 = impacchetta(d2.reshape(-1, 1), q2.reshape(-1, 256))
+                    # verifica al confine: caldo n.1 (ora pos.0) vs sorgente dequant
+                    ric = GQ.dequantize(p1[:nb_e], T.TQ1_0).reshape(out_, ind) \
+                        + GQ.dequantize(p2[:nb_e], T.TQ1_0).reshape(out_, ind)
+                    Wv = W[caldi[0]].astype(np.float32)
+                    err = float(np.linalg.norm(ric - Wv) / np.linalg.norm(Wv))
+                    del j1d, j1q, d2, q2
+                else:
+                    # strato senza counts (MTP): solo piano-1, nessun riordino
+                    p2 = None
+                    ric = GQ.dequantize(p1[:nb_e], T.TQ1_0).reshape(out_, ind)
+                    Wv = W[0].astype(np.float32)
+                    err = float(np.linalg.norm(ric - Wv) / np.linalg.norm(Wv))
+                del Wt
                 assert err < 0.6, f"{orig}: confine rotto ({err:.2f})"
                 fatti[orig] = (p1, p2)
                 pesi += W.size
                 v = pesi / (time.time() - t0) / 1e6
                 log(f"[{i+1}/{len(piano)}] {orig} · confine {err*100:.1f}% · {v:.1f} M/s")
-                del W, d1, q1, d2, q2, j1d, j1q
-            w.write_tensor_data(fatti[orig][1 if come == "forgia2" else 0])
+                del W, d1, q1
+            dati = fatti[orig][1 if come == "forgia2" else 0]
+            attesi = int(np.prod([x for x in ( [int(y) for y in forma][::-1][:-1] + [[int(y) for y in forma][::-1][-1]//256*54] ,)][0])) if False else None
+            try:
+                w.write_tensor_data(dati)
+            except AssertionError:
+                log(f"⛔ MISMATCH {nome}: forma_gguf={forma} · dati.nbytes={dati.nbytes} · dati.shape={dati.shape}")
+                raise
             if come == "forgia2": fatti.pop(orig, None)
         w.fout[0].flush(); giornale.write_text(f"{i}\n{w.fout[0].tell()}\n")
     w.close()

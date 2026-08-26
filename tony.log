@@ -1,0 +1,62 @@
+══ [1/4] imatrix (counts per i caldi)
+
+
+══ [2/4] cattura attivazioni (Hessiane)
+[Inferior 1 (process 918310) detached]
+══ [3/4] Hessiane (2048 dim)
+✓ Hessiane in /mnt/models/gguf/tony-tern/hessiane
+══ [4/4] FORGIA
+Traceback (most recent call last):
+  File "/home/angelo/odino-lab/fucina/forgia_gguf.py", line 188, in <module>
+    main()
+    ~~~~^^
+  File "/home/angelo/odino-lab/fucina/forgia_gguf.py", line 70, in main
+    assert set(strati) <= set(caldi_ord), "imatrix senza counts per alcuni strati MoE"
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: imatrix senza counts per alcuni strati MoE
+🏁 CATENA TONY COMPLETA
+══ [1/4] imatrix (counts per i caldi)
+══ [2/4] cattura attivazioni (Hessiane)
+[Inferior 1 (process 926350) detached]
+══ [3/4] Hessiane (2048 dim)
+✓ Hessiane in /mnt/models/gguf/tony-tern/hessiane
+══ [4/4] FORGIA
+    return func(*args, **kwargs)
+  File "/home/angelo/odino-lab/fucina/ternario_gpu.py", line 103, in quantizza
+    B = W[i0:i1].to(device, torch.float32, non_blocking=True).reshape(-1, BLOCCO)
+        ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/angelo/venv-catq/lib64/python3.14/site-packages/torch/cuda/__init__.py", line 478, in _lazy_init
+    torch._C._cuda_init()
+    ~~~~~~~~~~~~~~~~~~~^^
+RuntimeError: No CUDA GPUs are available
+🏁 CATENA TONY COMPLETA
+══ [1/4] imatrix (counts per i caldi)
+══ [2/4] cattura attivazioni (Hessiane)
+[Inferior 1 (process 928769) detached]
+══ [3/4] Hessiane (2048 dim)
+✓ Hessiane in /mnt/models/gguf/tony-tern/hessiane
+══ [4/4] FORGIA
+    ~~~~^^
+  File "/home/angelo/odino-lab/fucina/forgia_gguf.py", line 194, in main
+    w.write_tensor_data(fatti[orig][1 if come == "forgia2" else 0])
+    ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/angelo/build-llamacpp/gguf-py/gguf/gguf_writer.py", line 430, in write_tensor_data
+    assert ti.nbytes == tensor.nbytes
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError
+🏁 CATENA TONY COMPLETA
+══ [1/4] imatrix (counts per i caldi)
+══ [2/4] cattura attivazioni (Hessiane)
+[Inferior 1 (process 931344) detached]
+══ [3/4] Hessiane (2048 dim)
+✓ Hessiane in /mnt/models/gguf/tony-tern/hessiane
+══ [4/4] FORGIA
+[22:37:55] [823/873] blk.7.ffn_up_exps.weight · confine 18.5% · 37.9 M/s
+[22:38:05] [830/873] blk.8.ffn_down_exps.weight · confine 18.5% · 37.8 M/s
+[22:38:08] [833/873] blk.8.ffn_gate_exps.weight · confine 18.5% · 37.9 M/s
+[22:38:12] [838/873] blk.8.ffn_up_exps.weight · confine 18.5% · 38.1 M/s
+[22:38:16] [852/873] blk.9.ffn_down_exps.weight · confine 18.3% · 38.2 M/s
+[22:38:20] [855/873] blk.9.ffn_gate_exps.weight · confine 18.4% · 38.3 M/s
+[22:38:32] [860/873] blk.9.ffn_up_exps.weight · confine 18.5% · 38.1 M/s
+[22:38:35] 🏁 FORGIA FINITA in 14.5 min → /mnt/models/gguf/tony-tern/Tony-tern-TQ1.gguf
+🏁 CATENA TONY COMPLETA
