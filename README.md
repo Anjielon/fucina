@@ -49,7 +49,8 @@ W ≈ d₁·T₁ + d₂·T₂        T ∈ {-1, 0, +1},  256-weight blocks,  f16
 | file | role |
 |---|---|
 | `forge.py` | orchestrator: applies each lever *only if it wins its own test on the current model* |
-| `forge_gguf.py` | the forge: source GGUF → two-plane TQ1_0 GGUF, resumable via journal |
+| `forge_gguf.py` | forge from an already-quantized GGUF → two-plane TQ1_0, resumable via journal |
+| `forge_from_bf16.py` | forge from the original bf16 checkpoint — **this is what produced the case study** |
 | `ternary_gpu.py` | GPU quantizer: joint two-plane optimization + full-propagation GPTQ |
 | `two_planes.py` | Hessian preparation (damping, Cholesky) |
 | `tq1_pack.py` | GPU TQ1_0 bit-packing + hot-first permutation (self-tested against the reference decoder) |

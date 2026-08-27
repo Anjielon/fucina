@@ -287,6 +287,36 @@ The practical rule: report the paired ratio and the Δp decomposition, keep
 perplexity as context, and never let a single scalar close a question on its
 own.
 
+## A tool must not act when it is merely imported
+
+This class of defect appeared twice in one evening, and the second instance
+was dangerous.
+
+The first was mild: `build_hessians.py` had top-level code with hardcoded
+default paths, so importing it created a directory and announced "Hessians
+written". Harmless there, but a tool that acts on import is a defect, not a
+style preference.
+
+The second was not mild. The bf16 forge had the same shape — module-level code
+that reads the base model, opens the *output* GGUF for writing, writes a
+header, and seeks to a resume point. Importing it to check the translation
+started a forge: it created a directory and an 88 MB partial file before dying
+on an unrelated error. Nothing was lost, because the path it chose happened to
+be empty. Had a real model been there, it would have been overwritten.
+
+Two rules:
+
+1. **Every script gets `if __name__ == "__main__": main()`.** Not for style —
+   because importing is how you inspect, test, and document a module, and
+   inspection must never mutate the world.
+2. **A tool that writes should not know its own destination.** Defaults that
+   point at a real artefact turn a stray import into data loss. Require the
+   path, or default to somewhere provably empty.
+
+The verification that caught it is worth keeping too: after any refactor,
+import every module in the package and see what happens. It is one loop, it
+found five defects here, and three of them were invisible to reading.
+
 ## The standard of proof for a rejection
 
 Rejecting a technique is a scientific claim and carries the same burden as
