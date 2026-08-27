@@ -336,6 +336,34 @@ The practical rule: report the paired ratio and the Δp decomposition, keep
 perplexity as context, and never let a single scalar close a question on its
 own.
 
+## On unified memory, VRAM and RAM are one pool — and the watchdog does not warn
+
+Running a benchmark on the 84 GiB model and a CPU-side activation capture at
+the same time reset the machine. There is no out-of-memory message to find
+afterwards: the journal simply stops mid-line, with no shutdown sequence. That
+absence *is* the diagnosis — it is the signature of a hardware watchdog reset,
+fired because init could not answer its ping while the system thrashed.
+
+On a unified-memory machine the GPU allocation is not a separate budget. An
+84 GiB model does not leave 30 GiB of host RAM behind it; it leaves whatever
+remains of the *single* pool. Two jobs that each fit comfortably alone will
+take the machine down together, and they will do it without leaving evidence.
+
+The fix is not vigilance, because vigilance is exactly what fails at midnight.
+It is a precondition check that refuses to start:
+
+    spazio_per.sh 84 gpu   →  ⛔ needs 92 GiB (84 + 8 margin), 29 available
+
+Two rules:
+
+1. **One large job at a time, enforced by a gate rather than by intention.**
+   The gate takes the requested size, reads the actual free pool, adds a fixed
+   margin, and exits non-zero. Wire it as the first line of every heavy script.
+2. **A journal that stops mid-line is evidence, not missing evidence.** A clean
+   OOM leaves a kill message; a watchdog reset leaves nothing. If the last line
+   is ordinary and the next is a boot banner, stop looking for the error and
+   start looking at what was resident.
+
 ## A tool must not act when it is merely imported
 
 This class of defect appeared twice in one evening, and the second instance
