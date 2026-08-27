@@ -25,7 +25,7 @@ import numpy as np
 sys.path.insert(0, "/home/angelo/build-llamacpp/gguf-py")
 sys.path.insert(0, str(Path(__file__).parent))
 from gguf import GGUFReader
-from patch_gguf import ChirurgoGGUF
+from gguf_surgeon import GGUFSurgeon
 
 
 def diff_tensors(good: str, current: str, name_filter: str = "") -> list[str]:
@@ -58,15 +58,15 @@ def guard(good: str, current: str, expected: set[str], sample: int = 40) -> int:
 def restore(good: str, current: str, names: list[str]) -> int:
     """Copy the listed tensors from the good file into the current one, one at a time."""
     tb = {t.name: t for t in GGUFReader(good).tensors}
-    c = ChirurgoGGUF(current)
+    c = GGUFSurgeon(current)
     done = 0
     for n in names:
         expected_v = np.asarray(tb[n].data)
-        current_v = c.leggi(n)
+        current_v = c.read(n)
         if np.array_equal(expected_v.reshape(-1), current_v.reshape(-1)):
             continue
-        c.scrivi(n, expected_v.reshape(current_v.shape))
-        assert np.array_equal(c.leggi(n).reshape(-1), expected_v.reshape(-1)), f"verification failed for {n}"
+        c.write(n, expected_v.reshape(current_v.shape))
+        assert np.array_equal(c.read(n).reshape(-1), expected_v.reshape(-1)), f"verification failed for {n}"
         done += 1
         del expected_v, current_v
     return done

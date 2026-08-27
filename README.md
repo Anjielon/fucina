@@ -59,6 +59,7 @@ W ≈ d₁·T₁ + d₂·T₂        T ∈ {-1, 0, +1},  256-weight blocks,  f16
 | `paired_compare.py` | per-chunk paired sign test — resolves effects smaller than the absolute error bar |
 | `promote_tensors.py` | selective precision promotion (e.g. attention → Q8_0) by file rewrite |
 | `selective_rollback.py` | tensor-level diff / guard / restore between two builds |
+| `gguf_surgeon.py` | in-place tensor rewrite with automatic backups (no file rewrite) |
 | `diagnose_assembly.py` | forensic check that a written file reconstructs its source weights |
 | `no_miopen.py` | depthwise-conv fallback for ROCm GPUs without MIOpen kernels (gfx1151) |
 

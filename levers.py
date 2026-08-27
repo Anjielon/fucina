@@ -96,7 +96,7 @@ REGISTRY = [
       {"authors": "losing one collapses the model; coordinates published only for Llama/Mistral/OLMo/Phi"},
       "two forwards + spikes 8x above median", "2411.07191"),
 
- # ── RIPARAZIONE (post-forgia, senza toccare i ternari) ────────────────
+ # ── REPAIR (post-forge, ternary planes untouched) ─────────────────────
  Lever("router_selection_correction", "repair", 0, 8,
       {"authors": "selection bias is the PRINCIPAL factor in low-bit MoE",
        "ornith397": "REJECTED: worse at 35, 10 and 3 layers (PPL 6.18 -> 6.21). A quantized model's routers are coherent with its OWN activations"},
@@ -114,7 +114,7 @@ REGISTRY = [
       {"authors": "-58% ppl sotto rumore sui peyes"},
       "replace under-activated experts with clones of hot ones, one layer", "ROMER 2605.11800"),
 
- # ── RUNTIME (non toccano il file) ──────────────────────────────────────
+ # ── RUNTIME (no file changes) ─────────────────────────────────────────
  Lever("low_bit_sampling", "runtime", 0, 0,
       {"unsloth+3papers": "temp 0.6, min_p 0.03, presence 1.5, DRY, thinking ON; never XTC"},
       "A/B on the fixture suite", "docs section 23"),
