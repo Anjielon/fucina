@@ -317,6 +317,19 @@ The verification that caught it is worth keeping too: after any refactor,
 import every module in the package and see what happens. It is one loop, it
 found five defects here, and three of them were invisible to reading.
 
+### Never edit a shell script that is currently running
+
+A related trap, hit the same evening. A long pipeline was executing from a
+shell script, and extending that script to add a final stage seemed harmless —
+the new lines came after the current position. It is not harmless: the shell
+keeps a byte offset into the file and re-reads from it, so inserting text
+shifts everything after and the next read can start mid-line.
+
+The fix is not to be careful about where you insert. It is to **not edit the
+file at all**: restore it byte-for-byte and add the new stage as a separate
+process that waits for the first to finish. Orchestration belongs outside the
+script being orchestrated.
+
 ## The standard of proof for a rejection
 
 Rejecting a technique is a scientific claim and carries the same burden as
