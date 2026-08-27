@@ -162,6 +162,31 @@ so the reconciliation is that the self-calibration advantage grows as bits fall
 and as the task depends on generation quality. We should treat it as promising,
 not proven, for our regime, and measure it on Tony.
 
+### Building the overthinking-token list without damaging prose
+
+Two practical notes, both of which cost us a wrong list before we caught them:
+
+**Include the space-prefixed forms.** In BPE vocabularies a word inside running
+text is a *different token* from the same word at the start of a line — the
+former carries a leading-space marker (`Ġ` in Qwen-family vocabularies).
+Searching for the bare forms found 10 tokens; adding the prefixed forms found
+**30**. A list without them penalizes almost nothing, because the model
+practically always emits the prefixed variant.
+
+**Split the list by how ordinary the word is.** The published marker set
+includes `but` and `however`, which is sound for a math-reasoning benchmark and
+harmful for general prose — and worse in languages where the equivalent is a
+core connective (`ma` in Italian). We keep two sets:
+
+| set | tokens | when |
+|---|---|---|
+| always safe | `wait`, `alternatively`, `hmm` + capitalized + space-prefixed (10) | any generation |
+| thinking-block only | `but`, `however`, `actually`, `ma`, `tuttavia`, `invece`, … (20) | between `<think>` and `</think>`, where they do signal hesitation |
+
+Start the bias around −1.5 to −2.0 and **measure**: this lever changes what the
+model says, and a penalty strong enough to stop the loop is also strong enough
+to break a sentence.
+
 ## 6. Runtime (no file changes)
 
 | lever | measurement | verdict | source |
@@ -169,7 +194,7 @@ not proven, for our regime, and measure it on Tony.
 | **Low-bit sampling recipe** | temp 0.6 · min_p 0.03 · top_p 0.9 · presence 1.5. Note the ceiling: the loop-rescue authors measured a **90.2% loop rate at temp 0.6 and 94.6% greedy** — temperature alone does not fix severe collapse; thinking ON for hard reasoning; **never XTC**. At temp 0.2 a healthy sub-2-bit model degenerates into token loops — our test harness initially *failed a working model* because of this | ✅ | ours + Unsloth guidance + 3 papers (doc §23) |
 | **MTP speculation** | +10% at draft-length 1 on the Ornith family (the MTP head predicts exactly one token; longer drafts *hurt*: acceptance 0.65 → 0.39) | ✅ per model | ours |
 | **Loop detection + commit** | detector: any 20-gram repeated ≥4× within the last 1024 tokens. On trigger: if a parseable answer already appeared *before* the loop, emit it and stop. Authors' ablation: loop rescue alone is **+57 of the +59 total points** (17.2 → 74.2 on Qwen3-8B MATH-500) | ✅✅ **runtime, single model** — apply first | arXiv 2606.02011 |
-| **Overthinking-token logit penalty** | quantized reasoning models over-emit "wait / but / alternatively" at high-KL positions; in up to **52% of failures the correct answer had already appeared** and was not committed to. Training-free logit penalty: −12–23% chain length, −58% overthinking errors, accuracy preserved, across 5 models × 3 quantizers | ✅✅ **cheapest real fix** — a logit-bias list | arXiv 2606.00206 |
+| **Overthinking-token logit penalty** | quantized reasoning models over-emit "wait / but / alternatively" at high-KL positions; in up to **52% of failures the correct answer had already appeared** and was not committed to. Training-free logit penalty: −12–23% chain length, −58% overthinking errors, accuracy preserved, across 5 models × 3 quantizers. **Split the token list — see below** | ✅✅ **cheapest real fix** — a logit-bias list | arXiv 2606.00206 |
 | **Forced `</think>` closure (reasoning budget)** | structurally removes budget-exhaustion and unclosed-reasoning failures: soft warning at a fraction of budget, then hard close | 🧪 llama.cpp PR #25961, unmerged — validate before trusting | — |
 | **DRY sampler** | sequence-aware repetition penalty already in llama.cpp (`--dry-multiplier`, off by default). Community reports it fixes thinking loops where flat repetition-penalty *causes* them | 🧪 cheap knob, anecdotal evidence only | llama.cpp mainline |
 | ~~FP16 planning hybrid~~ | requires a second **full-precision copy of the same model** — ~800 GiB for a 397B. Rejected on feasibility, not on merit; the authors are silent on its memory cost | ⛔ not portable to a single-checkpoint deployment | arXiv 2606.02011 |
