@@ -134,8 +134,32 @@ forge would need one run; nothing else changes.
 
 **Perplexity and five questions are not a downstream evaluation.** Every
 comparable paper pairs perplexity with a task suite — commonsense (PIQA, ARC,
-HellaSwag, WinoGrande), knowledge (MMLU), reasoning (GSM8K). HellaSwag and
-WinoGrande runs are in progress; the rest is not done.
+HellaSwag, WinoGrande), knowledge (MMLU), reasoning (GSM8K).
+
+⚠️ **And `llama-perplexity --hellaswag` numbers are not the published ones.**
+The project's own discussion (ggml-org/llama.cpp#2321) states results are
+"linearly correlated but are not the same numbers" as the leaderboard, and the
+metric differs — `acc` against the length-normalised `acc_norm` that lm-eval
+reports by default. Such a figure is valid for comparing two of our own builds
+under one recipe; it cannot be placed in a column beside a published score.
+
+The defensible route is one consistent toolchain: `llama-server` plus
+lm-evaluation-harness through the `local-completions` adapter, with the harness
+version, the metric and the shot count all pinned and stated. Two practical
+facts make it cheaper than it looks:
+
+- **Multiple-choice tasks are prefill-bound, not decode-bound.** Each question
+  generates a single token; cost is dominated by prompt processing, which is far
+  faster than our ~10 tok/s generation figure, and the shared few-shot prefix is
+  cached across questions. MMLU, ARC, PIQA and BoolQ are hours, not days.
+- **GSM8K is the expensive one** — it generates full reasoning chains, so at
+  ~10 tok/s and a few hundred tokens per question it is 11-15 hours. Budget for
+  it separately or subsample it.
+
+If subsampling, use a **named** method: tinyBenchmarks (arXiv 2402.14992) ships
+100-item IRT-selected subsets as lm-eval tasks with a published estimation error
+under 2%. "We evaluated a random thousand" is the single most likely reviewer
+objection; `tinyMMLU` is a citation.
 
 **The obvious alternative explanation has not been excluded.** The field's
 default account of unexpected MoE quantization damage is routing shift —
