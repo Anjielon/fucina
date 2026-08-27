@@ -101,9 +101,16 @@ covariance has rank at most n−1.
 
 Run on the stripped 84.00 GiB build with llama.cpp's built-in scorer.
 
-| benchmark | score | 95% interval | tasks |
-|---|---|---|---|
-| HellaSwag | **74.67%** | [69.45, 79.26] | 300 |
+| benchmark | score | interval | tasks | chance |
+|---|---|---|---|---|
+| HellaSwag | **74.67%** | [69.45, 79.26] | 300 | 25% |
+| Winogrande | **70.33%** | ± 2.64 | 300 | **50%** |
+
+Winogrande is the more informative of the two here, for two reasons. Its chance
+floor is 50%, not 25 — a model that has stopped understanding scores 50, so
+70.33% is unambiguous evidence of real pronoun-resolution ability rather than a
+partially-degraded prior. And its interval is half as wide, since it is a
+two-choice task.
 
 ⚠️ **Two caveats, both material.** These come from `llama-perplexity`'s own
 implementation, which the project states is "linearly correlated but not the
