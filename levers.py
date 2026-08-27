@@ -123,6 +123,41 @@ REGISTRY = [
  Lever("self_draft_from_plane_one", "runtime", 0, 24,
       {"literature": "expected routing overlap 0.15-0.30 < the 0.5 threshold — likely not viable; QSpec reports 1.64x at high overlap"},
       "measure top-k routing overlap between tokens — one hour", "docs sections 24-25"),
+
+ # ── CALIBRATION (what you measure on decides what you get) ─────────────
+ Lever("reasoning_calibration", "calibration", 0, 2,
+      {"authors": "+8.97 absolute points on Math-500/GSM8K/HumanEval+ at 1.58 bit, calibrating "
+                  "on the model's OWN generated reasoning chains instead of web text",
+       "ours": "matches the wound we observe: quantization preserves language, degrades computation"},
+      "generate reasoning chains with the source model, use them as the calibration corpus, "
+      "compare error on arithmetic-heavy vs generic text",
+      "AYOT / ScaleQ-1.58, arXiv 2608.01078"),
+ Lever("per_expert_calibration_balance", "calibration", 0, 1,
+      {"authors": "+1.15 to 13.81% across three MoE models up to W2A4",
+       "ours": "with 512 experts and top-10, a rare expert sees a vanishing share of the "
+               "calibration tokens — its Hessian is estimated on too few samples"},
+      "count tokens routed per expert; if the tail is starved, rebalance and re-measure the "
+      "GPTQ error on cold experts specifically",
+      "EAQuant, arXiv 2506.13329"),
+
+ # ── STRUCTURE (beyond two scalar planes) ───────────────────────────────
+ Lever("leech_lattice_vq", "structure", 0, 40,
+      {"authors": "92.1% of the Shannon bound vs ~82% for E8 methods; 2 bits/weight, "
+                  "PPL 5.48 on Llama-2-7B, O(1) dequantization",
+       "ours": "would structurally dominate two scalar planes — no published method jointly "
+               "optimizes two planes, so the answer is to change structure"},
+      "fit the codebook on one tensor, compare against the two-plane error at equal bits",
+      "Qualcomm, arXiv 2603.11021"),
+ Lever("gptq_intrinsic_lowrank", "compensation", 1.8, 6,
+      {"authors": "low-rank correction INSIDE the GPTQ step (augmented Hessian) beats post-hoc "
+                  "GPTQ+LoRA, and is provably near-optimal"},
+      "one tensor: EoRA post-hoc vs intrinsic, same rank budget",
+      "arXiv 2606.01412"),
+ Lever("kl_sensitivity_lens", "allocation", 0, 3,
+      {"authors": "forward-only KL sensitivity, tau=0.791 vs 0.711 for SQNR, designed for "
+                  "hybrid SSM+attention models"},
+      "rank layers by KL sensitivity, compare against the Hessian-trace ranking",
+      "KL-Lens, arXiv 2604.13440"),
 ]
 
 def by_stage(stage=None):
