@@ -111,6 +111,24 @@ out of 256 should give once routing frequency is taken into account. A
 perplexity that merely *improves* would not have told us the mask was right —
 only that something got better.
 
+### Closing the residual by date, not by measurement
+
+After the fix the small model still sat at 12.11 against 9.46 with the plane
+off — better by a factor of 5,800, but not yet a win. The obvious move was
+another round of measurement. The cheaper one was `git log`:
+
+    model forged            26/08 22:38
+    joint-pair fix commit   26/08 23:34   "lessons from the first production night"
+
+The test model predates the fix by 56 minutes, and the commit that fixed the
+orphaned plane pair is named after the very run that produced it. Its second
+plane was optimized against a plane-1 that the file no longer contains — bug #2
+of this document, frozen into a file we then used as a reference.
+
+Two rules: **date your artefacts against your fixes before re-measuring them**,
+and **a test bench built before a fix is not a test bench** — it must be rebuilt
+with the corrected tool, or every result it produces carries the old defect.
+
 ## The forensic method that found bug #3
 
 When the model still failed after the file was proven correct, the search

@@ -13,10 +13,10 @@ Three corrections are wired in from birth, each one paid for in a failed run:
      actually written, must match the source. An assert, not a hope.
 
 Usage:
-  forge_gguf.py --sorgente X.gguf --uscita Y.gguf --caldi 28 \
-                --imatrix im.gguf [--hessiane DIR]
+  forge_gguf.py --source X.gguf --output Y.gguf --hot 28 \
+                --imatrix im.gguf [--hessians DIR]
 
-The resume journal is <output>.giornale (tensor index + byte offset): a crash
+The resume journal is <output>.journal (tensor index + byte offset): a crash
 costs one tensor, never the run.
 """
 from __future__ import annotations
@@ -36,8 +36,8 @@ from tq1_pack import pack, reorder_experts, hot_first_order
 def log(*a): print(f"[{time.strftime('%H:%M:%S')}]", *a, flush=True)
 
 
-def leggi_counts(imatrix: Path) -> dict[int, np.ndarray]:
-    """strato → esperti ordinati dal più caldo (dai .counts dell'imatrix)."""
+def read_counts(imatrix: Path) -> dict[int, np.ndarray]:
+    """layer → experts ordinati dal più caldo (dai .counts dell'imatrix)."""
     out = {}
     r = GGUFReader(str(imatrix))
     for t in r.tensors:
@@ -49,43 +49,43 @@ def leggi_counts(imatrix: Path) -> dict[int, np.ndarray]:
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--sorgente", required=True)
-    ap.add_argument("--uscita", required=True)
-    ap.add_argument("--caldi", type=int, default=28)
+    ap.add_argument("--source", required=True, help="source GGUF (MoE, any quantization)")
+    ap.add_argument("--output", required=True, help="destination GGUF (two-plane TQ1_0)")
+    ap.add_argument("--hot", type=int, default=28, help="experts receiving the second plane")
     ap.add_argument("--imatrix", required=True)
-    ap.add_argument("--hessiane", default=None, help="DIR con H_XX.npy (GPTQ per gate/up)")
-    ap.add_argument("--pezzo", type=int, default=3_000_000)
+    ap.add_argument("--hessians", default=None, help="directory of H_XX.npy — enables GPTQ on gate/up")
+    ap.add_argument("--chunk", type=int, default=3_000_000, help="rows per GPU chunk")
     A = ap.parse_args()
-    K = A.caldi
+    K = A.hot
 
-    src = GGUFReader(A.sorgente)
-    tensori = {t.name: t for t in src.tensors}
+    src = GGUFReader(A.source)
+    tensors = {t.name: t for t in src.tensors}
     arch = None
     for f in src.fields.values():
         if f.name.endswith(".architecture"):
             arch = str(bytes(f.parts[-1]), "utf8"); break
-    caldi_ord = leggi_counts(Path(A.imatrix))
-    strati = sorted({int(n.split(".")[1]) for n in tensori if ".ffn_gate_exps.weight" in n})
-    t0e = tensori[f"blk.{strati[0]}.ffn_gate_exps.weight"]
+    hot_order = read_counts(Path(A.imatrix))
+    layers = sorted({int(n.split(".")[1]) for n in tensors if ".ffn_gate_exps.weight" in n})
+    t0e = tensors[f"blk.{layers[0]}.ffn_gate_exps.weight"]
     E = int(t0e.shape[2])
-    senza_counts = sorted(set(strati) - set(caldi_ord))
-    log(f"arch={arch} · strati MoE={len(strati)} · esperti={E} · caldi={K}")
-    if senza_counts:
-        # es. lo strato MTP/nextn: mai eseguito nel forward normale → zero
-        # counts nell'imatrix. Niente caldi, niente 2° piano, solo piano-1.
-        log(f"⚠️ strati SENZA counts (probabile MTP/nextn): {senza_counts} → solo piano-1")
+    without_counts = sorted(set(layers) - set(hot_order))
+    log(f"arch={arch} · layers MoE={len(layers)} · experts={E} · hot={K}")
+    if without_counts:
+        # es. lo layer MTP/nextn: mai eseguito nel forward normale → zero
+        # counts in the imatrix. No hot set, no second plane — plane-1 only.
+        log(f"⚠️ layers WITHOUT counts (likely MTP/nextn): {without_counts} → plane-1 only")
 
     def hchol(L):
-        if not A.hessiane: return None
-        f = Path(A.hessiane) / f"H_{L:02d}.npy"
+        if not A.hessians: return None
+        f = Path(A.hessians) / f"H_{L:02d}.npy"
         if not f.exists(): return None
-        return torch.from_numpy(D.prepara_hessiana(np.load(f).astype(np.float64)).astype(np.float32))
+        return torch.from_numpy(D.prepare_hessian(np.load(f).astype(np.float64)).astype(np.float32))
 
-    def perm_di(L):
-        caldi = [int(x) for x in caldi_ord[L][:K]]
-        return hot_first_order(caldi, E), caldi
+    def permutation_for(L):
+        hot = [int(x) for x in hot_order[L][:K]]
+        return hot_first_order(hot, E), hot
 
-    # ── piano di scrittura ───────────────────────────────────────────────
+    # ── write plan ──────────────────────────────────────────────────────
     w = GGUFWriter(path=None, arch=arch)
     for f in src.fields.values():
         if f.name.startswith(("GGUF.", "split.")): continue
@@ -93,117 +93,118 @@ def main():
         except Exception: pass
     if K: w.add_uint32(f"{arch}.expert_count2", K)
 
-    piano = []
-    for nome, t in sorted(tensori.items()):
-        exp = nome.endswith(("ffn_gate_exps.weight", "ffn_up_exps.weight", "ffn_down_exps.weight"))
+    plan = []
+    for name, t in sorted(tensors.items()):
+        exp = name.endswith(("ffn_gate_exps.weight", "ffn_up_exps.weight", "ffn_down_exps.weight"))
         if exp:
-            forma = [int(x) for x in t.shape]
-            piano.append((nome, forma, "forgia"))
-            if K and int(nome.split(".")[1]) in caldi_ord:
-                f2 = list(forma); f2[2] = K
-                piano.append((nome.replace(".weight", "2.weight"), f2, "forgia2"))
+            shape_ = [int(x) for x in t.shape]
+            plan.append((name, shape_, "forge"))
+            if K and int(name.split(".")[1]) in hot_order:
+                f2 = list(shape_); f2[2] = K
+                plan.append((name.replace(".weight", "2.weight"), f2, "forge2"))
         else:
-            piano.append((nome, [int(x) for x in t.shape], "copia"))
+            plan.append((name, [int(x) for x in t.shape], "copy"))
 
-    for nome, forma, come in piano:
-        if come in ("forgia", "forgia2"):
-            fb = list(forma)[::-1]; fb[-1] = fb[-1] // 256 * 54
-            w.add_tensor_info(nome, fb, np.dtype(np.uint8), int(np.prod(fb)), raw_dtype=T.TQ1_0)
+    for name, shape_, kind in plan:
+        if kind in ("forge", "forge2"):
+            fb = list(shape_)[::-1]; fb[-1] = fb[-1] // 256 * 54
+            w.add_tensor_info(name, fb, np.dtype(np.uint8), int(np.prod(fb)), raw_dtype=T.TQ1_0)
         else:
-            t = tensori[nome]
+            t = tensors[name]
             d = np.asarray(t.data)
-            w.add_tensor_info(nome, list(d.shape), d.dtype, int(d.nbytes), raw_dtype=t.tensor_type)
+            w.add_tensor_info(name, list(d.shape), d.dtype, int(d.nbytes), raw_dtype=t.tensor_type)
 
-    giornale = Path(A.uscita + ".giornale")
-    riprendi = 0
-    if giornale.exists() and Path(A.uscita).exists():
+    journal = Path(A.output + ".journal")
+    resume_at = 0
+    if journal.exists() and Path(A.output).exists():
         try:
-            idx, pos = (int(x) for x in giornale.read_text().split())
-            if Path(A.uscita).stat().st_size >= pos:
-                riprendi = idx + 1
-                log(f"⭐ RIPRESA dal tensore {riprendi} (byte {pos})")
+            idx, pos = (int(x) for x in journal.read_text().split())
+            if Path(A.output).stat().st_size >= pos:
+                resume_at = idx + 1
+                log(f"⭐ RESUMING from tensor {resume_at} (byte {pos})")
         except Exception:
             pass
-    Path(A.uscita).parent.mkdir(parents=True, exist_ok=True)
-    w.open_output_file(Path(A.uscita))
+    Path(A.output).parent.mkdir(parents=True, exist_ok=True)
+    w.open_output_file(Path(A.output))
     w.write_header_to_file(); w.write_kv_data_to_file(); w.write_ti_data_to_file()
-    if riprendi:
+    if resume_at:
         f = w.fout[0]; f.flush(); f.seek(pos); f.truncate(pos)
 
-    fatti: dict[str, tuple] = {}
-    t0 = time.time(); pesi = 0
-    for i, (nome, forma, come) in enumerate(piano):
-        if i < riprendi: continue
-        if come == "copia":
-            t = tensori[nome]
-            if K and nome.endswith(".ffn_gate_inp.weight") and int(nome.split(".")[1]) in caldi_ord:
-                L = int(nome.split(".")[1])
+    done: dict[str, tuple] = {}
+    t0 = time.time(); weights = 0
+    for i, (name, shape_, kind) in enumerate(plan):
+        if i < resume_at: continue
+        if kind == "copy":
+            t = tensors[name]
+            if K and name.endswith(".ffn_gate_inp.weight") and int(name.split(".")[1]) in hot_order:
+                L = int(name.split(".")[1])
                 rt = np.asarray(t.data)
                 assert rt.ndim == 2 and rt.shape[0] == E
-                w.write_tensor_data(np.ascontiguousarray(rt[perm_di(L)[0]]))
+                w.write_tensor_data(np.ascontiguousarray(rt[permutation_for(L)[0]]))
             else:
                 w.write_tensor_data(np.asarray(t.data))
         else:
-            orig = nome.replace("2.weight", ".weight") if come == "forgia2" else nome
-            if orig not in fatti:
+            orig = name.replace("2.weight", ".weight") if kind == "forge2" else name
+            if orig not in done:
                 L = int(orig.split(".")[1])
-                t = tensori[orig]
+                t = tensors[orig]
                 W = GQ.dequantize(np.asarray(t.data), t.tensor_type)   # (E, out, in) f32
                 E_, out_, ind = W.shape
                 assert E_ == E
                 nb_e = out_ * (ind // 256)
-                # l'Hessiana e' misurata sul flusso residuo (hidden): vale per
-                # gate/up (ingresso=hidden), NON per down (ingresso=intermedio)
-                hidden = int(tensori[f"blk.{L}.ffn_gate_exps.weight"].shape[0])
+                # the Hessian is measured on the residual stream (hidden size),
+                # so it applies to gate/up (input = hidden) but NOT to down,
+                # whose input is the intermediate activation
+                hidden = int(tensors[f"blk.{L}.ffn_gate_exps.weight"].shape[0])
                 H = hchol(L) if ind == hidden else None
                 Wt = torch.from_numpy(W.reshape(-1, ind)).float()
                 if H is not None:
-                    d1, q1 = G.quantizza_un_piano(Wt, H, pezzo=A.pezzo)
+                    d1, q1 = G.quantize_one_plane(Wt, H, chunk=A.chunk)
                 else:
-                    r = G.quantizza(Wt, None, giri=2, pezzo=A.pezzo); d1, q1 = r[0], r[1]
+                    r = G.quantize(Wt, None, rounds=2, chunk=A.chunk); d1, q1 = r[0], r[1]
                 p1 = pack(d1.reshape(-1, 1), q1.reshape(-1, 256))
-                if L in caldi_ord:
-                    perm, caldi = perm_di(L)
-                    sel = np.concatenate([np.arange(e*out_, (e+1)*out_) for e in caldi])
+                if L in hot_order:
+                    perm, hot = permutation_for(L)
+                    sel = np.concatenate([np.arange(e*out_, (e+1)*out_) for e in hot])
                     Wc = torch.from_numpy(np.ascontiguousarray(W.reshape(-1, ind)[sel])).float()
-                    j1d, j1q, d2, q2 = G.quantizza(Wc, H, giri=2, pezzo=A.pezzo)
+                    j1d, j1q, d2, q2 = G.quantize(Wc, H, rounds=2, chunk=A.chunk)
                     del Wc
                     pj1 = pack(j1d.reshape(-1, 1), j1q.reshape(-1, 256))
                     v1 = p1.reshape(E, nb_e, 54)
-                    for s, e in enumerate(caldi):
+                    for s, e in enumerate(hot):
                         v1[int(e)] = pj1[s*nb_e:(s+1)*nb_e]
                     p1 = reorder_experts(v1.reshape(-1, 54), perm)
                     p2 = pack(d2.reshape(-1, 1), q2.reshape(-1, 256))
-                    # verifica al confine: caldo n.1 (ora pos.0) vs sorgente dequant
-                    ric = GQ.dequantize(p1[:nb_e], T.TQ1_0).reshape(out_, ind) \
+                    # verifica al confine: caldo n.1 (ora pos.0) vs source dequant
+                    rebuilt = GQ.dequantize(p1[:nb_e], T.TQ1_0).reshape(out_, ind) \
                         + GQ.dequantize(p2[:nb_e], T.TQ1_0).reshape(out_, ind)
-                    Wv = W[caldi[0]].astype(np.float32)
-                    err = float(np.linalg.norm(ric - Wv) / np.linalg.norm(Wv))
+                    Wv = W[hot[0]].astype(np.float32)
+                    err = float(np.linalg.norm(rebuilt - Wv) / np.linalg.norm(Wv))
                     del j1d, j1q, d2, q2
                 else:
-                    # strato senza counts (MTP): solo piano-1, nessun riordino
+                    # layer without counts (MTP): plane-1 only, no reordering
                     p2 = None
-                    ric = GQ.dequantize(p1[:nb_e], T.TQ1_0).reshape(out_, ind)
+                    rebuilt = GQ.dequantize(p1[:nb_e], T.TQ1_0).reshape(out_, ind)
                     Wv = W[0].astype(np.float32)
-                    err = float(np.linalg.norm(ric - Wv) / np.linalg.norm(Wv))
+                    err = float(np.linalg.norm(rebuilt - Wv) / np.linalg.norm(Wv))
                 del Wt
                 assert err < 0.6, f"{orig}: confine rotto ({err:.2f})"
-                fatti[orig] = (p1, p2)
-                pesi += W.size
-                v = pesi / (time.time() - t0) / 1e6
-                log(f"[{i+1}/{len(piano)}] {orig} · confine {err*100:.1f}% · {v:.1f} M/s")
+                done[orig] = (p1, p2)
+                weights += W.size
+                v = weights / (time.time() - t0) / 1e6
+                log(f"[{i+1}/{len(plan)}] {orig} · boundary {err*100:.1f}% · {v:.1f} M/s")
                 del W, d1, q1
-            dati = fatti[orig][1 if come == "forgia2" else 0]
-            attesi = int(np.prod([x for x in ( [int(y) for y in forma][::-1][:-1] + [[int(y) for y in forma][::-1][-1]//256*54] ,)][0])) if False else None
+            data_ = done[orig][1 if kind == "forge2" else 0]
+            attesi = int(np.prod([x for x in ( [int(y) for y in shape_][::-1][:-1] + [[int(y) for y in shape_][::-1][-1]//256*54] ,)][0])) if False else None
             try:
-                w.write_tensor_data(dati)
+                w.write_tensor_data(data_)
             except AssertionError:
-                log(f"⛔ MISMATCH {nome}: forma_gguf={forma} · dati.nbytes={dati.nbytes} · dati.shape={dati.shape}")
+                log(f"⛔ MISMATCH {name}: forma_gguf={shape_} · data_.nbytes={data_.nbytes} · data_.shape={data_.shape}")
                 raise
-            if come == "forgia2": fatti.pop(orig, None)
-        w.fout[0].flush(); giornale.write_text(f"{i}\n{w.fout[0].tell()}\n")
+            if kind == "forge2": done.pop(orig, None)
+        w.fout[0].flush(); journal.write_text(f"{i}\n{w.fout[0].tell()}\n")
     w.close()
-    log(f"🏁 FORGIA FINITA in {(time.time()-t0)/60:.1f} min → {A.uscita}")
+    log(f"🏁 FORGE COMPLETE in {(time.time()-t0)/60:.1f} min → {A.output}")
 
 
 main()
