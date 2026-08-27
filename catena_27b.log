@@ -1,0 +1,32 @@
+[08:49:05] 27B: attendo il download completo del bf16
+[09:19:35] 27B: attendo il download completo del bf16
+[09:26:55] 27B: attendo il download completo del bf16
+[09:29:56] 27B: attendo che la GPU si liberi (fine filiera v3.2)
+[09:33:57] 27B: [1/4] conversione bf16 → GGUF
+[09:37:21] 27B: attendo il download completo del bf16
+[09:37:21] 27B: attendo che la GPU si liberi (fine filiera v3.2)
+[09:41:24] 27B: [1/4] conversione bf16 → GGUF
+[09:41:24] 27B: [2/4] imatrix
+0.33.458.402 E cmn  common_init_: failed to load model '/mnt/models/gguf/qwen38-tern/qwen38-27b-bf16.gguf'
+0.33.458.416 E main : failed to init
+[09:42:08] 27B: [3/4] Hessiane
+✓ Hessiane in /mnt/models/gguf/qwen38-tern/hessiane
+[09:42:55] 27B: [4/4] FORGIA
+[09:50:38] 27B: attendo il download completo del bf16
+[09:50:38] 27B: attendo che la GPU si liberi (fine filiera v3.2)
+[09:52:38] 27B: [1/4] conversione bf16 → GGUF
+[09:52:39] 27B: [2/4] imatrix
+0.15.469.179 E cmn  common_init_: failed to load model '/mnt/models/gguf/qwen38-tern/qwen38-27b-bf16.gguf'
+0.15.469.187 E main : failed to init
+[09:52:58] 27B: [3/4] Hessiane
+✓ Hessiane in /mnt/models/gguf/qwen38-tern/hessiane
+[09:53:06] 27B: [4/4] FORGIA
+    self._build_tensors(offs, tensors_fields)
+    ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/angelo/build-llamacpp/gguf-py/gguf/gguf_reader.py", line 367, in _build_tensors
+    data = self._get(data_offs, item_type, item_count).reshape(np_dims),
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+ValueError: cannot reshape array of size 0 into shape (248320,10240)
+[09:53:25] 27B: 🏁 27B-TERN PRONTO (dal bf16, sorgente d'oro)
+[10:08:17] 27B: attendo il download completo del bf16
+[10:08:17] 27B: attendo che la GPU si liberi (fine filiera v3.2)
