@@ -80,6 +80,19 @@ ggml_tensor * m1 = ggml_step(ggml_scale_bias(f, -1.0f, n_exp2 - 0.5f));
 ids2 = ggml_cast(ggml_mul(f, m1), I32);   // hot -> id, cold -> 0 (then masked)
 ```
 
+One number in that failure is worth reading carefully. On CPU the broken model
+scored **248320.0000 ± 0.00556**, and the model's vocabulary is **248,320
+tokens**. Perplexity equal to the vocabulary size is the exact signature of a
+**uniform** output distribution: maximum entropy, zero information. The model
+was not degraded, it was annulled — the misapplied corrections, compounded over
+41 layers, saturated the network into flat noise. The vanishing error bar says
+the same thing: every chunk scored identically, because none of them carried
+any signal.
+
+Keep the ratio `perplexity / vocabulary size` in your head. At 1.0 the model is
+a random generator and the fault is structural, not a matter of quality. It is
+a faster diagnosis than any amount of staring at weights.
+
 Why it had never surfaced upstream: every other call site in llama.cpp uses
 the reassignment idiom — `qkv = ggml_clamp(ctx0, qkv, …)` — so the pre-clamp
 value is never read again. And `ggml_clamp` is the **only** operation in ggml.c
