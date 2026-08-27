@@ -392,10 +392,30 @@ Three independent tests of the scale-mismatch story:
   against 0.865 hot, so it is imbalanced *before* the plane is enabled):
   51.4% → 48.9%. Still better.
 - **Direct compensation in the engine**, multiplying cold experts by
-  0.964/0.882 to equalise the volumes: perplexity 11.2405 → 11.1027 against a
-  reference of 8.7204. Real, and worth about 5% of the gap.
+  0.964/0.882 to equalise the volumes:
 
-So the imbalance exists, costs something, and is not the cause.
+  | configuration | perplexity | |
+  |---|---|---|
+  | plane off | 8.7204 | reference |
+  | `down` only | 11.2405 | |
+  | `down` only + compensation | **11.1027** | −0.14, helps |
+  | all three | 10.9106 | |
+  | all three + compensation | **11.6068** | **+0.70, hurts** |
+  | all three + half compensation | 10.9754 | +0.06, hurts |
+
+  **It helps in one configuration and harms in another.** If scale mismatch
+  were the mechanism, compensation would help consistently. It does not.
+
+So the imbalance exists, costs something, and is not the cause. Hypothesis
+closed.
+
+One procedural note from that run, worth more than the result. The script first
+checked that the new switch had any effect at all — one chunk with and without:
+`7.2020` against `6.1923`. Had the switch been silently inert, six identical
+numbers would have read as "compensation changes nothing" rather than "the
+instrument is broken", and the wrong conclusion would have been recorded with
+full confidence. **Verify that your control actually controls something before
+you trust the experiment it gates.** Thirty seconds.
 
 ### What we can say, and what we cannot
 
