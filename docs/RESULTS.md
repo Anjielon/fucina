@@ -502,13 +502,38 @@ floor is 50%, not 25 — a model that has stopped understanding scores 50, so
 partially-degraded prior. And its interval is half as wide, since it is a
 two-choice task.
 
-⚠️ **Two caveats, both material.** These come from `llama-perplexity`'s own
-implementation, which the project states is "linearly correlated but not the
-same numbers" as the leaderboard, and which reports raw accuracy where lm-eval
-reports the length-normalised figure by default — so this belongs in a column
-of its own, not beside a published score. And 300 tasks gives ±5 points, which
-is honest but wide; the number distinguishes "the model works" from "the model
-is broken", not one good model from another.
+⚠️ **Caveats, and they are worse than "not the same numbers".** Read from the
+scorer's own source rather than taken on trust:
+
+- `hellaswag_score()` is labelled **`acc_norm`** but normalises the ending
+  log-probability by **token count**; lm-eval normalises by **character
+  length**. Same name, two different quantities, and the gap is
+  tokeniser-dependent. An earlier version of this document said we report raw
+  `acc` — that was wrong in a way that would have understated the
+  incomparability.
+- Its preprocessing is pinned to a **2023-era harness commit** (`df3da98`), and
+  the source itself says all 10,042 tasks should be used "to keep the results
+  standardized like other implementations". Our 300 is below what the author
+  considered sufficient, drawn with a hardcoded seed (`std::mt19937 rng(1)`).
+- Winogrande is worse: it reads a **custom CSV** rather than
+  `allenai/winogrande`, and carries an in-source
+  `// FIXME: this uses the wrong first logits when not skipping the choice
+  word`. lm-eval's winogrande has no `acc_norm` at all.
+
+So the honest column header is
+`HellaSwag (llama.cpp acc_norm — token-normalised, 300-task subset, seed=1)`,
+with one caption sentence saying these are not leaderboard-comparable and why.
+And 300 tasks gives ±5 points: the figure distinguishes "the model works" from
+"the model is broken", not one good model from another.
+
+**The metric to move to is not a better accuracy — it is KL divergence.**
+*Accuracy is Not All You Need* (arXiv 2407.09141, NeurIPS 2024) shows compressed
+models are behaviourally different from their baseline even at equal accuracy,
+and argues for KL divergence and token *flips* instead. llama.cpp already
+computes both: `--kl-divergence` reports mean KLD, mean Δp and same-top-p%, and
+its own README states the reading rule that matches this project's argument —
+symmetric percentiles mean the quantization is adding noise, while negative
+values larger than positive means the model is genuinely worse.
 
 **Where that sits.** Scored with the *same tool and protocol*, a modern MoE
 (Qwen3.5-35B-A3B) holds 83.0% at ~8 bpw, 81.0% at ~2.8, and 80.3% at ~2.6. We
