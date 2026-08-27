@@ -114,6 +114,44 @@ it to a single AUC. Note also that we measure in **probability** space while
 that paper measures in **logit** space — a difference to state explicitly
 rather than let a reader discover.
 
+#### What is ours in that number, precisely
+
+Three independent sweeps of ~110 papers found no median, percentile, histogram
+or CDF of the top-k boundary gap anywhere. But the *quantity* is defined twice
+and never measured, so the claim must be the measurement, not the concept:
+
+- **ReMoE (arXiv 2605.27081), Appendix C.2**, "Top-K Stability Under a
+  Probability Margin", defines **γ = q_(K) − q_(K+1)** on post-softmax
+  probabilities — our exact quantity, in our exact space, at our exact
+  boundary. It appears only inside a stability lemma and its proof, as an
+  unmeasured premise.
+- **arXiv 2608.11212** names the same thing in *logit* space ("weakest-selected
+  minus strongest-unselected") and reduces it to a single detector AUC (0.772).
+- **arXiv 2602.02443, Fig. 2(c)** gives a token-*averaged* mean curve over
+  ranks on a 128-expert model.
+
+So the field has the concept, the name and the mean, and lacks the
+distribution — which is the part that matters, because a mean gap on a skewed
+distribution is not the median and cannot tell you that half of all tokens sit
+at 0.0003. The honest sentence is *"ReMoE assumes γ is nontrivial; we measure
+it, and the median is 0.0003"*. **"We introduce the boundary margin" would be
+false.**
+
+⚠️ **And someone said the qualitative half of it in public seven days ago.**
+sglang PR #35916 (2026-08-21), on the same 256-expert top-8 topology: *"adjacent
+expert scores routinely sit within one bf16 ULP, so the narrower store changes
+which experts run — a different answer, not a small numeric difference."* It
+reports flip rates only (0.4-2.7% of tokens) on **synthetic** weights, and its
+author writes that a real comparison would be stronger but they lack the
+hardware for it. Our measurement is precisely what that PR is missing. Cite it,
+and move.
+
+⚠️ One reported opportunity **did not survive checking**: a brief suggested
+arXiv 2608.07911 had published per-request traces carrying a `margin` field,
+making a second-model cross-check "one numpy line away". The Zenodo record
+holds only the manuscript and two metadata files, and the repository is 3 MB of
+tooling. The traces are not published as data.
+
 ### Where the damage lives — a narrow mountain, not an accumulation
 
 The correction enabled on **one layer at a time**, 35B model, 12 chunks:
