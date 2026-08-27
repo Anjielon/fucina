@@ -93,6 +93,63 @@ gap between the 8th and 9th ranked expert is **0.0003**, against a mean
 per-expert probability of 1/256 = 0.0039 — the top-k cutoff sits in a gap about
 ten times narrower than an average expert's share.
 
+### Where the damage lives — a narrow mountain, not an accumulation
+
+The correction enabled on **one layer at a time**, 35B model, 12 chunks:
+
+| layer | perplexity | | layer | perplexity |
+|---|---|---|---|---|
+| off | 8.7204 | | 25 | **22.5109** |
+| 0 | **10.9524** | | 30 | **8.6860** ← better than off |
+| 5 | 8.7277 | | 35 | 8.7743 |
+| 10 | 8.8125 | | 39 | 8.7370 |
+| 15 | **20.1161** | | | |
+| 20 | **37.8030** | | | |
+
+The damage is a narrow peak centred on layer 20, plus a secondary bump on layer
+0, and nothing anywhere else. Band 20-39 measures 37.6144 — indistinguishable
+from layer 20 alone, so the other nineteen layers contribute nothing.
+
+This falsifies the natural reading of the routing result. We predicted damage
+*decreasing* with depth, since a deeper layer has fewer downstream routers left
+to disturb. Layer 5 has thirty-five below it and costs 0.007.
+
+By band:
+
+| band | perplexity | |
+|---|---|---|
+| off | 8.7204 | reference |
+| 1-12 | 9.0246 | |
+| 13-27 | 25.3425 | the mountain |
+| 16-24 | 19.0623 | its core |
+| 19-21 | 10.0830 | |
+| 28-39 | 8.7077 | |
+| **30-39** | **8.3576** | **best, on a quarter of the layers** |
+
+### Perturbations cancel instead of accumulating
+
+The result we cannot yet explain, and the sharpest one:
+
+| | perplexity |
+|---|---|
+| layer 20 alone | **37.8030** |
+| layers 19-21 | **10.0830** |
+| all 40 layers | **10.9106** |
+
+Perturbing the two neighbours of the worst layer removes three quarters of its
+damage. Perturbing everything is three and a half times better than perturbing
+one thing. **Adding error reduces damage**, reproducibly — every figure here
+repeats to four decimals across runs.
+
+That is the signature of a normalisation absorbing a change that is *consistent*
+across depth while an isolated one stands out. It also revives, at layer
+granularity, an explanation that was refuted at expert granularity: the
+correction makes hot experts about 9.3% louder (projection factor 0.882 →
+0.964), so one louder layer is an anomaly and forty louder layers are a
+constant. The prediction that separates it from the refuted version is sharp —
+scale compensation must help *a lot* on layer 20 alone and *little* on all
+layers — and is under measurement.
+
 ### Does the drift move toward the original, or away?
 
 Both configurations compared against the **source checkpoint** the model was
