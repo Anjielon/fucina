@@ -142,6 +142,31 @@ Two rules: **date your artefacts against your fixes before re-measuring them**,
 and **a test bench built before a fix is not a test bench** — it must be rebuilt
 with the corrected tool, or every result it produces carries the old defect.
 
+The same check then explained the main model too, and it is worth following
+because the conclusion inverted twice:
+
+    397B model forged     26/08 18:59
+    small twin forged     26/08 22:38
+    joint-pair fix        26/08 23:34
+
+**Both** predate the fix — the large one by four and a half hours. So both carry
+the orphaned pair, and the second plane degrades both: 9.46 → 12.11 on the twin,
+6.1845 → 7.1871 on the 397B (11.5 sigma, no test needed). Two different models,
+same direction, same magnitude relative to their baselines.
+
+What the pre-fix forge actually wrote is the useful part: every expert got the
+*dedicated* single-plane quantization (the good one, 28.13%), and the hot ones
+additionally got a plane-2 belonging to the *joint* pair. So the shipped file is
+a **well-made single-plane model carrying 4.1 GiB of dead weight** that actively
+hurts when switched on. That is why disabling the plane is not a fallback here —
+it is the correct configuration for this file, and stripping the `*_exps2`
+tensors recovers 4.1 GiB at exactly zero quality cost.
+
+The methodological point: we had a prior in-file verification that appeared to
+show the pair reconstructing the source well. It could not be reproduced, and
+the date evidence is both simpler and stronger. **When a measurement you cannot
+re-run disagrees with a provenance check you can, trust the provenance.**
+
 ## The forensic method that found bug #3
 
 When the model still failed after the file was proven correct, the search
