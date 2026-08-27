@@ -131,7 +131,14 @@ The obvious third point is a model with a **different architecture**, not just
 a different size: 128 experts across 94 layers instead of 256-512 across 41-60.
 Same routing mechanism, very different shape — which is exactly what
 distinguishes "a property of this family" from "a property of mixtures". The
-forge would need one run; nothing else changes.
+forge would need one run — **and one engine change that is easy to miss.** The
+second-plane tensors are declared once per architecture, in that architecture's
+model file. A different family does not load them: the forge would write a
+correct file and the engine would ignore it in silence, so the measurement would
+read "no difference" when the truth is "never loaded". Three lines, copied from
+the existing architecture, but they have to be written before the run. Same
+failure shape as the environment switches earlier here — an absence of effect
+that looks like a finding.
 
 **Perplexity and five questions are not a downstream evaluation.** Every
 comparable paper pairs perplexity with a task suite — commonsense (PIQA, ARC,
