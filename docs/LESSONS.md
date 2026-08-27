@@ -433,6 +433,15 @@ the projection coefficient, does not discuss shrinkage, and treats every expert
 uniformly, so it does not preempt either result; it is prior art to cite, not
 to be surprised by later.
 
+It does, however, contain an independent observation that supports the same
+conclusion from another angle. Its constrained ("tied") variant has *higher*
+weight-reconstruction error yet scores **86 against 84** on an MMLU subset
+versus a Q4_K baseline — what the author calls "a measured dissociation between
+proxy metrics and reference fidelity". Two projects, different mechanisms, same
+lesson: **per-weight reconstruction error is not the objective.** We can offer
+a mechanism for one case of it — scale consistency across the mixture — where
+that paper reports the dissociation without explaining it.
+
 ## On unified memory, VRAM and RAM are one pool — and the watchdog does not warn
 
 Running a benchmark on the 84 GiB model and a CPU-side activation capture at
