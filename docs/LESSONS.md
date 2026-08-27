@@ -569,6 +569,50 @@ number is the most persuasive result a broken experiment can produce, and it is
 the *third* time in this project that an absence of effect nearly entered the
 record as a finding.
 
+### The scale explanation, refuted a second time at a different granularity
+
+The cancellation above has an obvious candidate: the correction makes hot
+experts about 9.3% louder, so one louder layer is an anomaly among thirty-nine
+normal ones while forty louder layers are a constant that RMSNorm absorbs. The
+same explanation refuted at *expert* granularity, reborn at *layer* granularity
+— and this time it makes a sharp separating prediction. Scale compensation must
+help **a lot** where the change is anomalous (one layer) and **little** where it
+is uniform (all layers).
+
+Measured:
+
+| configuration | perplexity | with compensation |
+|---|---|---|
+| layer 20 alone | 37.8030 | **37.6701** (×1.093) · **37.6473** (×1.045) |
+| all 40 layers | 10.9106 | **11.6068** |
+
+It removes 0.13 of 29 points of damage where it was supposed to remove most of
+them — half a percent — and it *harms* the uniform case. Inert where predicted
+decisive, harmful where predicted neutral. **Refuted.** The prediction was
+written down before the run, which is the only reason the refutation is worth
+anything.
+
+So the cancellation is real, reproducible to four decimals, and unexplained.
+The next candidate is that routing mediates it — testable by counting route
+changes per configuration and asking whether the count orders the
+configurations the way perplexity does. That test does not need a new build and
+is running.
+
+### A pattern that matches the process running it
+
+Killing a helper script with `pkill -f coda_notte2` also killed the monitor
+watching the run *and* the shell issuing the command — both had that string in
+their own command lines, because both mentioned the script they were
+supervising. `pgrep`/`pkill` match the full command line of every process,
+including the one you are typing.
+
+Write the pattern so it cannot match itself: `pgrep -f "[c]oda_notte2"`. The
+bracket makes the regex match the literal text while the pattern's own source
+text — which contains the brackets — does not match it. Costs one character.
+Nothing was lost here because the measurement processes did not carry the name,
+but the supervision died silently, which is the worse half of the failure: the
+job kept running with nobody watching the memory ceiling.
+
 ### Why c and the error are the same number
 
 The shrinkage is not a defect to be tuned away; it is the error, seen from the
