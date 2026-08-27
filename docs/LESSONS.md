@@ -541,6 +541,15 @@ Two rules:
 1. **One large job at a time, enforced by a gate rather than by intention.**
    The gate takes the requested size, reads the actual free pool, adds a fixed
    margin, and exits non-zero. Wire it as the first line of every heavy script.
+
+   That gate was not enough, and the second failure is instructive. A benchmark
+   run passed it cleanly — 95 GiB free, 84 requested — and then walked the
+   *unified* total to 113 GiB of 128 with 9 GiB of swap in use, arriving back at
+   the same precursor. A precondition check answers "is there room to start?";
+   it says nothing about what the job grows into. The gate now also reads the
+   combined VRAM + RAM figure and the swap in use, and a watcher stops the job
+   if either crosses a ceiling while it runs. **Check the budget before, and the
+   trajectory during.**
 2. **A journal that stops mid-line is evidence, not missing evidence.** A clean
    OOM leaves a kill message; a watchdog reset leaves nothing. If the last line
    is ordinary and the next is a boot banner, stop looking for the error and
