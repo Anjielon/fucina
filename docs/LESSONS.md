@@ -377,10 +377,49 @@ worse, and why `down` suffers most: its output goes straight into the residual
 stream, while `up` and `gate` pass through a non-linearity first, which
 compresses the mismatch.
 
-The design consequence is sharp: **a partial-precision scheme in a MoE must
-either cover every expert or restore the missing scale on the ones it skips.**
-Accuracy per expert is the wrong objective; consistency across the mixture is
-the right one.
+**⚠️ This explanation was then tested and largely refuted — read on before
+using it.** The mismatch is real and measurable, but it accounts for about a
+twentieth of the damage. What follows is kept because the *measurements* stand
+and the conclusion they support is stronger than the explanation we first
+attached to them.
+
+Three independent tests of the scale-mismatch story:
+
+- **Mixture simulation, small model** (9.5% mismatch): the weighted sum of
+  eight experts is *better* with the second plane on the hot ones —
+  44.6% → 42.2% output error. Mismatch does not hurt the mixture.
+- **Mixture simulation, 397B** (16% mismatch, its cold experts sit at c = 0.814
+  against 0.865 hot, so it is imbalanced *before* the plane is enabled):
+  51.4% → 48.9%. Still better.
+- **Direct compensation in the engine**, multiplying cold experts by
+  0.964/0.882 to equalise the volumes: perplexity 11.2405 → 11.1027 against a
+  reference of 8.7204. Real, and worth about 5% of the gap.
+
+So the imbalance exists, costs something, and is not the cause.
+
+### What we can say, and what we cannot
+
+Measured at four levels, the second plane **improves** the weights (46.2% →
+22.3%), the single expert's output under real activations, and the weighted sum
+of eight experts — and **degrades** the model end to end (6.1845 → 6.3509 on
+the 397B with `up`+`gate`; 8.7204 → 11.2405 on the small model with `down`).
+
+We do not have an explanation, and seven candidates have been refuted by
+measurement rather than argued away. What we do have is a result that another
+project reached independently by another route: Tied Trit-Planes
+(arXiv 2608.08910) reports its *higher* reconstruction-error variant scoring
+**86 against 84** on MMLU, calling it "a measured dissociation between proxy
+metrics and reference fidelity".
+
+Stated plainly: **being closer to the original model does not make a better
+model.** Reconstruction fidelity — in weights, in layer outputs, or in the
+expert mixture — is not the objective, and optimising it can move the model the
+wrong way. The only instrument that decides is the model itself.
+
+The practical consequences hold regardless of the missing explanation: on the
+397B the second plane stays off, and the shipped build has those tensors
+stripped; on the smaller model `up` + `gate` genuinely help (8.7204 → 8.3493)
+and `down` genuinely does not.
 
 ### Why c and the error are the same number
 
