@@ -14,6 +14,18 @@ the possibility that a future engine switches the broken correction back on.
     strip_tensors.py in.gguf out.gguf --match _exps2 --drop-key expert_count2
     strip_tensors.py in.gguf out.gguf --match _exps2 --dry-run
 
+The second case this exists for: a correction that helps on some layers and
+harms on others. `--keep-layers` removes the matched tensors *except* on the
+named layers, which lets a measured layer profile be baked into the file:
+
+    strip_tensors.py in.gguf out.gguf --match _exps2 --keep-layers 30-39
+
+⚠️ With `--keep-layers`, do **not** drop the declaring metadata key — the
+surviving layers still need it. A model where only some layers carry the
+optional family is well-formed as long as the engine treats a missing tensor as
+"this layer has no correction" rather than as an error; verify that on a small
+model before spending a large run on it.
+
 Every surviving tensor is copied byte-for-byte; nothing is re-quantized. The
 source is opened read-only and never modified.
 
@@ -23,6 +35,7 @@ the metadata key that declares the optional family in the same pass (here
 """
 from __future__ import annotations
 import argparse
+import re
 import sys
 import time
 from pathlib import Path
@@ -37,11 +50,44 @@ def log(*a) -> None:
     print(f"[{time.strftime('%H:%M:%S')}]", *a, flush=True)
 
 
-def plan_strip(src: str, match: str) -> tuple[list[tuple[str, int]], int, int]:
+def parse_layers(spec: str) -> set[int]:
+    """"30-39", "0,5,7", "30-39,44" -> the set of layer indices."""
+    out: set[int] = set()
+    for part in spec.split(","):
+        part = part.strip()
+        if not part:
+            continue
+        if "-" in part:
+            a, b = part.split("-", 1)
+            out.update(range(int(a), int(b) + 1))
+        else:
+            out.add(int(part))
+    return out
+
+
+def layer_of(name: str) -> int | None:
+    m = re.match(r"blk\.(\d+)\.", name)
+    return int(m.group(1)) if m else None
+
+
+def should_remove(name: str, match: str, keep_layers: set[int] | None) -> bool:
+    if match not in name:
+        return False
+    if not keep_layers:
+        return True
+    layer = layer_of(name)
+    # a matched tensor outside any layer block is removed: keeping it would
+    # leave a global tensor declaring a family most layers no longer have
+    return layer is None or layer not in keep_layers
+
+
+def plan_strip(src: str, match: str,
+               keep_layers: set[int] | None = None
+               ) -> tuple[list[tuple[str, int]], int, int]:
     """(name, bytes) of the tensors that would be removed, plus kept/removed totals."""
     removed, kept_bytes, removed_bytes = [], 0, 0
     for t in GGUFReader(src).tensors:
-        if match in t.name:
+        if should_remove(t.name, match, keep_layers):
             removed.append((t.name, int(t.n_bytes)))
             removed_bytes += int(t.n_bytes)
         else:
@@ -49,7 +95,8 @@ def plan_strip(src: str, match: str) -> tuple[list[tuple[str, int]], int, int]:
     return removed, kept_bytes, removed_bytes
 
 
-def strip(src: str, dst: str, match: str, drop_keys: list[str]) -> None:
+def strip(src: str, dst: str, match: str, drop_keys: list[str],
+          keep_layers: set[int] | None = None) -> None:
     reader = GGUFReader(src)
     arch = next((str(bytes(f.parts[-1]), "utf8")
                  for f in reader.fields.values() if f.name.endswith(".architecture")), None)
@@ -70,8 +117,13 @@ def strip(src: str, dst: str, match: str, drop_keys: list[str]) -> None:
     if dropped_keys:
         log(f"metadata keys dropped: {', '.join(dropped_keys)}")
 
-    keep = [t for t in reader.tensors if match not in t.name]
+    keep = [t for t in reader.tensors
+            if not should_remove(t.name, match, keep_layers)]
     log(f"keeping {len(keep)} tensors, removing {len(reader.tensors) - len(keep)}")
+    if keep_layers:
+        survivors = sorted({layer_of(t.name) for t in keep
+                            if match in t.name} - {None})
+        log(f"'{match}' survives on layers: {survivors}")
 
     for t in keep:                                  # declare every tensor first
         d = np.asarray(t.data)
@@ -99,15 +151,24 @@ if __name__ == "__main__":
     ap.add_argument("--match", required=True, help="substring of the tensor names to remove")
     ap.add_argument("--drop-key", action="append", default=[],
                     help="substring of a metadata key to remove (repeatable)")
+    ap.add_argument("--keep-layers", default=None,
+                    help="layers on which matched tensors SURVIVE, e.g. 30-39 "
+                         "or 0,5,30-39. Without this, every match is removed")
     ap.add_argument("--dry-run", action="store_true")
     a = ap.parse_args()
 
-    removed, kept_bytes, removed_bytes = plan_strip(a.src, a.match)
-    print(f"{len(removed)} tensors match '{a.match}'")
+    keep_layers = parse_layers(a.keep_layers) if a.keep_layers else None
+    if keep_layers and a.drop_key:
+        sys.exit("--keep-layers with --drop-key would remove the metadata key "
+                 "that the surviving layers still need. Refusing.")
+
+    removed, kept_bytes, removed_bytes = plan_strip(a.src, a.match, keep_layers)
+    print(f"{len(removed)} tensors match '{a.match}'"
+          + (f" outside layers {a.keep_layers}" if keep_layers else ""))
     for name, n in removed[:5]:
         print(f"  {name:44s} {n/2**20:9.1f} MiB")
     if len(removed) > 5:
         print(f"  ... and {len(removed)-5} more")
     print(f"kept {kept_bytes/2**30:.2f} GiB · removed {removed_bytes/2**30:.2f} GiB")
     if not a.dry_run:
-        strip(a.src, a.dst, a.match, a.drop_key)
+        strip(a.src, a.dst, a.match, a.drop_key, keep_layers)
