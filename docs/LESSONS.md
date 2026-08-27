@@ -505,6 +505,70 @@ The practical consequences hold regardless of the missing explanation: on the
 stripped; on the smaller model `up` + `gate` genuinely help (8.7204 → 8.3493)
 and `down` genuinely does not.
 
+### The candidate, measured — the routes move sideways
+
+The ninth hypothesis was tested rather than argued, and it is the first that
+survives contact with a measurement.
+
+Capture the router's own output (`ffn_moe_probs`, F32, present with the plane
+on *and* off) and recompute the top-k offline. With the correction enabled,
+**78.67% of tokens select a different set of eight experts.** The drift grows
+with depth — 0.0% at layer 0, 28.1% at layer 1, 92% by layer 20 — and 0.0% at
+layer 0 is not a disappointment but the control: that router reads the
+embedding, which no correction touches, so the number is what it must be.
+
+The boundary is thin enough to explain the sensitivity. The median probability
+gap between the 8th and 9th ranked expert is **0.0003**, against a mean
+per-expert probability of 1/256 = 0.0039 — the cutoff sits in a gap roughly ten
+times narrower than an average expert's share. Nothing has to go badly wrong
+for the set to change; it only has to move slightly.
+
+Then the question that decides between "the correction is a disturbance" and
+"the model is co-adapted to its own errors": compare both configurations
+against the **source checkpoint**, counting how many of the eight selected
+experts they hold in common with it.
+
+| | agreement with source |
+|---|---|
+| one plane | **74.36%** |
+| one plane + second | **74.33%** |
+| chance (8 of 256) | 3.12% |
+
+Layer 0 gives 100.00%; agreement decays with depth and the second plane is
+ahead at layers 10, 20 and 30, behind at 1, 2, 5 and 39 — no consistent
+direction.
+
+**The correction reshuffles 78.67% of expert sets and buys back nothing.** It
+pays the full price of routing perturbation for no gain in routing fidelity.
+That is the first account consistent with every earlier measurement at once:
+weight error halves, single-expert output error halves, and the model still
+degrades, because a mixture does not need accurate experts so much as a routing
+pattern the rest of it agrees with.
+
+⚠️ **Two traps on the way to that number, both of which produced a confident
+wrong answer first.**
+
+*Comparing indices across a permutation.* The forge reorders experts hot-first,
+so index *i* names different experts in the two files. Compared raw, agreement
+is 4.4% — against a 3.12% chance floor, i.e. indistinguishable from unrelated —
+and it reads persuasively as "ternary quantization destroys routing entirely".
+The fix is not to reconstruct the permutation from the forge's source but to
+recover it from the data: the router's own rows are permuted alongside the
+experts, so matching rows between the two files by correlation recovers it
+exactly (median match **1.0000**, bijective on all 41 layers). The script now
+refuses to print any routing figure if that match degrades, because a bad
+alignment returns noise wearing the costume of a measurement.
+
+*A control that passes for the wrong reason.* The sharpest test available was
+"enable the plane on the last layer only" — it has no downstream router to
+disturb, so if routing is the mechanism it should be harmless. It measured
+**exactly** the reference perplexity, to four decimals. That looked like a
+clean confirmation. It was a tautology: the second plane covers layers 0–39,
+and the model has 41. There was nothing on layer 40 to switch on. An identical
+number is the most persuasive result a broken experiment can produce, and it is
+the *third* time in this project that an absence of effect nearly entered the
+record as a finding.
+
 ### Why c and the error are the same number
 
 The shrinkage is not a defect to be tuned away; it is the error, seen from the

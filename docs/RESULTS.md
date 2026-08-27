@@ -64,6 +64,68 @@ emits: 44.6% → 42.2% on the 35B (9.5% scale mismatch) and 51.4% → 48.9% on t
 **So fidelity improves at every level we can measure, and the model gets
 worse.** See [LESSONS](LESSONS.md).
 
+## Expert routing
+
+The measurement that eight fidelity metrics could not make, because all of them
+compared the *same* experts in both configurations. This one asks **which**
+experts get chosen.
+
+Captured from `ffn_moe_probs` — the router's own output, F32 and present in
+both configurations — with the top-k recomputed offline. 1,883 tokens, 35B
+model, 40 layers carrying a second plane.
+
+| | tokens whose expert *set* changes |
+|---|---|
+| layer 0 | **0.0%** |
+| layer 1 | 28.1% |
+| layer 5 | 65.9% |
+| layer 10 | 70.8% |
+| layer 20 | 92.2% |
+| layer 30 | 91.8% |
+| **all layers** | **78.67%** |
+| first third / last third | 57.90% / 89.67% |
+
+Layer 0 at exactly 0.0% is the control: its router reads the embedding, which
+no correction touches. The number is what it must be, so the capture is sound.
+
+The boundary is thin enough to explain the sensitivity. The median probability
+gap between the 8th and 9th ranked expert is **0.0003**, against a mean
+per-expert probability of 1/256 = 0.0039 — the top-k cutoff sits in a gap about
+ten times narrower than an average expert's share.
+
+### Does the drift move toward the original, or away?
+
+Both configurations compared against the **source checkpoint** the model was
+forged from, layer by layer, as the fraction of the 8 selected experts held in
+common.
+
+| | agreement with source |
+|---|---|
+| one plane | **74.36%** |
+| one plane + second | **74.33%** |
+| chance (8 of 256) | 3.12% |
+
+Layer 0 gives 100.00%, again as it must. Agreement decays with depth — 91.2% at
+layer 1, 65.6% at layer 20 — and the second plane does not consistently move it
+in either direction: it is ahead at layers 10, 20 and 30, behind at 1, 2, 5 and
+39.
+
+**So the correction reshuffles 78.67% of expert sets and buys back nothing.**
+It pays the full price of routing perturbation for no gain in routing fidelity.
+That is the first account consistent with every earlier measurement: weight
+error halves, single-expert output error halves, and the model still degrades,
+because what the model needs is not accurate experts but a routing pattern its
+remaining components agree with.
+
+⚠️ This required aligning expert indices first. The forge reorders experts
+hot-first, so index *i* means different things in the two files; comparing them
+raw gives 4.4% agreement — indistinguishable from the 3.12% chance floor — and
+reads convincingly as "the routes are unrelated". The permutation is recovered
+from the data rather than from the forge's source: the router's own rows are
+permuted alongside the experts, so matching rows between the two files by
+correlation recovers it exactly (median match **1.0000**, bijective on all 41
+layers). The script refuses to print any routing number if that match degrades.
+
 ## The projection factor
 
 `c = ⟨Ŵ,W⟩/⟨W,W⟩`, the fraction of weight energy retained.
