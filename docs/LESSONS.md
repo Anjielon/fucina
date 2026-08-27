@@ -464,10 +464,41 @@ objective that produced it is valid.
 
 Neither is confirmed here. What makes them different from the eight we refuted
 is that they explain **why our instruments read the way they did**, rather than
-only predicting the outcome — which is the shape a real explanation has. The
-test that would settle the first is cheap and does not need a re-forge: count
-how many expert selections differ between the two configurations, layer by
-layer, and see whether the divergence grows with depth.
+only predicting the outcome — which is the shape a real explanation has.
+
+There is a published method that settles it properly. **Route-Mediated
+Fraction** (arXiv 2608.11212) is a four-run causal intervention that separates
+"the experts are wrong" from "the wrong experts were chosen":
+
+| run | expert weights | routing |
+|---|---|---|
+| 1 | original | free |
+| 2 | quantized | **pinned** to the original model's choices |
+| 3 | quantized | free |
+| 4 | original | **transplanted** from the quantized model |
+
+`RMF = excess_route / excess_total`, in nats. The authors measure **RMF ≈ 0.31**
+on a 7B MoE at 4-bit — a third of the damage flows through routing, two thirds
+through the expert values directly. Pinning is implementable without a re-forge:
+record the routing with the plane off, replay it with the plane on.
+
+And if routing does dominate, there is a correction that fits a model too large
+to fine-tune. **HARC** (arXiv 2606.03391) realigns routers in **closed form** by
+conjugate gradient on forward-pass statistics — no backpropagation, no labels —
+in 36 minutes for 16 layers, with a partial version recovering 36% of the gain
+from the last four layers alone in nine.
+
+Two findings from the same literature that save wasted effort:
+
+- **Do not try to detect and revert suspicious flips.** A local margin
+  heuristic predicts *whether* a flip happened at AUC 0.772 but whether it was
+  *harmful* at AUC 0.490 — chance. Without the full-precision model as an
+  oracle at inference, harmful and beneficial flips are indistinguishable.
+- **Never quantize the router**, which is universal practice and already our
+  configuration. The drift does not originate there: quantized experts perturb
+  the residual stream, and every *downstream* router reads it. As
+  arXiv 2604.17837 puts it, the residual stream is simultaneously the control
+  signal and the content — correcting the content corrupts the control.
 
 The practical consequences hold regardless of the missing explanation: on the
 397B the second plane stays off, and the shipped build has those tensors
