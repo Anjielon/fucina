@@ -122,9 +122,15 @@ Written down before anyone else has to point it out.
 
 **Two models is not enough for the mixture result.** Recent MoE-quantization
 papers use three or four base models; we have one 397B and one 35B, and both
-were forged by the same pipeline. A reader is entitled to ask whether the
-effect is a property of these two checkpoints. A third model of a different
-architecture and scale is the first thing this needs.
+are the *same architecture family* (256 and 512 experts, 41 and 60 layers,
+identical tokenizer at 248,320 tokens) forged by the same pipeline. A reader is
+entitled to ask whether the effect is a property of these two checkpoints.
+
+The obvious third point is a model with a **different architecture**, not just
+a different size: 128 experts across 94 layers instead of 256-512 across 41-60.
+Same routing mechanism, very different shape — which is exactly what
+distinguishes "a property of this family" from "a property of mixtures". The
+forge would need one run; nothing else changes.
 
 **Perplexity and five questions are not a downstream evaluation.** Every
 comparable paper pairs perplexity with a task suite — commonsense (PIQA, ARC,
