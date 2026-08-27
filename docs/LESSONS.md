@@ -195,6 +195,60 @@ that dominates the absolute figure. Use it whenever the expected effect is
 small in either direction — including when you are trying to *reject* a
 technique.
 
+### The instrument was already in the toolchain
+
+We hand-rolled a per-chunk sign test before discovering that
+`llama-perplexity` already does the paired comparison properly:
+
+    llama-perplexity --kl-divergence-base baseline.kld   # once, on the reference
+    llama-perplexity --kl-divergence-base baseline.kld --kl-divergence   # each candidate
+
+On the same chunks it reports the **perplexity ratio with uncertainty
+propagated from the logits** — the paired estimator, not two independent error
+bars — plus KL divergence, top-1 agreement, and mean/RMS/percentiles of Δp.
+The reference does not have to be full precision: pointing it at the previous
+build answers "did this change help?" directly.
+
+Two statistical points worth stating plainly, because we got the first wrong:
+
+1. **Two independent ± values are the wrong error bar for a comparison.** The
+   variance of a paired difference is `Var(A) + Var(B) − 2·Cov(A,B)`, and when
+   both models read the same text that covariance is large and positive. The
+   correct interval on the difference can be several times tighter — for free,
+   from data already collected. This is the common-random-numbers principle,
+   and the paired bootstrap that formalises it has been standard in machine
+   translation evaluation since Koehn (2004).
+2. **Stratify rather than enlarge.** If you already know per-chunk difficulty
+   from the baseline run, stratified selection has provably lower variance than
+   taking the next N chunks in file order — again at no extra compute.
+
+### And know where even the better instrument goes blind
+
+`Displacement Is Not Direction` (arXiv 2606.19558) evaluated 28 quantization
+variants of Qwen3.6-35B-A3B and 41 of Devstral-Small-24B. KL divergence tracks
+downstream score well across the *whole* damage range (ρ ≈ −0.72 / −0.86), and
+**loses all correlation near the baseline** (ρ ≈ 0.00 / −0.24, n.s.) — the
+"silent zone". The reason is structural: KL measures the *volume* of
+disagreement, not its *direction*, and near baseline the helpful and harmful
+flips cancel. So the scalar will not adjudicate repair-sized effects either;
+what does is the Δp decomposition, which separates symmetric noise from skewed
+damage.
+
+Two published reminders that perplexity is the wrong instrument in a second,
+independent way — it can move in the *right* direction while real damage
+accumulates:
+
+- Gemma-2-2B at INT7: perplexity **improves** while 18.7% of active
+  sparse-autoencoder features are damaged; at INT6 only 51.3% survive
+  (arXiv 2606.03002).
+- Models matched on accuracy after compression can differ sharply in **flip
+  rate** and in generative quality (arXiv 2407.09141) — the average over
+  thousands of mostly-fine tokens hides a small number of catastrophic ones.
+
+The practical rule: report the paired ratio and the Δp decomposition, keep
+perplexity as context, and never let a single scalar close a question on its
+own.
+
 ## The standard of proof for a rejection
 
 Rejecting a technique is a scientific claim and carries the same burden as

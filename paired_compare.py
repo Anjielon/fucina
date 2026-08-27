@@ -12,6 +12,16 @@ of 30, that is decisive even when the mean difference is small.
 
     paired_compare.py run_a.log run_b.log
 
+Prefer llama.cpp's own paired machinery when you can afford the one-time
+baseline dump — it propagates the uncertainty from the logits instead of
+reconstructing it from the printed running estimates, and it reports the Δp
+decomposition that tells noise from damage:
+
+    llama-perplexity --kl-divergence-base baseline.kld
+    llama-perplexity --kl-divergence-base baseline.kld --kl-divergence
+
+This script exists for the case where you have only the logs.
+
 The logs are `llama-perplexity` output over the *same* corpus and chunk count.
 The script reads the running estimates, recovers the per-chunk values, and
 reports the sign test — how often one model wins — alongside the mean gap.
