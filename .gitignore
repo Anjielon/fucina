@@ -1,4 +1,6 @@
 __pycache__/
-fucina-lavoro/
+*.pyc
+forge-work/
+*.log
 *.gguf
 *.npy
