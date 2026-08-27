@@ -93,7 +93,8 @@ REGISTRY = [
 
  # ── RIPARAZIONE (post-forgia, senza toccare i ternari) ────────────────
  Lever("router_selection_correction", "repair", 0, 8,
-      {"authors": "selection bias is the PRINCIPAL factor in low-bit MoE"},
+      {"authors": "selection bias is the PRINCIPAL factor in low-bit MoE",
+       "ornith397": "REJECTED: worse at 35, 10 and 3 layers (PPL 6.18 -> 6.21). A quantized model's routers are coherent with its OWN activations"},
       "top-10 overlap before/after, teacher vs quantized activations", "EAC-MoE 2508.01625"),
  Lever("norm_tweaking", "repair", 0, 12,
       {"authors": "GLM-130B W2 quayes-fp; ⛔ Iters=1 TASSATIVO (5 = crollo)"},
