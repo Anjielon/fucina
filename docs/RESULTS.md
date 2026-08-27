@@ -114,3 +114,40 @@ healthy model. Below two bits the sampling recipe is part of the measurement.
 | forge, 397B | 7.6 h end-to-end on one consumer GPU, fed from a NAS at ~50 MB/s |
 | decode | ~10 tok/s, fully resident in 96 GiB of unified memory |
 | stripping the second plane | 84.00 GiB written in ~8 minutes |
+
+
+## What this evidence does not yet support
+
+Written down before anyone else has to point it out.
+
+**Two models is not enough for the mixture result.** Recent MoE-quantization
+papers use three or four base models; we have one 397B and one 35B, and both
+were forged by the same pipeline. A reader is entitled to ask whether the
+effect is a property of these two checkpoints. A third model of a different
+architecture and scale is the first thing this needs.
+
+**Perplexity and five questions are not a downstream evaluation.** Every
+comparable paper pairs perplexity with a task suite — commonsense (PIQA, ARC,
+HellaSwag, WinoGrande), knowledge (MMLU), reasoning (GSM8K). HellaSwag and
+WinoGrande runs are in progress; the rest is not done.
+
+**The obvious alternative explanation has not been excluded.** The field's
+default account of unexpected MoE quantization damage is routing shift —
+rank flips at the top-k boundary. Our own leading hypothesis *is* routing
+shift, which means the correct framing is not "an anomaly with routing held
+fixed" but "routing-mediated damage caused by a *correction* rather than by
+quantization". Either way it has to be measured, not asserted: count the
+selection changes layer by layer, and compute the Route-Mediated Fraction
+(arXiv 2608.11212).
+
+**Ablations a reader would rightly demand**, none of which are done: vary
+*which* experts receive the extra precision (random against
+importance-ranked), hold the calibration set fixed across configurations,
+sweep more than one bit budget, and plot local proxy error against task
+accuracy across many configurations rather than comparing two points.
+
+**On the projection identity.** `c = 1 − ε²` follows from the orthogonality
+principle, which is decades-old vector-quantization theory. The contribution
+is measuring it on ternary LLM weights and drawing the consequence — not
+deriving it. It belongs as a lemma inside the pipeline work, not as a claim of
+its own.
