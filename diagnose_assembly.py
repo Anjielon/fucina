@@ -1,6 +1,24 @@
-"""Quale tensore del blocco rimontato è sbagliato? Confronto con il MAESTRO.
-Per ogni tensore: correlazione fra la versione dal GGUF (dequantizzata,
-riorientata) e quella bf16 del NAS. Un tensore montato male ha correlazione ~0."""
+"""DIAGNOSE ASSEMBLY — which tensor did I load wrong?
+
+Rebuilding a GGUF inside transformers (needed for teacher-student repairs) is
+error-prone: axis order, expert ordering, flattened unit axes, log/exp
+conventions. When the rebuilt block produces an output 100x too large, hunting
+tensor by tensor takes hours.
+
+This does it in one pass: for every tensor, correlate the rebuilt version
+against the original bf16 weights. Correlation near zero = loaded wrong, and
+you see exactly which one. Four traps it caught on a 397B model:
+
+  1. axis order reversed (GGUF stores [in, out], transformers wants [out, in];
+     experts are [in, out, E] vs [E, out, in])
+  2. experts reordered hot-first by our own forge — slot 0 was expert 108
+  3. unit axes omitted by the GGUF (conv1d 3D->2D, gates 2D->1D)
+  4. A_log stored already exponentiated
+
+Caveat: some tensors legitimately differ by an internal head reordering done
+by the converter. If scale and value histogram match but point-wise error is
+huge, you are comparing a permutation, not a defect (see docs section 38.1).
+"""
 import sys, json
 from pathlib import Path
 import numpy as np, torch

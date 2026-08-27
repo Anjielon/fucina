@@ -32,7 +32,7 @@ if [ ! -s $D/hessiane/H_00.npy ]; then
     $BL/bin/llama-eval-callback -m $D/qwen38-27b-bf16.gguf -ngl 999 -c 2048 -n 1 -f $C 2>/dev/null | tail -1
   NDIM=$(python3 -c "
 import json;print(json.load(open('$S/config.json')).get('hidden_size') or json.load(open('$S/config.json'))['text_config']['hidden_size'])")
-  NDIM=$NDIM /home/angelo/venv-catq/bin/python /home/angelo/odino-lab/fucina/costruisci_hessiane.py $D/dumps $D/hessiane 2>&1 | tail -2
+  NDIM=$NDIM /home/angelo/venv-catq/bin/python /home/angelo/odino-lab/fucina/build_hessians.py $D/dumps $D/hessiane 2>&1 | tail -2
 fi
 
 log "[4/4] FORGIA"

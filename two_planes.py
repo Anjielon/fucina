@@ -1,30 +1,19 @@
-"""Due piani ternari CONGIUNTI (PTQTP) + GPTQ — il cuore di ODINO v3.
+"""JOINT two-plane ternary quantization (PTQTP) + GPTQ.
 
-    W  ≈  d1 ⊙ T1  +  d2 ⊙ T2        con T1, T2 ∈ {-1, 0, +1}
+    W  ≈  d1 ⊙ T1  +  d2 ⊙ T2        with T1, T2 ∈ {-1, 0, +1}
 
-A 3,38 bit per peso. Misurato su un tensore vero di Ornith:
-    un piano, ingenuo        43,54%
-    due piani SEQUENZIALI    20,40%   (primo piano, poi il residuo)
-    due piani CONGIUNTI      17,26%   ← qui
-    + GPTQ                    9,36%
-    + rotazione               7,08%   ← meglio di IQ4_XS (7,60%) con l'80% dei bit
+3.38 bits per weight. Measured on a real tensor of a 397B model:
 
-⭐ PERCHE' CONGIUNTI E NON SEQUENZIALI. Sequenziale = si sceglie T1 pensando
-solo a W, poi T2 ripara. Congiunto = si scelgono INSIEME, e ogni peso puo'
-prendere uno dei NOVE valori {-(d1+d2), -d1, -(d1-d2), -d2, 0, d2, d1-d2,
-d1, d1+d2}. Con d2 libera (non d1/3) i nove livelli non sono equispaziati:
-si adattano alla forma vera della distribuzione.
+    one plane, naive            43.54%
+    two planes, SEQUENTIAL      20.40%   (first plane, then its residual)
+    two planes, JOINT           17.26%   <- this module
 
-⭐ PERCHE' IL GPTQ SI SOMMA. Il limite tasso-distorsione (33,3% a 1,585 bit)
-vale sull'errore nei PESI. Quello che conta e' ‖(W−Ŵ)X‖, l'errore sull'USCITA.
-Se le attivazioni sono anisotrope (Ornith: autovalori ~k^-0,59, MISURATO) si
-spende precisione solo dove passa il segnale, e il limite non si applica.
-GPTQ quantizza una colonna alla volta e SPINGE l'errore su quelle non ancora
-fatte, pesandolo con l'inversa di H = XXᵀ: chi viene dopo assorbe.
+The joint solution is not the sequential one refined: the two planes are
+optimized together, alternating the closed-form scales with the sign search.
 
-⚠️ Le scale sono PER BLOCCO DI 256 (formato TQ1_0), quindi si fissano prima
-   del giro GPTQ e il GPTQ lavora dentro il blocco a scala fissa — e' il
-   modo standard (group-size) di far convivere i due.
+Companion caveat, learned the hard way: the plane-1 of a joint solution is
+co-adapted to its partner. If only one plane will be stored, quantize it
+DEDICATED instead — using the joint plane-1 alone costs about 10 points.
 """
 from __future__ import annotations
 import numpy as np
@@ -125,7 +114,7 @@ def prepara_hessiana(H: np.ndarray, smorzamento: float = 0.01) -> np.ndarray:
     return np.linalg.cholesky(Hinv).T.copy()
 
 
-def gptq_due_piani(W: np.ndarray, Hchol: np.ndarray) -> tuple:
+def gptq_two_planes(W: np.ndarray, Hchol: np.ndarray) -> tuple:
     """GPTQ su blocchi da 256 con due piani congiunti.
 
     W: (n_out, n_in) · Hchol: da prepara_hessiana(H), (n_in, n_in)

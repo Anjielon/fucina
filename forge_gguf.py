@@ -1,21 +1,23 @@
-#!/usr/bin/env python3
-"""FUCINA — forgia ternaria GENERALE: da un GGUF qualsiasi (MoE) al 2-piani TQ1_0.
+"""FORGE — any GGUF MoE model to a two-plane TQ1_0 model.
 
-Generalizzazione della forgia di ODINO (26/8). Differenze dal forgia_odino:
-  - sorgente = un GGUF già quantizzato (dequant per-esperto), non i bf16 del NAS
-  - architettura PARAMETRICA: n_strati, n_esperti, hidden letti dai metadati
-  - niente lista "pescati": i tensori non-esperto si copiano TALI E QUALI
-    (la sorgente è già di qualità: Q6_K/Q8 — la leva DS4 è gratis)
-Le CORREZIONI della v3.1 sono cablate dalla nascita:
-  1. esperti riordinati CALDI-PRIMI + righe del router permutate (il motore
-     assume il prefisso 0..K-1)
-  2. i caldi tengono la COPPIA CONGIUNTA (piano-1+2 ottimizzati insieme)
-  3. verifica al confine per-strato (assert, non speranza)
+Source is an already-quantized GGUF (dequantized per expert), not the original
+bf16: the non-expert tensors are copied as they are, which keeps attention and
+embeddings at the source's quality for free.
 
-Uso:
-  forgia_gguf.py --sorgente X.gguf --uscita Y.gguf --caldi 28 \
-                 --imatrix im.gguf [--hessiane DIR]
-Il giornale di ripresa è <uscita>.giornale (indice+byte, come ODINO).
+Three corrections are wired in from birth, each one paid for in a failed run:
+  1. experts written HOT-FIRST, router rows permuted to match — the engine
+     assumes the second plane covers the expert prefix 0..K-1;
+  2. hot experts keep the JOINT plane pair (a joint plane-1 used alone loses
+     ~10 points to co-adaptation);
+  3. a per-layer boundary check: the hottest expert, rebuilt from what was
+     actually written, must match the source. An assert, not a hope.
+
+Usage:
+  forge_gguf.py --sorgente X.gguf --uscita Y.gguf --caldi 28 \
+                --imatrix im.gguf [--hessiane DIR]
+
+The resume journal is <output>.giornale (tensor index + byte offset): a crash
+costs one tensor, never the run.
 """
 from __future__ import annotations
 import argparse, sys, time
@@ -28,7 +30,7 @@ import gguf
 from gguf import GGUFReader, GGUFWriter, GGMLQuantizationType as T
 from gguf import quants as GQ
 import ternary_gpu as G
-import due_piani as D
+import two_planes as D
 from tq1_pack import pack, reorder_experts, hot_first_order
 
 def log(*a): print(f"[{time.strftime('%H:%M:%S')}]", *a, flush=True)

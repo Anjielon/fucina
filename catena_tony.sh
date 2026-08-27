@@ -21,7 +21,7 @@ fi
 
 echo "══ [3/4] Hessiane (2048 dim)"
 [ -s $D/hessiane/H_40.npy ] || NDIM=2048 /home/angelo/venv-catq/bin/python \
-  /home/angelo/odino-lab/fucina/costruisci_hessiane.py $D/dumps $D/hessiane 2>&1 | tail -3
+  /home/angelo/odino-lab/fucina/build_hessians.py $D/dumps $D/hessiane 2>&1 | tail -3
 
 echo "══ [4/4] FORGIA"
 unset HIP_VISIBLE_DEVICES ROCR_VISIBLE_DEVICES   # torch deve VEDERE la GPU

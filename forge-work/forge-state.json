@@ -1,0 +1,7 @@
+{
+ "stages_done": [
+  "inspect"
+ ],
+ "model": "prova.gguf",
+ "budget_gib": 94.0
+}
