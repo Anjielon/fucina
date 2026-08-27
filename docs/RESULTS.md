@@ -97,6 +97,26 @@ Measured on 1,883 and 15,064 samples respectively. An earlier attempt with two
 tokens produced meaningless numbers and was discarded — with n samples the
 covariance has rank at most n−1.
 
+## Standardised benchmarks
+
+Run on the stripped 84.00 GiB build with llama.cpp's built-in scorer.
+
+| benchmark | score | 95% interval | tasks |
+|---|---|---|---|
+| HellaSwag | **74.67%** | [69.45, 79.26] | 300 |
+
+⚠️ **Two caveats, both material.** These come from `llama-perplexity`'s own
+implementation, which the project states is "linearly correlated but not the
+same numbers" as the leaderboard, and which reports raw accuracy where lm-eval
+reports the length-normalised figure by default — so this belongs in a column
+of its own, not beside a published score. And 300 tasks gives ±5 points, which
+is honest but wide; the number distinguishes "the model works" from "the model
+is broken", not one good model from another.
+
+What it does establish, and perplexity alone cannot: at **1.69 bits per weight**,
+with 512 experts compressed from 740 GiB to 84, the model still does commonsense
+inference.
+
 ## Behaviour
 
 Five verifiable questions, sampling `temp 0.6 · top_p 0.9 · min_p 0.03 ·
