@@ -58,3 +58,31 @@ narrowed by *exclusion with measurements*, one hour end-to-end:
    already expressed in blocks. One line, two files, everything green.
 
 Silence in a passing test suite is not evidence — coverage is.
+
+## Auditing your own rejections
+
+Seven techniques had been rejected on measurements. A critical re-reading of
+the *experiment code* — not the results — invalidated three of them.
+
+| rejected technique | what the code actually did |
+|---|---|
+| GPTAQ (asymmetric calibration) | never built the required cross-Hessian; the "asymmetric" flag disabled GPTQ's intra-block propagation. The measured 32.6% sits exactly between no-GPTQ (38.9) and GPTQ (28.1) — a mutilated GPTQ was rejected, not GPTAQ |
+| Haar transform | applied to the wrong axis (the residual dimension instead of the expert's private one) and without the band grouping that is half the method. With 256-wide blocks the first block mixes seven bands: 0.1% was the guaranteed outcome |
+| MagR | the proximal step was an iterated clip at (1−α)·rowmax — geometric shrinkage of the maximum, not the ℓ∞ proximal operator; no null-space projection and no GPTQ afterwards. The conclusion may still hold, the evidence does not |
+
+A fourth finding was procedural: four of the seven experiments used the same
+`gate_up` tensor as a proxy for the model, while the techniques under test are
+aimed at `down` — the one matrix that receives no error compensation.
+
+Two rules follow:
+
+1. **A rejection is a claim, and claims need the same scrutiny as successes.**
+   Re-read the experiment code before trusting a negative result, especially
+   when it contradicts a published one.
+2. **Test a technique on the tensor it was designed for.** A convenient proxy
+   makes the experiment cheap and the answer meaningless.
+
+There is a third, uncomfortable one: our own rejection of router recalibration
+had a margin of 0.028 against a stated uncertainty of ±0.087. By the rule in
+this repository, that number does not establish the rejection either. Use a
+paired per-chunk comparison when the effect is small in either direction.
