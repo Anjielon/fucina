@@ -113,6 +113,7 @@ healthy model. Below two bits the sampling recipe is part of the measurement.
 |---|---|
 | forge, 397B | 7.6 h end-to-end on one consumer GPU, fed from a NAS at ~50 MB/s |
 | decode | ~10 tok/s, fully resident in 96 GiB of unified memory |
+| what limits it | **memory bandwidth, not compute** — during a HellaSwag run the GPU reports 99% utilisation while accumulating only 5 minutes of CPU-side work over 22 minutes of wall clock. With 512 experts, every forward pass gathers the routed experts from unified memory, and that gather is the bottleneck. It is also why multiple-choice benchmarks, which are prefill-bound in theory and should be fast, are not as fast as the theory promises on this hardware |
 | stripping the second plane | 84.00 GiB written in ~8 minutes |
 
 
