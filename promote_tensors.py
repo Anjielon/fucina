@@ -11,6 +11,29 @@ precision carry disproportionate weight. On a 397B model, promoting the
 linear-attention projections cut model-level output error from 25.4% to 17.1%
 for 3 GiB — by far the best return per byte we measured.
 
+⚠️ READ THIS BEFORE USING IT TO "IMPROVE" A MODEL.
+
+This tool re-encodes the values **already in the file**. Information destroyed
+by the original quantization is gone, and no container can bring it back:
+writing Q4_K values into a Q8_0 block reproduces them almost exactly, so the
+model is unchanged and the file is larger.
+
+We learned this the expensive way. We promoted 45 attention tensors from
+Q4_K/Q6_K to Q8_0, measured no difference (paired sign test, 17/30 chunks,
+p = 0.58), and briefly concluded that attention was not the model's
+bottleneck. That conclusion was unsupported: the experiment could not have
+produced any other result. Retracted.
+
+So this tool is legitimate for exactly two jobs:
+  · re-encoding tensors whose values came from a HIGHER-precision source
+    (pass them in yourself), and
+  · normalising a file's precision layout — for instance when a converter left
+    half the shared experts at Q4_K and half at Q8_0.
+
+To genuinely raise a tensor's precision you must re-read it from the original
+bf16/fp16 checkpoint. That is a different operation, and this file does not
+do it.
+
 Usage:
     promote_tensors.py in.gguf out.gguf --match attn_qkv --to Q8_0
     promote_tensors.py in.gguf out.gguf --match attn_qkv --to Q8_0 --dry-run

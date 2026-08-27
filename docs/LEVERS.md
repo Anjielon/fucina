@@ -166,9 +166,13 @@ not proven, for our regime, and measure it on Tony.
 
 | lever | measurement | verdict | source |
 |---|---|---|---|
-| **Low-bit sampling recipe** | temp 0.6 · min_p 0.03 · top_p 0.9 · presence 1.5; thinking ON for hard reasoning; **never XTC**. At temp 0.2 a healthy sub-2-bit model degenerates into token loops — our test harness initially *failed a working model* because of this | ✅ | ours + Unsloth guidance + 3 papers (doc §23) |
+| **Low-bit sampling recipe** | temp 0.6 · min_p 0.03 · top_p 0.9 · presence 1.5. Note the ceiling: the loop-rescue authors measured a **90.2% loop rate at temp 0.6 and 94.6% greedy** — temperature alone does not fix severe collapse; thinking ON for hard reasoning; **never XTC**. At temp 0.2 a healthy sub-2-bit model degenerates into token loops — our test harness initially *failed a working model* because of this | ✅ | ours + Unsloth guidance + 3 papers (doc §23) |
 | **MTP speculation** | +10% at draft-length 1 on the Ornith family (the MTP head predicts exactly one token; longer drafts *hurt*: acceptance 0.65 → 0.39) | ✅ per model | ours |
-| **Loop rescue / hybrid planning** | at 2 bit the dominant failure is *generation pathology*, not wrong answers: loops, budget exhaustion, unclosed reasoning. Authors recover Qwen3-8B MATH-500 from **17.2% → 74.2%** at runtime | ✅✅ **runtime-only, no re-forge** — apply first | arXiv 2606.02011 |
+| **Loop detection + commit** | detector: any 20-gram repeated ≥4× within the last 1024 tokens. On trigger: if a parseable answer already appeared *before* the loop, emit it and stop. Authors' ablation: loop rescue alone is **+57 of the +59 total points** (17.2 → 74.2 on Qwen3-8B MATH-500) | ✅✅ **runtime, single model** — apply first | arXiv 2606.02011 |
+| **Overthinking-token logit penalty** | quantized reasoning models over-emit "wait / but / alternatively" at high-KL positions; in up to **52% of failures the correct answer had already appeared** and was not committed to. Training-free logit penalty: −12–23% chain length, −58% overthinking errors, accuracy preserved, across 5 models × 3 quantizers | ✅✅ **cheapest real fix** — a logit-bias list | arXiv 2606.00206 |
+| **Forced `</think>` closure (reasoning budget)** | structurally removes budget-exhaustion and unclosed-reasoning failures: soft warning at a fraction of budget, then hard close | 🧪 llama.cpp PR #25961, unmerged — validate before trusting | — |
+| **DRY sampler** | sequence-aware repetition penalty already in llama.cpp (`--dry-multiplier`, off by default). Community reports it fixes thinking loops where flat repetition-penalty *causes* them | 🧪 cheap knob, anecdotal evidence only | llama.cpp mainline |
+| ~~FP16 planning hybrid~~ | requires a second **full-precision copy of the same model** — ~800 GiB for a 397B. Rejected on feasibility, not on merit; the authors are silent on its memory cost | ⛔ not portable to a single-checkpoint deployment | arXiv 2606.02011 |
 | **Self-draft from plane-1** (plane-1 as its own draft model) | expected routing overlap ρ ≈ 0.15–0.30 < 0.5 threshold → probably not viable; QSpec-class gains only at high ρ | 🧪 measure ρ first | doc §24-25 |
 
 ## The three bugs that shipped a perfect file and a broken model
@@ -183,7 +187,12 @@ questions. Three independent defects, none of them in the math:
 2. **Orphaned plane pair.** The stored plane-2 came from a joint optimization
    whose plane-1 had been discarded in favour of the dedicated one — a couple
    that had never been optimized together.
-3. **Double offset division.** The Vulkan TQ1_0 *mat-vec* kernel divided an
+3. **A destructive op read as if it were pure.** `ggml_clamp` returns a view
+   into its input and writes through it; the mask branch read the same tensor
+   and got post-clamp values, so the hot-expert mask was uniformly 1 and every
+   cold expert received a correction that was not its own. Found by printing
+   the tensors, not by reading the code.
+4. **Double offset division.** The Vulkan TQ1_0 *mat-vec* kernel divided an
    offset that the caller already provides in block units — every generated
    token multiplied real weights of the *wrong expert*, while prompt
    processing (a different shader) was correct. The stock `test-backend-ops`
@@ -191,7 +200,7 @@ questions. Three independent defects, none of them in the math:
    small-n vector path with non-zero offsets. 27/27 + 80/80 green after the
    one-line fix.
 
-The seven engineering rules distilled from this day are in
+The engineering rules distilled from these days are in
 [LESSONS.md](LESSONS.md); they are now *code* in this repository (boundary
 asserts, in-forge verification, backend-op test requirements), not prose.
 

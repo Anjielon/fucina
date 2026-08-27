@@ -40,6 +40,77 @@ claims**. These rules exist because we shipped the first without the second.
    conventions (block units vs element units). Validating one says nothing
    about the others. Test all three, with non-zero view offsets.
 
+### Bug #4 — a destructive op read as if it were pure
+
+The second plane, once its file was proven correct and its graph read three
+times without finding fault, still destroyed the model: perplexity 9.46 → 70,614
+on GPU and 248,320 on CPU. Identical failure on both backends ruled out the
+kernels and pointed at graph construction.
+
+The graph did this:
+
+```cpp
+mask = ggml_step(ggml_scale_bias(f, -1.0f, n_exp2 - 0.5f));   // reads f
+ids2 = ggml_cast(ggml_clamp(f, 0.0f, n_exp2 - 1), I32);        // WRITES INTO f
+```
+
+`ggml_clamp` returns `ggml_view_tensor(ctx, a)` — a view sharing `a`'s buffer —
+and the CLAMP kernel writes through it. The scheduler is free to run CLAMP
+first, and it did. By the time SCALE read `f`, every expert id had already been
+clamped to `n_exp2-1`, so `n_exp2 - 0.5 - id` was `+0.5` for every expert and
+the mask was **uniformly 1**. Every cold expert received the correction
+belonging to the last hot slot, in every layer, for every token.
+
+Two things made it invisible:
+
+- **It reads as correct code.** The mask formula is right, the clamp is right,
+  the multiply is right. Nothing is wrong except an aliasing relationship that
+  is not visible at the call site.
+- **Reading the source did not settle it.** Three careful reads found the graph
+  correct. What settled it was `llama-eval-callback`: the pre-threshold mask
+  values printed as `0.5, 0.5, 19.5, …` — all positive, when most should have
+  been negative. A single line of real numbers ended a search that hours of
+  reading had not.
+
+The fix removes the destructive op rather than working around it — the indices
+can be derived from the mask itself, writing to nothing:
+
+```cpp
+ggml_tensor * m1 = ggml_step(ggml_scale_bias(f, -1.0f, n_exp2 - 0.5f));
+ids2 = ggml_cast(ggml_mul(f, m1), I32);   // hot -> id, cold -> 0 (then masked)
+```
+
+Why it had never surfaced upstream: every other call site in llama.cpp uses
+the reassignment idiom — `qkv = ggml_clamp(ctx0, qkv, …)` — so the pre-clamp
+value is never read again. And `ggml_clamp` is the **only** operation in ggml.c
+that returns `ggml_view_tensor(ctx, a)` unconditionally; every other aliasing
+op selects with `inplace ? ggml_view_tensor : ggml_dup_tensor`. A lone
+exception in an otherwise consistent API is precisely the shape a trap takes.
+
+**Rule: in ggml, know which ops return views into their input.** `ggml_clamp`,
+the `*_inplace` family, and anything built on `ggml_view_tensor` write through
+to the source. If a tensor feeds two consumers and one of them is destructive,
+the graph has a race whose outcome depends on scheduling order — and it will
+not announce itself.
+
+**Rule: when reading disagrees with behaviour, print the tensors.** Static
+reading is blind to aliasing and execution order. `llama-eval-callback` costs
+one run.
+
+Verify the fix the same way you found the bug — at the tensor level, not by
+inference from a downstream metric:
+
+| | before | after |
+|---|---|---|
+| pre-threshold values | `0.5, 0.5, 19.5, …` — all positive | `−97.5, −216.5, 19.5, …` — mostly negative |
+| mask | `1,1,1,1,1,1,1,1` (16/16) | `0,0,1,0,…,1,0` (3/16) |
+| Tony perplexity, plane 2 on | 70,614 | 12.11 |
+
+Three hot selections out of sixteen is about 19%, which is what 28 hot experts
+out of 256 should give once routing frequency is taken into account. A
+perplexity that merely *improves* would not have told us the mask was right —
+only that something got better.
+
 ## The forensic method that found bug #3
 
 When the model still failed after the file was proven correct, the search
