@@ -336,6 +336,54 @@ The practical rule: report the paired ratio and the Δp decomposition, keep
 perplexity as context, and never let a single scalar close a question on its
 own.
 
+## Ternary quantization shrinks weights — and in a MoE, *partial* correction is worse than none
+
+The hardest result of the project, and the one we would not have found by
+reading code.
+
+A second ternary plane, correctly forged and correctly applied, made the model
+**worse**. Every part checked out: the file reconstructs the source better
+(44.5% → 18.5% weight error, and the same on the *output* under real captured
+activations), the engine computes exactly `(W1+W2)x` with cold experts at
+exactly zero, and the graph is right node by node. Bisecting the three
+projections showed `up` and `gate` helping (8.7204 → 8.3493 together) while
+`down` alone did more harm than both did good (→ 11.2405).
+
+Four explanations were proposed and all four were refuted by measurement:
+an orphaned plane pair (the files are sound), an anisotropic input to `down`
+(its input is *more* isotropic — 69.6% effective rank against 23.2%),
+correlated corrections summing to a bias (alignment measured at 1.00×,
+i.e. independent), and a pathological layer (every layer improves by the same
+26 points).
+
+The fifth measurement found it. Project each quantized expert onto its
+original, `c = ⟨Ŵ,W⟩/⟨W,W⟩`:
+
+| | projection factor |
+|---|---|
+| cold experts (228), one plane | **0.882** |
+| hot experts (28), one plane | 0.880 |
+| hot experts, **both planes** | **0.964** |
+
+**Single-plane ternary quantization shortens the weights by about 12%**, and it
+does so *uniformly*. A uniform shrink is nearly free: the normalization layers
+downstream absorb a constant factor. But a mixture-of-experts output is a
+weighted **sum** of experts, so when the second plane restores 28 experts to
+0.964 and leaves 228 at 0.882, the mixture becomes internally inconsistent by
+9% — some experts now speak at a different volume than the rest.
+
+That is why making a *subset* of experts more accurate can make the model
+worse, and why `down` suffers most: its output goes straight into the residual
+stream, while `up` and `gate` pass through a non-linearity first, which
+compresses the mismatch.
+
+The design consequence is sharp: **a partial-precision scheme in a MoE must
+either cover every expert or restore the missing scale on the ones it skips.**
+Accuracy per expert is the wrong objective; consistency across the mixture is
+the right one. We have not seen this stated in the multi-plane or
+mixed-precision MoE literature, and it would silently damage any scheme that
+gives extra bits to a hot subset.
+
 ## On unified memory, VRAM and RAM are one pool — and the watchdog does not warn
 
 Running a benchmark on the 84 GiB model and a CPU-side activation capture at
