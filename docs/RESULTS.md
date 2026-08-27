@@ -150,6 +150,36 @@ constant. The prediction that separates it from the refuted version is sharp —
 scale compensation must help *a lot* on layer 20 alone and *little* on all
 layers — and is under measurement.
 
+### Routing concentration, which does not explain it
+
+The correction covers the 28 hottest experts of 256, so an obvious candidate
+for the layer profile is that traffic is spread more evenly on the damaged
+layers — 28 experts would then cover less of it, leaving the inconsistency
+larger. Computable from the imatrix's per-expert counts alone, before forging
+anything, in one minute and with no GPU.
+
+| layer | share carried by the 28 hottest | normalised entropy | damage |
+|---|---|---|---|
+| 0 | 23.84% | 0.9778 | 10.9524 |
+| 10 | 26.44% | 0.9597 | 8.8125 |
+| 15 | 29.59% | 0.9524 | 20.1161 |
+| **20** | **32.04%** | **0.9440** | **37.8030** |
+| 25 | 33.40% | 0.9420 | 22.5109 |
+| **30** | **30.95%** | **0.9481** | **8.6860** |
+| 39 | 44.93% | 0.8912 | 8.7370 |
+
+Correlation with damage: **+0.013** for the hot share, **+0.037** for entropy.
+The most-damaged and least-damaged layers carry almost exactly the same share
+(32.04% against 30.95%) with four times the difference in damage. **Refuted.**
+
+One real finding falls out sideways, independent of our problem: **routing
+concentrates with depth.** The 28 hottest experts carry 23.8% of traffic at
+layer 0 and 44.9% at layer 39, with entropy falling monotonically. Deeper
+layers rely on a narrower set of experts. It does not predict damage, but it is
+a property of the trained model worth reporting — and it means a fixed *K*
+hot experts per layer covers very different fractions of the traffic at
+different depths.
+
 ### Does the drift move toward the original, or away?
 
 Both configurations compared against the **source checkpoint** the model was
