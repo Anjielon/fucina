@@ -86,3 +86,22 @@ There is a third, uncomfortable one: our own rejection of router recalibration
 had a margin of 0.028 against a stated uncertainty of ±0.087. By the rule in
 this repository, that number does not establish the rejection either. Use a
 paired per-chunk comparison when the effect is small in either direction.
+
+## Know what your measurement can see
+
+Before attempting a repair, compare its expected gain against the resolution
+of your own benchmark. Ours reports perplexity as `6.2091 ± 0.0874` over 30
+chunks — roughly 1.4% relative. A technique whose published benefit is 0.1–0.3
+perplexity is therefore invisible at 30 chunks: it sits inside one and a half
+standard deviations.
+
+Since σ falls as 1/√n, resolving a 0.1 gain at three sigma needs about 210
+chunks — seven times the measurement cost. That is a legitimate choice, but it
+must be made deliberately, before spending hours on a repair whose outcome the
+benchmark cannot report.
+
+The alternative is a paired comparison: evaluate both models on the same
+chunks and test the per-chunk differences, which cancels the corpus variance
+that dominates the absolute figure. Use it whenever the expected effect is
+small in either direction — including when you are trying to *reject* a
+technique.
