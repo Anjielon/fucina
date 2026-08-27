@@ -113,9 +113,28 @@ of its own, not beside a published score. And 300 tasks gives ±5 points, which
 is honest but wide; the number distinguishes "the model works" from "the model
 is broken", not one good model from another.
 
-What it does establish, and perplexity alone cannot: at **1.69 bits per weight**,
-with 512 experts compressed from 740 GiB to 84, the model still does commonsense
-inference.
+**Where that sits.** Scored with the *same tool and protocol*, a modern MoE
+(Qwen3.5-35B-A3B) holds 83.0% at ~8 bpw, 81.0% at ~2.8, and 80.3% at ~2.6. We
+are six points below the 2.6-bpw point with almost a full bit less — a further
+step down the same gentle curve, not a cliff.
+
+The cliff is documented elsewhere and looks different. Published 2-bit
+post-training quantization of LLaMA3-8B and 70B collapses to **50–64%** with
+*every* method tried, good or bad (arXiv 2404.14047). A broken model sits at
+25% or below. BitNet b1.58 2B4T, a model *trained from scratch* for ternary
+weights, reaches 68.4%.
+
+So: 74.67% at 1.69 bpw, from post-training quantization of weights never
+intended for it, is above both the published 2-bit PTQ band and a
+natively-trained ternary model — while remaining below what a well-executed
+2.6-bpw quant achieves. That is the honest position.
+
+**No published number with this scorer exists below 2 bpw for a model of this
+size.** This is new data rather than a comparison against an existing point.
+
+⚠️ Read as an indication, not a fine measurement: ±5 points at 300 tasks means
+only differences of ten points or more are safely interpretable, and HellaSwag
+has documented validity problems of its own (arXiv 2504.07825).
 
 ## Behaviour
 
