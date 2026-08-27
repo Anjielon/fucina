@@ -180,6 +180,28 @@ a property of the trained model worth reporting — and it means a fixed *K*
 hot experts per layer covers very different fractions of the traffic at
 different depths.
 
+### The correction is the same size everywhere
+
+The last trivial explanation for the layer profile: perhaps the correction is
+simply larger where it does harm. Read straight from the file, no GPU — the
+norm of the second plane over the norm of the first, averaged over hot experts.
+
+| layer | up | gate | down | damage |
+|---|---|---|---|---|
+| 0 | 0.4147 | 0.4151 | 0.4137 | 10.9524 |
+| 15 | 0.4174 | 0.4172 | 0.4141 | 20.1161 |
+| **20** | **0.4147** | **0.4139** | **0.4119** | **37.8030** |
+| 25 | 0.4177 | 0.4188 | 0.4163 | 22.5109 |
+| **30** | **0.4177** | **0.4225** | **0.4161** | **8.6860** |
+| 39 | 0.4165 | 0.4183 | 0.4208 | 8.7370 |
+
+The ratio sits between 0.412 and 0.423 at every layer of the model — a 2%
+spread — while the damage varies four-fold. The correlations are *negative*
+(-0.18, -0.56, -0.57): where it hurts most, the correction is marginally
+*smaller*. **Refuted**, and the refutation sharpens the result rather than
+weakening it: an identical perturbation, applied at the same relative size
+everywhere, has incomparable consequences depending only on depth.
+
 ### Does the drift move toward the original, or away?
 
 Both configurations compared against the **source checkpoint** the model was
