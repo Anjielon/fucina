@@ -93,3 +93,35 @@ questions. Three independent defects, none of them in the math:
 The seven engineering rules distilled from this day are in
 [LESSONS.md](LESSONS.md); they are now *code* in this repository (boundary
 asserts, in-forge verification, backend-op test requirements), not prose.
+
+### Haar transform, re-tested properly (rejected with cause)
+
+The original rejection ("0.1% — nothing") was reached by a flawed experiment:
+wrong axis, no band grouping. Re-implemented correctly on the expert's private
+axis, the verdict is unchanged but the reason is now understood:
+
+| | layer 10 | layer 45 |
+|---|---|---|
+| baseline, one plane | 43.82% | 43.55% |
+| Haar + bands, best level | 44.53% (**−1.63%**) | 43.48% (+0.14%) |
+| baseline, two planes | 17.90% | 17.82% |
+| Haar + bands, two planes | 18.62% (**−4.04%**) | 17.76% (+0.33%) |
+
+The result oscillates around zero and changes sign between layers: noise, not
+signal. Three structural reasons, all measured:
+
+- **adjacent-weight correlation on the private axis: 0.0002–0.0005.** Haar is a
+  local low-pass filter and assumes spatial regularity; these weights are white
+  noise.
+- **per-band energy is exactly proportional to band width** (0.2 / 0.4 / 0.8 /
+  1.6 / 3.1 / 6.3 / 12.5 / 25 / 49.9%). The transform concentrates nothing —
+  the premise of the technique does not hold here.
+- Haar sums independent variables and therefore **gaussianizes** (kurtosis
+  3.90 → 3.43), which hurts ternary quantization specifically, since it lives
+  on heavy tails.
+
+Two methodological notes worth keeping. On this model the bands on the private
+axis are *already* pure at 256-wide blocks, so the grouping step is free —
+there was nothing to gain there either. And dequantizing an already-ternary
+GGUF to re-quantize it yields a fake ~0 error: measure against the original
+weights, never against your own output.

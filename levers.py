@@ -59,7 +59,12 @@ REGISTRY = [
       {"ornith397": "39 -> 46: it serves abs-max quantizers, not least-squares scales"},
       "one tensor; apply ONLY with an abs-max quantizer", "MagR 2406.00800"),
  Lever("local_haar", "transform", 0, 0.5,
-      {"ornith397": "0.1% — nothing"}, "one tensor", "HBLLM 2512.00862"),
+      {"ornith397": "REJECTED with cause: on the expert's private axis the bands are "
+       "already pure (no grouping needed), per-band energy is exactly proportional to "
+       "band width (no concentration), and adjacent-weight correlation is 0.0002 — "
+       "Haar assumes spatial regularity these weights do not have. It also gaussianizes "
+       "(kurtosis 3.90 -> 3.43), which hurts ternary. Re-tested correctly after an "
+       "earlier flawed measurement; the verdict stands, the reason is now known"}, "one tensor", "HBLLM 2512.00862"),
  Lever("similarity_reordering", "transform", 0, 0.5,
       {"ornith397": "0.6-0.7%", "pt2llm": "useful on their block layout"},
       "one tensor, ordina per |w| medio", "PT2-LLM"),
