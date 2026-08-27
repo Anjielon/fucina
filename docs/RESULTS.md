@@ -141,14 +141,50 @@ damage. Perturbing everything is three and a half times better than perturbing
 one thing. **Adding error reduces damage**, reproducibly — every figure here
 repeats to four decimals across runs.
 
-That is the signature of a normalisation absorbing a change that is *consistent*
-across depth while an isolated one stands out. It also revives, at layer
-granularity, an explanation that was refuted at expert granularity: the
-correction makes hot experts about 9.3% louder (projection factor 0.882 →
-0.964), so one louder layer is an anomaly and forty louder layers are a
-constant. The prediction that separates it from the refuted version is sharp —
-scale compensation must help *a lot* on layer 20 alone and *little* on all
-layers — and is under measurement.
+That looked like the signature of a normalisation absorbing a change that is
+*consistent* across depth while an isolated one stands out — which would revive,
+at layer granularity, the scale explanation refuted at expert granularity. The
+prediction separating it was sharp: compensation must help *a lot* on layer 20
+alone and *little* on all layers.
+
+| configuration | perplexity | with compensation |
+|---|---|---|
+| layer 20 alone | 37.8030 | 37.6701 (×1.093) · 37.6473 (×1.045) |
+| layer 30 alone | 8.6860 | 8.6818 |
+| all 40 layers | 10.9106 | **11.6068** |
+
+It removes 0.13 of 29 points where it was meant to remove most, and harms the
+uniform case. Inert where predicted decisive, harmful where predicted neutral.
+**Refuted.** The cancellation remains real and unexplained.
+
+### The number of route changes does not predict the damage
+
+If routing mediates the damage, the count of changed expert sets should order
+the configurations the way perplexity does. It does not — it very nearly
+inverts them.
+
+| configuration | tokens whose expert set changes | perplexity |
+|---|---|---|
+| layers 30-39 | 11.37% | **8.3576** — the best |
+| **layer 20 alone** | **14.84%** | **37.8030** — the worst |
+| layers 19-21 | 21.80% | 10.0830 |
+| **all 40 layers** | **78.67%** | 10.9106 |
+
+All forty layers cause **five times** the route churn of layer 20 alone and
+the model is **three and a half times better**. Correlation −0.294, orderings
+different.
+
+Read per *affected* layer the contrast is sharper still, not weaker: layer 20
+can only disturb the nineteen routers below it, so its 14.84% of the whole
+stack is roughly 30% of the layers it can reach; the 30-39 band reaches nine
+layers, so its 11.37% is roughly 45% of them — more churn where it reaches,
+and it is the best configuration measured.
+
+**So it is not how many routes change, it is which.** That is consistent with
+the one published attempt to tell harmful flips from benign ones: a local
+margin heuristic predicts *whether* a flip happened at AUC 0.772 and whether it
+was *harmful* at AUC 0.490 — chance. Flip rate is not a proxy for damage, and
+any method that optimises it is optimising the wrong quantity.
 
 ### Routing concentration, which does not explain it
 
