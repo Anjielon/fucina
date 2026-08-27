@@ -82,7 +82,7 @@ evidence against this design; it is evidence that the distinction matters.
 
 | lever | our measurement | verdict | source |
 |---|---|---|---|
-| **Second plane for hot experts only** | 3% hottest: 37.4% → 32.0%; steep curve at the start; full 2-plane everywhere costs 18× the work for the tail | ✅ core design | ours; cf. DynaExq |
+| **Second plane for hot experts only** | 3% hottest: 37.4% → 32.0% on weights. **End-to-end, measured**: perplexity 8.7204 → **8.3493** with the plane on `up` and `gate` (28 of 256 experts). The `down` plane is currently defective in our engine and must stay off — see below | ✅ core design, ✅ **now measured end-to-end** | ours; cf. DynaExq |
 | **Frequency beats sensitivity** as the hot-set criterion | 32.6% vs 38.2% (correlation between the two rankings: +0.06). MoPEQ claims the opposite — **re-measure per model** | ✅ (re-test always) | ours vs MoPEQ |
 | **down_proj above gate/up** | three independent sources agree | 🧪 v4 | DeepSeek-V3-class configs, Unsloth GGUF headers (read directly), MXMoE |
 | **Protect first/last layers** | Hessian trace varies **35×** across layers; on Ornith the top-10 are exactly the last ten | ✅ | ours; cf. Unsloth dynamic quants |
@@ -118,6 +118,35 @@ Three implementation facts, each of which we got wrong or did not know:
 Cost: <10% extra time below dim 4096, 30–40% above. Neither paper reports
 ternary or MoE results — the transfer to our regime is unproven and is exactly
 what the Tony testbench exists to measure.
+
+### The second plane, measured end to end — and where it still fails
+
+Weight-level error tells you a technique *should* work; only the model tells
+you it *does*. Bisecting the three projections independently, on a 9.8 GiB
+two-plane MoE, 12 chunks:
+
+| configuration | perplexity | |
+|---|---|---|
+| second plane off | 8.7204 | reference |
+| on `up` only | **8.4226** | −0.30 |
+| on `gate` only | **8.5187** | −0.20 |
+| on `up` + `gate` | **8.3493** | **−0.37** |
+| on `down` only | 11.2405 | **+2.52** |
+| all three | 10.9106 | +2.19 |
+
+Two of the three projections deliver what the weights promised, and their
+gains add. The third, alone, does more harm than the other two do good — while
+its stored weights reconstruct the source *better* than the others' do
+(44.5% → 18.45%). So the file is right and something in the engine's `down`
+path is not.
+
+The methodological point is the one worth carrying: we had verified the file
+against the original checkpoint and verified the graph node by node, and both
+verifications were correct — yet the whole was wrong. **Verifying the parts is
+not verifying the composition.** What localised it was neither reading nor
+reasoning but a five-line bisection with one environment variable per branch,
+which is why those switches now ship in the engine rather than being added
+when needed.
 
 ## 5. Repair (post-forge, ternary planes untouched)
 
