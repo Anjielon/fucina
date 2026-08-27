@@ -372,6 +372,37 @@ projection is catastrophic on the mountain layers and helpful in the tail;
 projection profile measured much earlier — `down` on every layer read 11.2405
 only because "every layer" includes the mountain.
 
+### The same phenomenon, unremarked, in someone else's published table
+
+A deliberate sweep of the MoE mixed-precision literature found it uniformly
+monotone in its *assumptions* — every expert-wise bit-allocation paper frames
+the only failure mode as mis-estimating importance, never as being right and
+still losing. But the phenomenon is visible in published data:
+
+- **GEMQ (arXiv 2605.23078, ICML 2026), Table 1, Qwen3-30B-A3B.** Expert-level
+  mixed precision loses to plain uniform quantization at matched bits-per-expert
+  across all three budgets, and at 2.0 bpe on all three metrics simultaneously
+  (−9.89 accuracy). The paper covers it with a single hedging adverb
+  ("generally") and never returns to it. **That is our result, in someone
+  else's experiment, unremarked.**
+- **HiFloat4 (arXiv 2607.26515).** Verbatim: *"Counterintuitively, restoring
+  the training policy to higher precision while keeping the rollout in FP4
+  makes accuracy worse than full FP4 baseline"* — 78.01% against 82.03% for
+  uniform FP4. Different setting (training/rollout rather than expert
+  granularity) and the mechanism they name is mismatch rather than noise, which
+  is the same shape as ours.
+- **TurboAngle (arXiv 2603.27467)** reports a strict-superset violation, though
+  as a single-author preprint with effect sizes near its own noise floor.
+
+⚠️ The framing that follows is **not** "more bits hurt" — that is false and
+easy to refute. It is **heterogeneous fidelity hurts**: three independent
+literatures converge on consistency across components mattering more than
+fidelity of any one of them. Our contribution is a controlled, localised
+instance with a mechanism to test, not the discovery of the effect.
+
+**Documented absence:** no paper applies a residual or second plane
+*selectively* to a subset of MoE experts, which is the primitive here.
+
 ### The alternative explanation, and why the data already excludes it
 
 The sharpest objection a reader can raise: the literature localises *massive
