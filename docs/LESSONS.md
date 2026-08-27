@@ -436,6 +436,39 @@ model.** Reconstruction fidelity — in weights, in layer outputs, or in the
 expert mixture — is not the objective, and optimising it can move the model the
 wrong way. The only instrument that decides is the model itself.
 
+### The candidate that survives, and why our tests were blind to it
+
+A deliberate literature search found the field has already isolated the piece we
+were missing. Three independent 2025-26 papers converge: **in a MoE, end-to-end
+quality is governed by expert *selection* far more than by expert fidelity**,
+and the damage arrives as near-neighbour rank flips around the top-k boundary
+(arXiv 2606.05688 on routing instability under quantization perturbation;
+EAQuant arXiv 2506.13329, which adds an explicit router-logit alignment term;
+GEMQ arXiv 2605.23078, which fine-tunes routers to the *quantized* experts).
+
+That is invisible to every measurement above — by construction. Our mixture test
+evaluated the same eight experts in both configurations. It could not see a
+change of *which* experts. But in the running model the chain is direct: the
+second plane changes an expert's output at layer 0, which changes the residual
+stream, which changes the router's logits at layer 1, and so on through sixty
+layers. A correction that makes every expert more faithful can still move the
+model if it moves the routing.
+
+Second candidate, from the same search and equally on point: **FOEM
+(arXiv 2507.11017)** shows that compensation methods assume the correction is a
+*small* perturbation, and that this assumption "is fundamentally flawed" once
+corrections accumulate — measuring the true loss change at more than an order of
+magnitude beyond what the first- and second-order terms predict. Our second
+plane is roughly 40% of the signal. We are outside the regime in which the
+objective that produced it is valid.
+
+Neither is confirmed here. What makes them different from the eight we refuted
+is that they explain **why our instruments read the way they did**, rather than
+only predicting the outcome — which is the shape a real explanation has. The
+test that would settle the first is cheap and does not need a re-forge: count
+how many expert selections differ between the two configurations, layer by
+layer, and see whether the divergence grows with depth.
+
 The practical consequences hold regardless of the missing explanation: on the
 397B the second plane stays off, and the shipped build has those tensors
 stripped; on the smaller model `up` + `gate` genuinely help (8.7204 → 8.3493)
