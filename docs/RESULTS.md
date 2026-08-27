@@ -91,7 +91,28 @@ no correction touches. The number is what it must be, so the capture is sound.
 The boundary is thin enough to explain the sensitivity. The median probability
 gap between the 8th and 9th ranked expert is **0.0003**, against a mean
 per-expert probability of 1/256 = 0.0039 — the top-k cutoff sits in a gap about
-ten times narrower than an average expert's share.
+thirteen times narrower than an average expert's share.
+
+⚠️ **That thinness is typical, not anomalous, and saying otherwise would be the
+weaker claim.** The one published aggregate on fine-grained MoE routing
+(arXiv 2602.02443, measured on Qwen3-30B-A3B, Ling-Lite-1.5, GPT-OSS-20B and —
+closest to us — Qwen3-Next-80B-A3B at 256 experts) reports the score gap from
+rank 5 to rank 32 as under 1.5% in total; back-computing gives a mean per-rank
+tail gap around 14× thinner than the mean expert share, against our 13×. Those
+agree. So the mechanism is a property of fine-grained MoE routing generally,
+not an artefact of these two checkpoints — which is what makes it worth
+reporting.
+
+The comparison is suggestive rather than a replication: theirs is a mean over
+ranks 5–32 of a token-averaged curve, ours a median of the specific 8↔9 gap
+across tokens, on different models. What is genuinely absent from the
+literature is the *distribution*: that paper plots a mean curve and reports no
+median, no histogram, no percentiles. Searches for "routing margin", "expert
+selection margin" and "router logit gap" return nothing; "router margin"
+returns exactly one paper, which computes the quantity per token and collapses
+it to a single AUC. Note also that we measure in **probability** space while
+that paper measures in **logit** space — a difference to state explicitly
+rather than let a reader discover.
 
 ### Where the damage lives — a narrow mountain, not an accumulation
 
@@ -140,6 +161,34 @@ Perturbing the two neighbours of the worst layer removes three quarters of its
 damage. Perturbing everything is three and a half times better than perturbing
 one thing. **Adding error reduces damage**, reproducibly — every figure here
 repeats to four decimals across runs.
+
+⚠️ **This phenomenon is already published and must not be presented as a
+discovery.** EvoPress (arXiv 2410.14649, ICML 2025) opens on it: *"current
+methods rely on estimating the importance of a given layer, implicitly assuming
+that layers contribute independently to the overall compression error… this
+independence assumption does not generally hold for LLM compression: pruning a
+model further may even significantly recover performance."* Their Table 1
+reports depth pruning that is not monotone — removing strictly more blocks can
+improve perplexity — and that models with a *lower* sum of per-layer errors can
+perform worse.
+
+What remains ours is narrower and should be stated as such: the **magnitude**
+(a 29-perplexity single-layer effect that thirty-nine further perturbed layers
+reduce to 2.2, against their block-level non-monotonicity), the
+**localisation** (EvoPress explicitly does not isolate individual catastrophic
+layers), and any **mechanism** — they report the phenomenon and stop.
+
+The available mechanistic candidate, untested here and not previously connected
+to quantization: self-repair. Rushing & Nanda (arXiv 2402.15390, ICML 2024)
+identify its two mechanisms as *"changes in the final LayerNorm scaling
+factor"* and *"sparse sets of neurons implementing Anti-Erasure"*, and note it
+is imperfect and noisy — which matches a cancellation that is partial rather
+than complete. The Hydra Effect (arXiv 2307.15771) reports the same shape:
+ablating one layer causes another to compensate.
+
+Note also that this cuts directly against the founding assumption of the
+error-propagation line: *Quantization Error Propagation* (arXiv 2504.09629)
+frames the whole problem as errors that accumulate and grow across layers.
 
 That looked like the signature of a normalisation absorbing a change that is
 *consistent* across depth while an isolated one stands out — which would revive,
@@ -322,6 +371,38 @@ projection is catastrophic on the mountain layers and helpful in the tail;
 `up` and `gate` are harmless everywhere.** That also explains the global
 projection profile measured much earlier — `down` on every layer read 11.2405
 only because "every layer" includes the mountain.
+
+### The alternative explanation, and why the data already excludes it
+
+The sharpest objection a reader can raise: the literature localises *massive
+activations* and *super weights* at layers 1-4 (arXiv 2402.17762, 2411.07191)
+and *super experts* at layers 1-3 in MoE (arXiv 2507.23279). Those scalars are
+created early and propagate unchanged through the residual stream. A damage
+metric sensitive to propagated state would naturally peak somewhere downstream
+of the source — possibly mid-depth — for reasons entirely about propagation
+rather than about mid-depth weights being special. Our layer-0 bump plus a
+layer-20 peak is exactly the pattern that alternative predicts.
+
+The projection decomposition excludes it. In a SwiGLU block, `up` and `gate`
+read the **residual stream** — where a propagated massive activation lives —
+while `down` reads the **SwiGLU product**, which is local to that layer. If the
+damage were mediated by propagated state, the projections reading that state
+would be the damaged ones. They are the harmless ones: at the worst layer in
+the model, `up` alone (8.6984) and `gate` alone (8.7163) both measure *better*
+than applying no correction, while `down` alone measures 37.9258.
+
+The damage is therefore attached to the layer's own SwiGLU output, not to what
+passes through it.
+
+Two further facts point the same way. The correction's relative magnitude is
+constant with depth (0.412-0.423), so the peak is not a bigger perturbation.
+And the `down` input's kurtosis is 38,770 at layer 0 against 45-150 elsewhere —
+so the layer with the extreme activation statistics is *not* the layer with the
+extreme damage, which is the opposite of what the propagation account needs.
+
+⚠️ Still to do: a per-layer curve of the `down` input statistics, so that
+"layer 20 is unremarkable in its activations" is a measurement rather than an
+inference from two sampled layers.
 
 ### The recipe, written into the file
 
