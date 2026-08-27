@@ -1,23 +1,23 @@
-"""TQ1_0 — impacchettamento GPU e riordino esperti (modulo della Fucina).
+"""TQ1_0 — GPU bit-packing and hot-first expert ordering.
 
-Formato TQ1_0 (llama.cpp): blocco di 256 pesi ternari in 54 byte —
-52 di dati (base 3: 5 valori/byte nei primi 48, 4 valori/byte negli ultimi 4)
-+ 2 di scala float16. 1,69 bit per peso.
+TQ1_0 (llama.cpp): 256 ternary weights per block in 54 bytes — 52 of data
+(base 3: five values per byte in the first 48, four per byte in the last 4)
+plus a 2-byte f16 scale. 1.69 bits per weight.
 
-Estratto dalla forgia di ODINO (26/8) per rendere la Fucina self-contained.
-Autotest in fondo: il pacchetto DEVE combaciare col decodificatore ufficiale
-(gguf.quants) — la lezione del fork GuthL (troncamento a 8 bit taciuto).
+The self-test at the bottom is not optional: it checks the packing against the
+reference decoder. A well-known third-party fork silently truncated to 8 bits,
+and only a round-trip test catches that class of bug.
 """
 from __future__ import annotations
 import numpy as np
 import torch
 
 
-def impacchetta(d: np.ndarray, q: np.ndarray) -> np.ndarray:
-    """d:(n,1) scala f16 · q:(n,256) in {-1,0,1} → (n,54) uint8 TQ1_0.
+def pack(d: np.ndarray, q: np.ndarray) -> np.ndarray:
+    """d:(n,1) f16 scales, q:(n,256) in {-1,0,1} -> (n,54) uint8 TQ1_0.
 
-    ⚡ GPU a pezzi: in numpy costava 60-100 s per tensore da 2,1 mld di pesi;
-    in torch su GPU: secondi (misurato nella forgia di ODINO).
+    Chunked on the GPU: in numpy this cost 60-100 s for a 2.1B-weight tensor;
+    in torch on GPU it is seconds (measured while forging a 397B model).
     """
     n_r = q.shape[0]
     out = np.empty((n_r, 54), np.uint8)
@@ -38,26 +38,27 @@ def impacchetta(d: np.ndarray, q: np.ndarray) -> np.ndarray:
     return out
 
 
-def permutazione_caldi(caldi: list[int], E: int) -> np.ndarray:
-    """[caldi] + [tutti gli altri in ordine] — l'ordine che il motore a 2 piani
-    assume: il piano-2 copre il PREFISSO 0..k-1.
-    ⛔ Lezione ODINO v3.1: il motore lo assumeva, la forgia non lo faceva →
-    correzioni sommate agli esperti sbagliati. La permutazione va fatta ALLA
-    NASCITA del file, righe del router comprese."""
-    perm = np.array(list(caldi) + [e for e in range(E) if e not in set(caldi)])
-    assert len(perm) == E and len(set(perm.tolist())) == E, "perm non valida"
+def hot_first_order(hot: list[int], n_experts: int) -> np.ndarray:
+    """[hot experts] + [all others in order] — the ordering the two-plane engine
+    assumes: the second plane covers the expert PREFIX 0..k-1.
+
+    Hard-won: the engine assumed this ordering, the forge did not apply it, and
+    the second-plane corrections landed on the wrong experts. Apply it when the
+    file is WRITTEN, router rows included."""
+    perm = np.array(list(hot) + [e for e in range(n_experts) if e not in set(hot)])
+    assert len(perm) == n_experts and len(set(perm.tolist())) == n_experts, "invalid permutation"
     return perm
 
 
-def riordina_esperti(pacchi: np.ndarray, perm: np.ndarray) -> np.ndarray:
-    """pacchi (E*nb, 54) uint8 → esperti riordinati secondo perm."""
-    E = len(perm)
-    v = pacchi.reshape(E, -1, 54)
+def reorder_experts(blocks: np.ndarray, perm: np.ndarray) -> np.ndarray:
+    """blocks (E*nb, 54) uint8 -> experts reordered according to perm."""
+    n_experts = len(perm)
+    v = blocks.reshape(n_experts, -1, 54)
     return np.ascontiguousarray(v[perm]).reshape(-1, 54)
 
 
-def _autotest() -> None:
-    """pacchetto == decodificatore ufficiale, su valori casuali."""
+def _self_test() -> None:
+    """packing must match the reference decoder, on random values."""
     import sys
     sys.path.insert(0, "/home/angelo/build-llamacpp/gguf-py")
     from gguf import quants as GQ
@@ -65,12 +66,12 @@ def _autotest() -> None:
     rng = np.random.default_rng(7)
     q = rng.integers(-1, 2, size=(8, 256)).astype(np.int8)
     d = rng.random((8, 1)).astype(np.float32) * 0.1
-    p = impacchetta(d, q)
-    ric = GQ.dequantize(p, T.TQ1_0).reshape(8, 256)
-    att = q.astype(np.float32) * d
-    assert np.allclose(ric, att, atol=1e-3), "impacchetta ≠ decodificatore ufficiale"
-    print("✓ autotest tq1_pack: pacchetto == decodificatore ufficiale")
+    p = pack(d, q)
+    back = GQ.dequantize(p, T.TQ1_0).reshape(8, 256)
+    want = q.astype(np.float32) * d
+    assert np.allclose(back, want, atol=1e-3), "pack() disagrees with the reference decoder"
+    print("✓ tq1_pack self-test: packing matches the reference decoder")
 
 
 if __name__ == "__main__":
-    _autotest()
+    _self_test()

@@ -1,21 +1,24 @@
-"""Quantizzatore ternario a DUE PIANI + GPTQ, sulla GPU.
+"""Two-plane ternary quantizer with GPTQ, on the GPU.
 
-⛔ PERCHE' ESISTE. In numpy il conto e' cronometrato: 0,6 milioni di pesi al
-   secondo → **192 ore** per i 386,5 miliardi di ODINO. Non e' un difetto di
-   ciclo (ho vettorizzato e tolto la ricerca sui nove livelli: stesso ordine
-   di grandezza). Servono ~50 operazioni per peso e numpy ne fa ~300 milioni
-   al secondo: e' aritmetica, non pigrizia.
-   La sola leva che cambia ordine di grandezza e' la GPU.
+Why it exists: in numpy the same algorithm runs at 0.6M weights/second, i.e.
+**192 hours** for a 386.5B-parameter model. That is not a loop problem — the
+inner loop is vectorized and the nine-level search removed — it is arithmetic:
+~50 operations per weight against numpy's ~300M ops/second. Only the GPU
+changes the order of magnitude.
 
-Stesso algoritmo di `gptq_veloce.py`, operatore per operatore:
-  1. scale d1,d2 per blocco di 256, avviate col sequenziale e poi alternate
-     in forma chiusa (sistema 2x2)
-  2. ogni peso al migliore dei NOVE valori d1*t1 + d2*t2, t ∈ {-1,0,+1}
-  3. GPTQ: un giro sulle 256 colonne, l'errore spinto sulle successive
-     tramite il fattore di Cholesky di H⁻¹
+The algorithm, operator by operator:
+  1. per-block scales d1, d2 (blocks of 256), initialized sequentially then
+     alternated in closed form (a 2x2 system);
+  2. GPTQ with the true Hessian: quantize a column, push its error onto the
+     columns not yet quantized, propagate ACROSS blocks (not only within);
+  3. the scale is recomputed from the COMPENSATED block, which is worth an
+     extra 0.3 points.
 
-⚠️ La VRAM vista da torch e' ~15 GiB (non i 96 di Vulkan), quindi si lavora
-   a fette: `pezzo` righe per volta.
+Two entry points:
+  quantizza()          -> two joint planes (for the hot experts)
+  quantizza_un_piano() -> one dedicated plane (for everything else)
+The distinction matters: plane-1 taken from a joint optimization is
+co-adapted to its partner and loses ~10 points when used alone.
 """
 from __future__ import annotations
 import torch

@@ -27,9 +27,9 @@ sys.path.insert(0, str(Path(__file__).parent))
 import gguf
 from gguf import GGUFReader, GGUFWriter, GGMLQuantizationType as T
 from gguf import quants as GQ
-import ternario_gpu as G
+import ternary_gpu as G
 import due_piani as D
-from tq1_pack import impacchetta, riordina_esperti, permutazione_caldi
+from tq1_pack import pack, reorder_experts, hot_first_order
 
 def log(*a): print(f"[{time.strftime('%H:%M:%S')}]", *a, flush=True)
 
@@ -81,7 +81,7 @@ def main():
 
     def perm_di(L):
         caldi = [int(x) for x in caldi_ord[L][:K]]
-        return permutazione_caldi(caldi, E), caldi
+        return hot_first_order(caldi, E), caldi
 
     # ── piano di scrittura ───────────────────────────────────────────────
     w = GGUFWriter(path=None, arch=arch)
@@ -159,19 +159,19 @@ def main():
                     d1, q1 = G.quantizza_un_piano(Wt, H, pezzo=A.pezzo)
                 else:
                     r = G.quantizza(Wt, None, giri=2, pezzo=A.pezzo); d1, q1 = r[0], r[1]
-                p1 = impacchetta(d1.reshape(-1, 1), q1.reshape(-1, 256))
+                p1 = pack(d1.reshape(-1, 1), q1.reshape(-1, 256))
                 if L in caldi_ord:
                     perm, caldi = perm_di(L)
                     sel = np.concatenate([np.arange(e*out_, (e+1)*out_) for e in caldi])
                     Wc = torch.from_numpy(np.ascontiguousarray(W.reshape(-1, ind)[sel])).float()
                     j1d, j1q, d2, q2 = G.quantizza(Wc, H, giri=2, pezzo=A.pezzo)
                     del Wc
-                    pj1 = impacchetta(j1d.reshape(-1, 1), j1q.reshape(-1, 256))
+                    pj1 = pack(j1d.reshape(-1, 1), j1q.reshape(-1, 256))
                     v1 = p1.reshape(E, nb_e, 54)
                     for s, e in enumerate(caldi):
                         v1[int(e)] = pj1[s*nb_e:(s+1)*nb_e]
-                    p1 = riordina_esperti(v1.reshape(-1, 54), perm)
-                    p2 = impacchetta(d2.reshape(-1, 1), q2.reshape(-1, 256))
+                    p1 = reorder_experts(v1.reshape(-1, 54), perm)
+                    p2 = pack(d2.reshape(-1, 1), q2.reshape(-1, 256))
                     # verifica al confine: caldo n.1 (ora pos.0) vs sorgente dequant
                     ric = GQ.dequantize(p1[:nb_e], T.TQ1_0).reshape(out_, ind) \
                         + GQ.dequantize(p2[:nb_e], T.TQ1_0).reshape(out_, ind)
