@@ -129,3 +129,18 @@ must hold:
 A rejection that fails any of these is provisional and must be recorded as
 such. The registry is more valuable for its negative results than its positive
 ones — which is exactly why they must be trustworthy.
+
+### Duplicate expert ids: tested, and not the culprit
+
+`test-backend-ops` builds MUL_MAT_ID indices as `data[i] = i % n_experts`
+followed by a shuffle, which makes every id in a row **distinct**. A masked
+second-plane path clamps most slots onto the same index, so the entire suite
+could pass while that regime was never exercised.
+
+We added `MOGAVIS_DUP_IDS=<cap>` to generate rows that repeat the same expert,
+and re-ran the TQ1_0 cases: **83/83 pass**. Duplicate ids are handled
+correctly; the hypothesis is closed, and the environment variable stays as
+permanent coverage for anyone porting a masked expert path.
+
+Recording this matters as much as a positive result would: the next person to
+suspect duplicate ids can read that it was measured, not assumed.
