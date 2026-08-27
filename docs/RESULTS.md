@@ -271,6 +271,52 @@ permuted alongside the experts, so matching rows between the two files by
 correlation recovers it exactly (median match **1.0000**, bijective on all 41
 layers). The script refuses to print any routing number if that match degrades.
 
+### The shape of the damage, and of the gain
+
+Perplexity is a mean, and a mean of 37.80 against 8.72 can come from every
+chunk getting worse or from two chunks catching fire. The cure differs.
+Per-chunk contributions, 12 chunks:
+
+| chunk | off | layer 20 only | all layers | layers 30-39 |
+|---|---|---|---|---|
+| 1 | 7.74 | **88.36** | 10.21 | **7.45** |
+| 4 | 10.38 | **120.68** | 12.70 | **10.12** |
+| 9 | 12.03 | 26.07 | 16.14 | **11.12** |
+| 12 | 12.93 | 34.40 | 16.75 | **12.20** |
+
+| configuration | worst chunk | median chunk |
+|---|---|---|
+| layer 20 only | ×11.62 | ×3.20 |
+| all layers | ×1.39 | ×1.28 |
+| layers 30-39 | ×0.98 | ×0.96 |
+
+The damage is **diffuse**, with a heavy tail: layer 20 makes every chunk worse
+by a median factor of 3.2, and the worst by 11.6. It is not a handful of tokens
+catching fire — the model is genuinely and uniformly worse.
+
+The gain is diffuse too, which matters more: the 30-39 band improves **all
+twelve chunks**, none excepted. The improvement is not luck on a slice of
+corpus.
+
+### The recipe, written into the file
+
+The two profiles compose. `up` and `gate` help at every depth; `down` helps
+only in the tail. No engine switch expresses that, and none is needed — the
+second-plane tensors are optional per layer, so the recipe goes into the file:
+
+    strip_tensors.py in.gguf out.gguf --match ffn_down_exps2 --keep-layers 30-39
+
+| configuration | perplexity | |
+|---|---|---|
+| second plane off | 8.7204 | reference |
+| `up`+`gate` every layer | 8.3493 | previous best |
+| all three, layers 30-39 | 8.3576 | |
+| **`up`+`gate` everywhere, `down` on 30-39 — in the file** | **8.2501** | **−5.4%** |
+
+The file carries the recipe rather than the operator having to remember it,
+which is also the only form in which a recipe survives being handed to someone
+else.
+
 ## The projection factor
 
 `c = ⟨Ŵ,W⟩/⟨W,W⟩`, the fraction of weight energy retained.
