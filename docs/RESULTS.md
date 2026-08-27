@@ -556,6 +556,19 @@ metric differs — `acc` against the length-normalised `acc_norm` that lm-eval
 reports by default. Such a figure is valid for comparing two of our own builds
 under one recipe; it cannot be placed in a column beside a published score.
 
+**Two incompatible metric conventions exist, and almost nobody declares which
+one they used.** A survey of 25 recent quantization papers found only 4 that
+state `acc` against `acc_norm` explicitly, and only 4 that pin an lm-eval
+version. The split runs by community rather than by year: the PTQ-compression
+lineage reports raw `acc`, the model-release lineage reports `acc_norm` on
+length-varying multiple choice. WinoGrande and MMLU are plain `acc` everywhere.
+
+The cautionary case is worth stating because it looks like rigour: "we follow
+the evaluation setup of GPTQ" is **not** reproducible. Two papers from the same
+group, carrying that identical sentence, differ by 7 points on the
+*unquantized* ARC-e baseline — a silent lm-eval v0.3 → v0.4 bump sits inside
+the same prose. Naming the protocol you followed is not the same as pinning it.
+
 The defensible route is one consistent toolchain: `llama-server` plus
 lm-evaluation-harness through the `local-completions` adapter, with the harness
 version, the metric and the shot count all pinned and stated. Two practical
