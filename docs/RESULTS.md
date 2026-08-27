@@ -366,6 +366,29 @@ together, so `up` and `gate` even mitigate it slightly. Both of them, applied
 alone at the worst layer in the model, measure *better* than not applying the
 correction at all.
 
+⚠️ **The projection asymmetry itself is not new, and claiming it would be
+caught.** D²Quant (arXiv 2602.02546, Jan 2026) — weight-only PTQ at sub-4-bit,
+our exact regime — states it as settled: *"down-projection matrices are a
+well-known quantization bottleneck, but maintaining their fidelity often
+requires extra bit-width"*, and designs a dual-scale quantizer specifically for
+them. What no one does is *derive* it from the gated-activation statistics;
+D²Quant asserts the bottleneck and engineers around it.
+
+⚠️ **And the depth localisation is contradicted by four independent sources,
+one of them GLU-specific.** *Mitigating Quantization Errors Due to Activation
+Spikes in GLU-Based LLMs* (arXiv 2405.14428, EMNLP 2024) reports the opposite
+band: *"The activation spikes occur in the FFN of specific layers, particularly
+in the early and late layers"* — tested on LLaMA-2/3, Mistral, Mixtral, SOLAR
+and Gemma. llama.cpp's own `use_more_bits` heuristic spends extra bits on the
+first and last eighth. Two further analyses agree on edges.
+
+Our band is 31.7-65.9% of depth on the 35B and 0-65% on the 397B: the middle,
+not the edges. The available distinction is that those works measure
+*activation spike magnitude* in a dense GLU FFN while we measure
+*weight-perturbation damage* in a 1.69-bit MoE — two genuinely different
+quantities. But that is a claim to demonstrate, not to assert, and it is why
+the per-layer effective-rank measurement below is not optional.
+
 So the whole result is one sentence: **the second plane on the `down`
 projection is catastrophic on the mountain layers and helpful in the tail;
 `up` and `gate` are harmless everywhere.** That also explains the global
