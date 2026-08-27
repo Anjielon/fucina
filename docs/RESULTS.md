@@ -298,6 +298,31 @@ The gain is diffuse too, which matters more: the 30-39 band improves **all
 twelve chunks**, none excepted. The improvement is not luck on a slice of
 corpus.
 
+### One projection does all of it
+
+Decomposing the worst layer answers what eleven refuted hypotheses could not.
+Layer 20 alone, one projection at a time:
+
+| at layer 20 only | perplexity |
+|---|---|
+| reference, correction off | 8.7204 |
+| `up` alone | **8.6984** — better |
+| `gate` alone | **8.7163** — better |
+| `up` + `gate` | 8.7400 |
+| **`down` alone** | **37.9258** |
+| all three | 37.8030 |
+
+`down` accounts for the entire catastrophe — marginally more than all three
+together, so `up` and `gate` even mitigate it slightly. Both of them, applied
+alone at the worst layer in the model, measure *better* than not applying the
+correction at all.
+
+So the whole result is one sentence: **the second plane on the `down`
+projection is catastrophic on the mountain layers and helpful in the tail;
+`up` and `gate` are harmless everywhere.** That also explains the global
+projection profile measured much earlier — `down` on every layer read 11.2405
+only because "every layer" includes the mountain.
+
 ### The recipe, written into the file
 
 The two profiles compose. `up` and `gate` help at every depth; `down` helps
