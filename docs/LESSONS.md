@@ -390,11 +390,28 @@ orthogonal to `Ŵ`, so by Pythagoras `‖W‖² = ‖Ŵ‖² + ‖e‖²` and th
 
     c = ⟨Ŵ,W⟩/⟨W,W⟩ = ‖Ŵ‖²/‖W‖² = 1 − ε²
 
-Measured on the joint two-plane fit: c = 0.9659 against 1 − ε² = 0.9659, with
-orthogonality +0.0000 — the identity holds to four figures, which also proves
-the joint fit really is LS-optimal. The single plane gives c = 0.8821 against
-1 − ε² = 0.8018 and orthogonality −0.18: our six-point scale grid does *not*
-find the optimum there, which is a separate finding and a place with headroom.
+Measured on three fits:
+
+| | c | 1 − ε² | orthogonality |
+|---|---|---|---|
+| dedicated single plane | 0.8072 | 0.8072 | 0 |
+| **joint plane-1, used alone** | 0.8821 | 0.8018 | **−0.18** |
+| joint pair | 0.9659 | 0.9659 | 0 |
+
+The identity holds to four figures wherever the fit is genuinely LS-optimal,
+which confirms both the dedicated single plane and the joint pair are. The
+middle row is the interesting one, and we first misread it: seeing
+orthogonality −0.18 we concluded the scale search was leaving something on the
+table. It is not. Testing the production scale function against a 60-point grid
+with fixed-point refinement gives 43.905% against 43.897% — **eight
+thousandths of a point, i.e. no headroom at all**.
+
+The −0.18 is the signature of *co-adaptation*, not of a bad scale: the joint
+plane-1 is not fitted to stand alone, so alone it is not LS-optimal. Note the
+direction — it is *longer* than a dedicated plane would be (c = 0.882 against
+0.807), not shorter. The second plane was fitted to work against that longer
+first plane, which is exactly why using one without the other is wrong in
+either combination.
 
 The practical consequence: you cannot reduce the shrink by fitting better, and
 rescaling by 1/c costs almost nothing in weight error (0.0352 against 0.0340)
