@@ -380,9 +380,58 @@ compresses the mismatch.
 The design consequence is sharp: **a partial-precision scheme in a MoE must
 either cover every expert or restore the missing scale on the ones it skips.**
 Accuracy per expert is the wrong objective; consistency across the mixture is
-the right one. We have not seen this stated in the multi-plane or
-mixed-precision MoE literature, and it would silently damage any scheme that
-gives extra bits to a hot subset.
+the right one.
+
+### Why c and the error are the same number
+
+The shrinkage is not a defect to be tuned away; it is the error, seen from the
+other side. When the fit is least-squares optimal the residual `e = W − Ŵ` is
+orthogonal to `Ŵ`, so by Pythagoras `‖W‖² = ‖Ŵ‖² + ‖e‖²` and therefore
+
+    c = ⟨Ŵ,W⟩/⟨W,W⟩ = ‖Ŵ‖²/‖W‖² = 1 − ε²
+
+Measured on the joint two-plane fit: c = 0.9659 against 1 − ε² = 0.9659, with
+orthogonality +0.0000 — the identity holds to four figures, which also proves
+the joint fit really is LS-optimal. The single plane gives c = 0.8821 against
+1 − ε² = 0.8018 and orthogonality −0.18: our six-point scale grid does *not*
+find the optimum there, which is a separate finding and a place with headroom.
+
+The practical consequence: you cannot reduce the shrink by fitting better, and
+rescaling by 1/c costs almost nothing in weight error (0.0352 against 0.0340)
+while fixing the mixture inconsistency. **Rescale, do not re-fit.**
+
+Two other quantizations, for scale: Q8_0 gives c = 1.0000 at 0.10% error —
+no shrink at all. The reference abs-max ternary gives c = 0.7678 at 81% error.
+The phenomenon belongs to the very-low-bit regime, and a least-squares scale
+halves it (12% instead of 23%).
+
+### What the literature does and does not say
+
+Searched deliberately, since a finding that is merely unknown *to us* is not a
+finding. Neither result appears in the post-training-quantization literature:
+
+- **The shrinkage.** No paper reports `‖Ŵ‖²/‖W‖²` for quantized LLM weights, or
+  proposes rescaling by its inverse. The mathematics is elementary — orthogonal
+  projection — and the adjacent theory exists in other fields (regression
+  dilution in statistics, the Bussgang gain in signal processing), but the
+  connection to weight PTQ is not made. Nagel et al.'s bias correction
+  (arXiv 1906.04721), the closest candidate, corrects the *mean of the
+  activations*, a first-moment effect, not the weight norm.
+- **The MoE regression.** Here the literature runs the *opposite* way: MoPEQ
+  (arXiv 2509.02512), AlphaQ (arXiv 2606.04980), Mixture Compressor
+  (arXiv 2410.06270) and others all report that giving extra bits to a subset
+  of experts helps monotonically. They compare a genuinely high-precision tier
+  against a low one, where partial upgrade helps by construction, and never
+  probe two *already* low-precision tiers where the inconsistency between them
+  is the dominant term.
+
+Closest related work, which must be read before publishing anything here:
+**Tied Trit-Planes (arXiv 2608.08910)** applies two ternary planes to a
+284B-parameter MoE streamed from SSD on a 64 GB machine — the same mechanism
+and nearly the same deployment constraint as this project. It does not measure
+the projection coefficient, does not discuss shrinkage, and treats every expert
+uniformly, so it does not preempt either result; it is prior art to cite, not
+to be surprised by later.
 
 ## On unified memory, VRAM and RAM are one pool — and the watchdog does not warn
 
