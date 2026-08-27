@@ -90,7 +90,8 @@ evidence against this design; it is evidence that the distinction matters.
 | **Veto for rare-but-critical experts** (rarity ≠ expendability) | checkpoint-only | 🧪 v4 | arXiv 2604.06515 |
 | **Attention QKV at Q8** | **not distinguishable**: paired sign test on 30 chunks, 17/30 wins, p = 0.58, mean gap 0.013 against a ±0.087 spread. Costs 0.78 GiB. Discarded | ⛔ rejected (measured, paired) | ours |
 | **Linear attention at Q8** | inherited sub-2-bit GatedDeltaNet projections were 47–51% wrong; Q8 restore: model error **25.4% → 17.1%** for +3 GiB — best lever per byte (2.77 pts/GiB) | ✅✅ | ours; cf. Quamba (arXiv 2410.13229): no sub-4-bit SSM scan has ever been demonstrated |
-| **Super-weight restore** | losing a single super weight collapses a model; coordinates published only for Llama/Mistral/OLMo/Phi — scan yours | 🧪 v3.2 | Yu et al., "The Super Weight in Large Language Models", arXiv 2411.07191 |
+| **Super-weight restore** | losing a single super weight collapses a model; coordinates published only for Llama/Mistral/OLMo/Phi — scan yours | 🧪 | Yu et al., arXiv 2411.07191 |
+| **Sparse outlier rescue (top-k weights at f16)** | measured on our tensors: the top **1% of weights carry 18% of the ternary error**, the top 10% carry 63% — eighteenfold concentration. Keeping 1% at f16 costs ~+0.16 bits/weight (≈10% file) for up to an 18% error cut; the top 0.1% costs ~1% of the file for 3-4% | 🧪 real but not free — needs a sparse side-channel in the format | ours; cf. SpQR arXiv 2306.03078 |
 
 ### The asymmetric-calibration family, stated precisely
 
@@ -140,6 +141,13 @@ gains add. The third, alone, does more harm than the other two do good — while
 its stored weights reconstruct the source *better* than the others' do
 (44.5% → 18.45%). So the file is right and something in the engine's `down`
 path is not.
+
+What does *not* distinguish `down` from `up`, measured rather than assumed:
+error concentration is identical (top 1% of weights carry 18.6% of the error in
+`down` against 18.3% in `up`), input isotropy runs the wrong way (69.6%
+effective rank against 23.2%), the corrections are independent rather than
+aligned (1.00×), and every layer improves by the same 26 points. Four candidate
+differentiators eliminated; the scale-consistency argument is what remains.
 
 The methodological point is the one worth carrying: we had verified the file
 against the original checkpoint and verified the graph node by node, and both
