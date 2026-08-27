@@ -567,11 +567,16 @@ two-choice task.
 scorer's own source rather than taken on trust:
 
 - `hellaswag_score()` is labelled **`acc_norm`** but normalises the ending
-  log-probability by **token count**; lm-eval normalises by **character
-  length**. Same name, two different quantities, and the gap is
-  tokeniser-dependent. An earlier version of this document said we report raw
-  `acc` — that was wrong in a way that would have understated the
+  log-probability by **token count**; lm-eval's `acc_norm` normalises by
+  **character length**. Same name, two different quantities, and the gap is
+  tokeniser-dependent. So our figures are neither `acc` nor `acc_norm` but a
+  **third quantity**. An earlier version of this document said we report raw
+  `acc` — wrong, and wrong in the direction that understated the
   incomparability.
+- Worse for the comparison we wanted to draw: **lm-eval's Winogrande has `acc`
+  only — no `acc_norm` exists** — and the same is true of MMLU. The sentence
+  "lm-eval reports the length-normalised figure by default" is false for both
+  tasks we ran.
 - Its preprocessing is pinned to a **2023-era harness commit** (`df3da98`), and
   the source itself says all 10,042 tasks should be used "to keep the results
   standardized like other implementations". Our 300 is below what the author
@@ -586,6 +591,18 @@ So the honest column header is
 with one caption sentence saying these are not leaderboard-comparable and why.
 And 300 tasks gives ±5 points: the figure distinguishes "the model works" from
 "the model is broken", not one good model from another.
+
+⛔ **And the deeper problem is statistical power, not naming.** At n = 300 the
+standard error is ±2.51 pp on HellaSwag and ±2.64 pp on Winogrande, so the
+95% intervals are about 10 points wide and the smallest difference resolvable
+between two builds is **6.9 pp**. Quantization damage is typically 1-4 pp.
+**This setup cannot see the effect it was run to measure.** A ±1 pp half-width
+needs roughly 7,200 items; the full HellaSwag validation set is 10,042, which
+the scorer's own source says to use.
+
+These two numbers therefore stay in this document as evidence that the model is
+not broken — which is what they can support — and must not appear in a results
+table as a measurement of quantization damage.
 
 **The metric to move to is not a better accuracy — it is KL divergence.**
 *Accuracy is Not All You Need* (arXiv 2407.09141, NeurIPS 2024) shows compressed
@@ -699,10 +716,23 @@ facts make it cheaper than it looks:
   ~10 tok/s and a few hundred tokens per question it is 11-15 hours. Budget for
   it separately or subsample it.
 
-If subsampling, use a **named** method: tinyBenchmarks (arXiv 2402.14992) ships
-100-item IRT-selected subsets as lm-eval tasks with a published estimation error
-under 2%. "We evaluated a random thousand" is the single most likely reviewer
-objection; `tinyMMLU` is a citation.
+⛔ **Do not use tinyBenchmarks for these numbers, despite the citation being
+tempting.** An earlier version of this document recommended it. Checking the
+published gp-IRT blend weights shows the reported figure is mostly *not* your
+model: the weight on responses actually observed is 11.7% for `tinyMMLU`, 12.9%
+for `tinyHellaswag`, 30.5% for `tinyArc` — the rest comes from an IRT model
+fitted in January 2024 on 395 full-precision leaderboard models with everything
+below MMLU 0.30 filtered out. A quantized model in the near-chance region is
+outside the calibration pool by construction, and simulation on the real
+published parameters shows it *shrinks* measured quantization damage — 2.95 pp
+of true damage reported as 1.69 pp — in the direction that flatters us. At 100
+items it also buys no variance advantage over a plain random sample for
+measuring a delta.
+
+The defensible alternatives are **metabench** (arXiv 2407.12844, ~850 items,
+1.24% RMSE per benchmark) or **MINCE** (arXiv 2606.22826), which is built for
+quantized and edge variants and reports 12× lower drift than tinyBenchmarks on
+MMLU.
 
 **The obvious alternative explanation has not been excluded.** The field's
 default account of unexpected MoE quantization damage is routing shift —
