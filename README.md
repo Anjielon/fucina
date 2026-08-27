@@ -98,6 +98,34 @@ per request; never XTC.
 | ⚠️ caveat | the published 88 GiB build predates the joint-pair fix, so its second plane is orphaned and must stay disabled — it is a single-plane model, and the `*_exps2` tensors are 4.1 GiB of dead weight. The two-plane numbers above are the quantizer's, measured on weights; a file that realises them requires a forge run with the current code |
 | speed | ~10 tok/s decode, fully resident in 96 GiB UMA |
 
+## The result we did not go looking for
+
+The measurement that took the longest to accept, and the one most likely to be
+useful to someone else:
+
+> **A correction that improves fidelity at every level we can measure can still
+> make the model worse.**
+
+A second ternary plane, correctly forged and correctly applied, halves the
+weight error (46.2% → 22.3%), halves the single expert's output error under
+real captured activations, and improves the weighted sum of the eight routed
+experts — and degrades the model end to end (perplexity 6.1845 → 6.3509 on the
+397B). Nine explanations were proposed; eight were refuted by measurement and
+are recorded in [LESSONS](docs/LESSONS.md) with the numbers that killed them.
+
+The surviving candidate is that a mixture-of-experts is governed by expert
+*selection* more than by expert fidelity, so a correction that improves every
+expert can still move the model by moving the routing. Three independent
+2025-26 papers document that mechanism as a *cause* of quantization damage
+(arXiv 2606.05688, 2506.13329, 2605.23078); here it would be the side effect of
+a *correction*. Another project reports the same dissociation from the other
+direction: Tied Trit-Planes (arXiv 2608.08910) finds its higher-reconstruction-
+error variant scoring 86 against 84 on MMLU.
+
+The practical rule this repository now enforces: **decide on the model, never
+on the reconstruction.** Every lever in the registry carries an end-to-end
+number, or it carries a note saying it does not.
+
 ## Where this sits in the literature
 
 At the time of writing we could find **no published result for a 400B-class MoE
