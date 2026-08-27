@@ -105,3 +105,27 @@ chunks and test the per-chunk differences, which cancels the corpus variance
 that dominates the absolute figure. Use it whenever the expected effect is
 small in either direction — including when you are trying to *reject* a
 technique.
+
+## The standard of proof for a rejection
+
+Rejecting a technique is a scientific claim and carries the same burden as
+accepting one. Before a lever is marked rejected in the registry, all four
+must hold:
+
+1. **Faithful implementation.** The code must implement the technique as
+   specified, verified against the source paper step by step. Three of our own
+   rejections failed here: an "asymmetric GPTQ" that never built the required
+   cross-Hessian, a Haar transform on the wrong axis without band grouping, a
+   proximal operator that was an iterated clip.
+2. **Correct target.** The technique must be tested on the tensor family it
+   was designed for, not on whichever one is convenient to load.
+3. **Sufficient resolution.** The measured margin must exceed the
+   measurement's own uncertainty; if the expected effect is small, use a
+   paired per-chunk comparison or enlarge the sample first.
+4. **Literature checked.** Search for later work that extends or corrects the
+   technique. A 2024 method rejected on its original form may have a 2026
+   variant that removes the limitation you hit.
+
+A rejection that fails any of these is provisional and must be recorded as
+such. The registry is more valuable for its negative results than its positive
+ones — which is exactly why they must be trustworthy.
