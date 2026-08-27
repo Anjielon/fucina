@@ -464,6 +464,51 @@ instance with a mechanism to test, not the discovery of the effect.
 **Documented absence:** no paper applies a residual or second plane
 *selectively* to a subset of MoE experts, which is the primitive here.
 
+### Where this sits: consistency, not smallness, is the safety property
+
+A sweep of the perturbation literature found the pieces of this argument
+scattered across three fields and assembled by nobody. Stated honestly: the
+individual facts are published, the synthesis is ours, and the step the
+synthesis actually needs is *not* proved anywhere.
+
+**Locality decides damage, not magnitude — and the cleanest number is nine
+years old.** LLM.int8() (arXiv 2208.07339, §4) zeroes 0.1% of features (the
+outlier dimensions) and perplexity degrades **600-1000%**; zeroing **seven
+random** features costs **0.1%**. Same operation, same coordinate count, four
+orders of magnitude of difference in consequence. Independently, an L2-matched
+study (arXiv 2602.11169) finds angular perturbation does up to **42.9×** more
+damage to LM loss than a magnitude perturbation of identical Euclidean size.
+
+**A consistent multiplicative perturbation is mathematically free.** SmoothQuant
+(arXiv 2211.10438) fuses its per-channel scale into the preceding LayerNorm
+"offline"; SliceGPT (arXiv 2401.15024) proves `RMSNorm(XQ)Qᵀ = RMSNorm(X)` for
+the entire orthogonal group and absorbs LayerNorm's `diag(α)` into `W_in`.
+RMSNorm is stated outright to *discard* input norm information (arXiv
+2510.22777).
+
+**And normalisation actively repairs damage**: final-LayerNorm rescaling alone
+undoes about **30%** of an ablated head's direct effect (arXiv 2402.15390).
+
+**The non-monotonic shape is published too, twice.** QDrop (arXiv 2203.05740)
+shows randomly *dropping* activation quantization half the time beats both no
+quantization and full quantization during calibration. Quant-Noise (arXiv
+2004.07320) is sharper still on a language model: int8 with noise on a random
+5% subset gives **18.7** perplexity, no noise gives **19.6**, and *full*
+quantization-aware training gives **21.0** — worse than doing nothing. Partial
+beats both ends, which is the shape of our cancellation.
+
+⚠️ **What none of them prove, and what our argument needs.** SmoothQuant and
+SliceGPT establish the invariance for *exact* transforms. Nobody has shown it
+degrades gracefully for *approximate* consistent perturbations — which is
+precisely the step from "an exact rescale is free" to "a roughly-uniform
+perturbation is cheap". That is an assumption, and it should be labelled one.
+
+⚠️ **Two facts that cut against us**, both from the papers themselves: the
+L2-matched study finds magnitude perturbation *does* disproportionately damage
+fine-grained syntax (20.4% against 1.6% on subject-verb agreement), so
+"absorbed" holds for aggregate loss and not everywhere; and scale invariance is
+noted to hold only "approximately in normalization-heavy networks".
+
 ### The alternative explanation, and why the data already excludes it
 
 The sharpest objection a reader can raise: the literature localises *massive
