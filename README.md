@@ -11,6 +11,8 @@ weights — not the paper's promise, our number — and every technique credits
 the research it came from. See [docs/LEVERS.md](docs/LEVERS.md) for the full
 catalogue (34 levers, each with prior, cost, verdict and citation) and
 [docs/LESSONS.md](docs/LESSONS.md) for the engineering rules we paid for.
+Every number the project rests on, with the conditions it was taken under, is
+collected in [docs/RESULTS.md](docs/RESULTS.md).
 
 ## The method
 
