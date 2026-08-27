@@ -613,6 +613,20 @@ Nothing was lost here because the measurement processes did not carry the name,
 but the supervision died silently, which is the worse half of the failure: the
 job kept running with nobody watching the memory ceiling.
 
+**The same bug in a wait loop is worse, because it is silent.** Twenty minutes
+later a queued job had still not started: its `while pgrep -f "prev_stage";
+do sleep 20; done` was matching the *monitor*, whose command line named
+`prev_stage.log` among the files it was tailing. The stage it was waiting for
+had finished; the watcher that reported on it had not. A queue waiting on its
+own observer looks exactly like a queue doing its job — no error, no exit code,
+a process list that seems healthy. Two rules, both cheap:
+
+- shield every `pgrep`/`pkill` pattern, always, not only when you expect a
+  collision — the collision comes from a process you did not write;
+- make a wait loop wait for a *condition*, not for a process name: a sentinel
+  line in the log, or a file the finishing stage touches. A process name is a
+  proxy for "is it done", and this is how proxies fail.
+
 ### Why c and the error are the same number
 
 The shrinkage is not a defect to be tuned away; it is the error, seen from the
