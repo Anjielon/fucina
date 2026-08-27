@@ -167,6 +167,13 @@ show the pair reconstructing the source well. It could not be reproduced, and
 the date evidence is both simpler and stronger. **When a measurement you cannot
 re-run disagrees with a provenance check you can, trust the provenance.**
 
+The practical consequence was a shippable improvement rather than a setback.
+Stripping the 180 dead tensors and the metadata key that declares them gave a
+model measuring **6.1845 ± 0.08705** — identical to the original to the last
+digit — at **84.00 GiB instead of 88.16**. Removing weight that does nothing is
+not a consolation prize: it is 4.16 GiB of VRAM returned, and it makes it
+impossible for a later engine to switch the broken correction back on.
+
 ## The forensic method that found bug #3
 
 When the model still failed after the file was proven correct, the search
