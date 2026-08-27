@@ -124,7 +124,49 @@ out of 256 should give once routing frequency is taken into account. A
 perplexity that merely *improves* would not have told us the mask was right —
 only that something got better.
 
-### Closing the residual by date, not by measurement
+### Retraction: the date argument was wrong
+
+The section that follows reasoned from provenance — both artefacts predated a
+fix, therefore both carried the defect — and concluded that the second plane
+could not work on either file. **That conclusion was wrong, and it is retracted
+here rather than edited away**, because the way it failed is the useful part.
+
+The direct measurement, made afterwards, reads one expert from the original
+checkpoint and compares it against the two planes actually written. On the
+397B, layer 59, three positions:
+
+| | plane 1 alone | plane 1 + plane 2 |
+|---|---|---|
+| gate | 46.21% | **22.32%** |
+| up | 46.20% | **22.31%** |
+| down | 45.30% | **19.25%** |
+
+And on the small twin, whose file predates the fix by 56 minutes, layer 20:
+44.6% → 18.6%, 44.5% → 18.5%, 44.5% → 18.5%. Both files also proved to carry
+the hot-first permutation: position 0 holds the expert the imatrix ranks
+hottest, while the unpermuted candidates were uncorrelated past 90% and the
+test discarded them on its own.
+
+**Both files are sound.** The second plane halves the error on all three
+projections in both models. So the defect is entirely in the engine, and the
+contradiction is what proves it: with the plane disabled the hot experts carry
+44-46% error, with it enabled 18-22%, and yet disabled measures *better*
+(6.1845 against 7.1871). No correct engine can produce that ordering.
+
+Three rules, paid for with an hour:
+
+1. **A coherent explanation is not a true one.** The dates lined up perfectly —
+   both artefacts before the fix, two independent confirmations, a mechanism
+   that explained the sign and roughly the magnitude. Every part of it was
+   checkable and none of it was checked against the thing itself.
+2. **Measure the artefact, not its history.** Provenance tells you what
+   *probably* happened; reading the bytes tells you what *did*. The direct
+   measurement took six seconds once the slicing was right.
+3. **When ruling something out, prefer the test that could show you wrong.**
+   The date check could only ever confirm the hypothesis. The reconstruction
+   test could refute it — and did.
+
+### Closing the residual by date, not by measurement (superseded — see above)
 
 After the fix the small model still sat at 12.11 against 9.46 with the plane
 off — better by a factor of 5,800, but not yet a win. The obvious move was
