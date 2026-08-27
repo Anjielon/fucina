@@ -90,7 +90,7 @@ per request; never XTC.
 | | |
 |---|---|
 | source | Ornith-1.5-397B-A17B (MIT), 512 experts × 60 layers, hybrid GatedDeltaNet attention |
-| output | 88.17 GiB (vs ~740 GiB bf16): 484 cold experts @ 1 dedicated plane, 28 hot @ 2 joint planes, attention @ Q8_0 |
+| output | 88.17 GiB (vs ~740 GiB bf16). Experts: 484 cold @ one dedicated plane, 28 hot @ two joint planes — 75.9 GiB for the first plane, 4.1 GiB for the second. Everything else inherited from the source and left alone: the state-space projections at Q8_0 (3.0 GiB, the lever that paid best per byte), standard attention at Q4_K/Q6_K, embeddings Q8_0, output head Q5_K, routers F32 |
 | forge time | 7.6 h end-to-end on one consumer GPU (Radeon 8060S, Vulkan), NAS-fed at ~50 MB/s |
 | quality | multi-step arithmetic and logic traps solved with reasoning enabled; per-expert weight error 21.5% (2-plane) / 28.1% (1-plane dedicated) |
 | speed | ~10 tok/s decode, fully resident in 96 GiB UMA |

@@ -154,3 +154,41 @@ Below two bits per weight, sampling settings change the verdict:
 Never XTC. Enable reasoning for hard tasks — it solves problems the direct
 path does not. Greedy decoding can degenerate into token loops on a model that
 is otherwise healthy; a test harness using it will fail a working model.
+
+
+## Deploying a two-plane model
+
+A two-plane ternary model needs an engine that knows about **both** extensions,
+and this is the step most likely to be forgotten after a successful forge:
+
+1. **TQ1_0 kernels** for your backend. On Vulkan these are not in mainline yet
+   (llama.cpp PR #27765); without them the model does not load at all.
+2. **The two-plane summation** in `build_moe_ffn`: optional `*_exps2` tensors
+   added to `up`, `gate` (before the activation) and `down` (before the routing
+   weights are applied), gated by the `<arch>.expert_count2` metadata key.
+3. **The hot-expert mask built without a destructive op** — see LESSONS bug #4.
+   An engine with the extension but without that fix is *worse* than one
+   without the extension at all: it applies real corrections to the wrong
+   experts.
+
+Practical consequence for a service unit: point `ExecStart` at the build that
+has all three, and say so in a comment. A well-meaning update to "the standard
+build" silently disables the model — or, worse, leaves it running and wrong.
+
+Keep an escape hatch. Ours is the `ODINO_NO_P2=1` environment variable, which
+skips the second plane entirely: one plane, guaranteed sane, one restart away.
+Any engine extension that can be wrong should have a way to be turned off
+without rebuilding.
+
+## Comparing two models honestly
+
+Only compare numbers taken with the same recipe — same corpus, same chunk
+count, same context size. Mixing a figure measured on one corpus with a figure
+measured on another is the easiest way to fool yourself, and it does not
+announce itself as an error.
+
+When the expected difference is small, do not compare the two final numbers:
+run `paired_compare.py` on the two logs and read the sign test. Our benchmark
+reports ±0.087 over 30 chunks, so a 0.013 effect is invisible in the absolute
+figures while being perfectly decidable per chunk — or perfectly *undecidable*,
+which is also an answer worth having.
