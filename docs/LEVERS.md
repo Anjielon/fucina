@@ -24,10 +24,48 @@
 |---|---|---|---|
 | **Dedicated-per-plane GPTQ** | joint plane-1 used alone loses 10 points: **37.95% → 28.13%** when re-quantized dedicated. The co-adaptation trap. | ✅✅ the key insight | ours |
 | **GPTQ** (full Hessian, cross-block propagation) | the backbone of every number above | ✅ | Frantar, Ashkboos, Hoefler, Alistarh — arXiv 2210.17323 |
-| **Coordinate-descent refinement on ternary** | authors: −15% vs GPTQ; untested on ternary planes before us | 🧪 planned (v4) | QuantEase, arXiv 2309.01885 |
-| **Asymmetric GPTAQ** | **worse** on ternary: 32.6 vs 28.1 symmetric | ⛔ rejected for Ornith | GPTAQ, arXiv 2504.02692 |
+| **Coordinate-descent refinement after GPTQ** | authors: layer error −12% median (up to −30%), OPT-350M 3-bit ppl 33.6 → 31.5. Their paper covers **uniform grids only**; the ternary extension is stated and never demonstrated | 🧪 v4 — closed form below | QuantEase, arXiv 2309.01885 |
+| **Joint two-plane CD *under the true Hessian*** | PTQTP does joint two-plane with plain Frobenius loss; QuantEase does Hessian-weighted CD on one plane. **Nobody has published the combination** — this is the open slot our pipeline sits in | 🧪🔥 v4 — our distinctive contribution | see below |
+| **Asymmetric calibration (GPTAQ/GPTQv2)** | our 32.6 vs 28.1 was a **mis-implementation**, retracted (see LESSONS). Authors at W2A16 on LLaMA2-7B: ppl **20.7 → 9.02** — our exact bit regime | 🧪🔥 **highest-priority v4 lever** | GPTAQ, arXiv 2504.02692 |
+| **First-order compensation (FOEM)** | −17.3% ppl *over GPTAQ* at 3-bit; MMLU 53.8 → 56.1. Supersedes GPTAQ | 🧪 v4, after GPTAQ | FOEM, arXiv 2507.11017 (AAAI 2026) |
 | **Cross-layer error propagation** (calibrate layer *l* on the *quantized* output of *l−1*) | authors: largest gains at low bits | 🧪 planned (v4) | QEP, arXiv 2504.09629 |
 | **Babai (nearest-plane) ordering** | last-to-first GPTQ = Babai's algorithm, free | ✅ free | arXiv 2507.18553 |
+
+### The exact open problem, stated honestly
+
+We previously claimed that joint two-plane ternary optimization was unpublished.
+**That was wrong and is retracted.** PTQTP (arXiv 2509.16989) does exactly that:
+alternating ridge regression for the two scales, then an exhaustive 9-way search
+over `(T¹,T²) ∈ {−1,0,+1}²` per weight, up to 50 iterations. What PTQTP does
+*not* do is weight the objective by the calibration Hessian — its loss is plain
+Frobenius on the weights, calibration-free.
+
+Conversely, every Hessian-aware ternary method we found (QuantEase, ExTernD, and
+GPTQ itself) is **sequential**: one plane, or greedy deflation.
+
+So the precise open slot is:
+
+```
+min ‖(W − d₁T₁ − d₂T₂) X‖²_F        with H = XᵀX from real activations
+     ↑ joint over both planes        ↑ Hessian-weighted, not Frobenius
+```
+
+The blueprint to fill it is a hybrid: QuantEase's per-weight closed form
+
+```
+β̃ = −[ Σ_{k≠j} H_{j,k}·Ŵ_{i,k} − (WH)_{i,j} ] / H_{j,j}
+```
+
+with the scalar snap `q(β̃)` replaced by PTQTP's joint 9-way enumeration over the
+two planes. AQLM (arXiv 2401.06118) subsumes this in principle — two codebooks,
+alphabet 3, group size 1 — and its beam search degenerates to exact enumeration
+at that alphabet size; but no ternary configuration of AQLM has been published
+or benchmarked.
+
+One published warning worth carrying: ExTernD (arXiv 2607.13511) reports that
+joint fitting of multiple ternary factors "fails completely" — but for a
+*multiplicative* low-rank form, not our *additive* same-shape planes. It is not
+evidence against this design; it is evidence that the distinction matters.
 
 ## 3. Foldable transforms (zero runtime cost)
 
@@ -49,18 +87,80 @@
 | **down_proj above gate/up** | three independent sources agree | 🧪 v4 | DeepSeek-V3-class configs, Unsloth GGUF headers (read directly), MXMoE |
 | **Protect first/last layers** | Hessian trace varies **35×** across layers; on Ornith the top-10 are exactly the last ten | ✅ | ours; cf. Unsloth dynamic quants |
 | **Veto for rare-but-critical experts** (rarity ≠ expendability) | checkpoint-only | 🧪 v4 | arXiv 2604.06515 |
+| **Attention QKV at Q8** | **not distinguishable**: paired sign test on 30 chunks, 17/30 wins, p = 0.58, mean gap 0.013 against a ±0.087 spread. Costs 0.78 GiB. Discarded | ⛔ rejected (measured, paired) | ours |
 | **Linear attention at Q8** | inherited sub-2-bit GatedDeltaNet projections were 47–51% wrong; Q8 restore: model error **25.4% → 17.1%** for +3 GiB — best lever per byte (2.77 pts/GiB) | ✅✅ | ours; cf. Quamba (arXiv 2410.13229): no sub-4-bit SSM scan has ever been demonstrated |
 | **Super-weight restore** | losing a single super weight collapses a model; coordinates published only for Llama/Mistral/OLMo/Phi — scan yours | 🧪 v3.2 | Yu et al., "The Super Weight in Large Language Models", arXiv 2411.07191 |
+
+### The asymmetric-calibration family, stated precisely
+
+Plain GPTQ matches the quantized layer against *its own* replayed input: it never
+sees what the full-precision model actually produced there. Asymmetric
+calibration changes the target to the full-precision output, so the layer also
+absorbs the drift accumulated upstream:
+
+```
+GPTQ    min ‖(W+ΔW)X − W X‖²        X  = activations through the ALREADY-QUANTIZED prefix
+GPTAQ   min ‖(W+ΔW)X − W X̃‖²        X̃ = activations through the FULL-PRECISION prefix
+```
+
+Three implementation facts, each of which we got wrong or did not know:
+
+1. The Hessian stays `H = XXᵀ` from the **quantized** path. Only the *target*
+   changes.
+2. The extra statistic is the cross term `(X̃ − X)·Xᵀ`, cached once and folded
+   in column by column — **not** `X̃Xᵀ`, and it must be routed through `W`
+   (`R = W(X̃−X)`) rather than symmetrized.
+3. `X` and `X̃` must be captured on the **same token sequences**. Independent
+   calibration sets break the derivation, since `ΔX` is meant to be a per-token
+   residual. This forces two paired forward passes and a sequential,
+   layer-by-layer schedule.
+
+Cost: <10% extra time below dim 4096, 30–40% above. Neither paper reports
+ternary or MoE results — the transfer to our regime is unproven and is exactly
+what the Tony testbench exists to measure.
 
 ## 5. Repair (post-forge, ternary planes untouched)
 
 | lever | prior | verdict | source |
 |---|---|---|---|
+| **EAQuant — expert calibration balance** | authors: +1.15–1.37% at W4A4, +1.33–2.28% at W3A4 on three MoE models. Three parts: smoothing aggregated across experts *and* router; router-logit KL alignment; **injecting tokens for under-served experts** (`count < r·kN/n`) | 🧪 v4 — the calibration-balance part is cheap and MoE-specific | EAQuant, arXiv 2506.13329 |
 | **QESC — router selection correction** | expert-selection bias is the *principal* factor in low-bit MoE degradation (authors) | 🧪 v3.2, TopK-MSE on logits | EAC-MoE, arXiv 2508.01625 |
 | **Norm Tweaking** | GLM-130B at W2 near-fp quality; **Iters=1 is mandatory** (5 iterations = collapse) | 🧪 v3.2 | arXiv 2309.02784 |
 | **QZO zeroth-order scale refinement** | teacher-free, 18× less memory | 🧪 optional | QZO, arXiv 2505.13430 |
 | **EoRA low-rank error correction** | +6.4% quality at rank 4 (our measurement); hot-only cuts 80% of the byte cost | 🧪 v4 | EoRA, arXiv 2410.21271 |
 | **ROMER hot-expert copies** | −58% ppl under weight noise (authors) | 🧪 test | ROMER-class, arXiv 2605.11800 |
+
+### What the QKV result tells us (a useful negative)
+
+Promoting the 45 `attn_qkv` tensors to Q8_0 changed nothing measurable, while
+the *linear-attention* projections on the same model gave 25.4% → 17.1%. The two
+results together locate the remaining error: **standard attention is not the
+bottleneck on this model; the state-space projections were, and the experts
+still are.**
+
+That is worth more than the 0.78 GiB it cost to learn. It also sets a floor on
+what this benchmark can adjudicate: with σ ≈ 0.087 over 30 chunks, resolving a
+0.013 effect at three sigma would need roughly 4,000 chunks. Levers of that size
+are permanently below our measurement floor and should be judged on a different
+instrument — or not attempted.
+
+## 5b. Calibration data (chosen, not inherited)
+
+| lever | measurement / prior | verdict | source |
+|---|---|---|---|
+| **Reasoning-trace self-calibration (AYOT)** | ternary Qwen3-4B: **+8.97 points** over conventional calibration on math/code, with only 4M tokens. Same regime as ours: 1.58-bit, reasoning model | 🧪🔥 v4 top-3 | AYOT / ScaleQ-1.58, arXiv 2608.01078 |
+| **Expert-balanced sampling (MoEQuant EBSS)** | routing is power-law: a generic corpus leaves niche experts uncalibrated. Mixtral at 3-bit: **+4.72 points**; DeepSeek-MoE HumanEval +10 | 🧪🔥 v4 — mandatory at 512 experts | MoEQuant, arXiv 2505.03804 |
+| **Calibration set size** | saturates at **64–128 sequences** across three independent studies; past that, nothing | ✅ settled — stop spending here | arXiv 2311.09755, 2510.10618, 2410.17170 |
+| **Domain match** | math calibration → +5.92 on math; code → +7.49 on code. Generic-corpus *choice* among C4/Wikipedia/RedPajama is inconsistent — the lever is domain match, not corpus brand | ✅ | COLA, arXiv 2510.10618 |
+| **Sequence-length diversity** | fixed-length chunks misestimate the Hessian because activation statistics depend on length; mix short and long | 🧪 cheap to try | MaCa, arXiv 2602.07465 |
+
+Honest contradiction, recorded: COLA found self-generated calibration slightly
+*worse* than a curated corpus for quantization (44.23 vs 43.61), while
+Self-Calibration (arXiv 2410.17170) found it better. Both are at moderate bit
+widths on general tasks. AYOT's large win is at **ternary, on reasoning tasks** —
+so the reconciliation is that the self-calibration advantage grows as bits fall
+and as the task depends on generation quality. We should treat it as promising,
+not proven, for our regime, and measure it on Tony.
 
 ## 6. Runtime (no file changes)
 
@@ -68,6 +168,7 @@
 |---|---|---|---|
 | **Low-bit sampling recipe** | temp 0.6 · min_p 0.03 · top_p 0.9 · presence 1.5; thinking ON for hard reasoning; **never XTC**. At temp 0.2 a healthy sub-2-bit model degenerates into token loops — our test harness initially *failed a working model* because of this | ✅ | ours + Unsloth guidance + 3 papers (doc §23) |
 | **MTP speculation** | +10% at draft-length 1 on the Ornith family (the MTP head predicts exactly one token; longer drafts *hurt*: acceptance 0.65 → 0.39) | ✅ per model | ours |
+| **Loop rescue / hybrid planning** | at 2 bit the dominant failure is *generation pathology*, not wrong answers: loops, budget exhaustion, unclosed reasoning. Authors recover Qwen3-8B MATH-500 from **17.2% → 74.2%** at runtime | ✅✅ **runtime-only, no re-forge** — apply first | arXiv 2606.02011 |
 | **Self-draft from plane-1** (plane-1 as its own draft model) | expected routing overlap ρ ≈ 0.15–0.30 < 0.5 threshold → probably not viable; QSpec-class gains only at high ρ | 🧪 measure ρ first | doc §24-25 |
 
 ## The three bugs that shipped a perfect file and a broken model

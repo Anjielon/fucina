@@ -9,7 +9,7 @@ of a single AMD Ryzen AI Max+ 395 desktop, at ~10 tok/s.
 Every technique in this repository carries its **measured** effect on real
 weights — not the paper's promise, our number — and every technique credits
 the research it came from. See [docs/LEVERS.md](docs/LEVERS.md) for the full
-catalogue (29 levers, each with prior, cost, verdict and citation) and
+catalogue (34 levers, each with prior, cost, verdict and citation) and
 [docs/LESSONS.md](docs/LESSONS.md) for the engineering rules we paid for.
 
 ## The method
@@ -48,23 +48,29 @@ W ≈ d₁·T₁ + d₂·T₂        T ∈ {-1, 0, +1},  256-weight blocks,  f16
 
 | file | role |
 |---|---|
-| `forgia_gguf.py` | the forge: source GGUF → two-plane TQ1_0 GGUF, resumable via journal |
-| `ternario_gpu.py` | GPU quantizer: joint two-plane optimization + full-propagation GPTQ |
+| `forge.py` | orchestrator: applies each lever *only if it wins its own test on the current model* |
+| `forge_gguf.py` | the forge: source GGUF → two-plane TQ1_0 GGUF, resumable via journal |
+| `ternary_gpu.py` | GPU quantizer: joint two-plane optimization + full-propagation GPTQ |
+| `two_planes.py` | Hessian preparation (damping, Cholesky) |
 | `tq1_pack.py` | GPU TQ1_0 bit-packing + hot-first permutation (self-tested against the reference decoder) |
-| `due_piani.py` | Hessian preparation (damping, Cholesky) |
-| `costruisci_hessiane.py` | activation dumps → per-layer Hessians (reports anisotropy α) |
-| `leve.py` | the lever registry: 29 techniques with prior, test protocol, cost, source |
-| `fucina.py` | orchestrator: applies each lever *only if it wins its own test on the current model* |
+| `build_hessians.py` | activation dumps → per-layer Hessians (reports anisotropy α) |
+| `levers.py` | the lever registry: 34 techniques with prior, test protocol, cost, source |
+| `safe_repair.py` | the gate: a repair is kept only if its gain exceeds the benchmark's own noise |
+| `paired_compare.py` | per-chunk paired sign test — resolves effects smaller than the absolute error bar |
+| `promote_tensors.py` | selective precision promotion (e.g. attention → Q8_0) by file rewrite |
+| `selective_rollback.py` | tensor-level diff / guard / restore between two builds |
+| `diagnose_assembly.py` | forensic check that a written file reconstructs its source weights |
+| `no_miopen.py` | depthwise-conv fallback for ROCm GPUs without MIOpen kernels (gfx1151) |
 
 ## Usage
 
 ```bash
-python3 forgia_gguf.py \
-    --sorgente  model.gguf          # any GGUF MoE (weights are dequantized per expert)
-    --uscita    model-ternary.gguf
-    --caldi     28                  # experts that receive the second plane
+python3 forge_gguf.py \
+    --source    model.gguf          # any GGUF MoE (weights are dequantized per expert)
+    --output    model-ternary.gguf
+    --hot       28                  # experts that receive the second plane
     --imatrix   imatrix.gguf        # must contain per-expert routing counts
-    --hessiane  H_DIR/              # optional: enables GPTQ on gate/up projections
+    --hessians  H_DIR/              # optional: enables GPTQ on gate/up projections
 ```
 
 Runtime requirements: a llama.cpp build with TQ1_0 Vulkan kernels **and** the
@@ -87,6 +93,24 @@ per request; never XTC.
 | forge time | 7.6 h end-to-end on one consumer GPU (Radeon 8060S, Vulkan), NAS-fed at ~50 MB/s |
 | quality | multi-step arithmetic and logic traps solved with reasoning enabled; per-expert weight error 21.5% (2-plane) / 28.1% (1-plane dedicated) |
 | speed | ~10 tok/s decode, fully resident in 96 GiB UMA |
+
+## Where this sits in the literature
+
+At the time of writing we could find **no published result for a 400B-class MoE
+at ~1.7 bits/weight**, and no published method that optimizes two ternary planes
+*jointly* under a true calibration Hessian — PTQTP (arXiv 2509.16989) does the
+joint part without the Hessian, QuantEase (arXiv 2309.01885) does the Hessian
+part on one plane. The nearest published sub-2-bit MoE work is BitsMoE
+(arXiv 2606.00079) on a 30B model, and the historical existence proof is QMoE
+(arXiv 2310.16795), which compressed a 1.6T Switch Transformer below 1
+bit/param — a non-reasoning model, in 2023. The only independent data point at
+our exact scale is an industry report that a 397B-class MoE at 2 bit "corrupts
+structured output", which matches the failure mode we measured before fixing
+our engine.
+
+That is the gap this repository documents: not a new theory, but a complete,
+measured, reproducible path from a 740 GiB bf16 MoE to a working 88 GiB model
+on one desktop.
 
 ## Credits
 

@@ -25,6 +25,8 @@ from math import comb
 def per_chunk(path: str) -> list[float]:
     """Recover per-chunk perplexities from the running estimates in a log."""
     text = open(path, errors="ignore").read()
+    # llama-perplexity prints the running estimates on a single line,
+    # comma-separated: "[1]5.29,[2]5.41,[3]6.02,". Match them anywhere.
     running = [(int(i), float(v)) for i, v in re.findall(r"\[(\d+)\]([\d.]+)", text)]
     if not running:
         return []

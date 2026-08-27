@@ -66,7 +66,7 @@ the *experiment code* — not the results — invalidated three of them.
 
 | rejected technique | what the code actually did |
 |---|---|
-| GPTAQ (asymmetric calibration) | never built the required cross-Hessian; the "asymmetric" flag disabled GPTQ's intra-block propagation. The measured 32.6% sits exactly between no-GPTQ (38.9) and GPTQ (28.1) — a mutilated GPTQ was rejected, not GPTAQ |
+| GPTAQ (asymmetric calibration) | never built the required cross term; the "asymmetric" flag disabled GPTQ's intra-block propagation. The measured 32.6% sits exactly between no-GPTQ (38.9) and GPTQ (28.1) — a mutilated GPTQ was rejected, not GPTAQ. Reading the paper properly afterwards showed the requirement is `(X̃−X)Xᵀ` on **paired** token batches, with the Hessian unchanged — a design our capture pipeline never had |
 | Haar transform | applied to the wrong axis (the residual dimension instead of the expert's private one) and without the band grouping that is half the method. With 256-wide blocks the first block mixes seven bands: 0.1% was the guaranteed outcome |
 | MagR | the proximal step was an iterated clip at (1−α)·rowmax — geometric shrinkage of the maximum, not the ℓ∞ proximal operator; no null-space projection and no GPTQ afterwards. The conclusion may still hold, the evidence does not |
 
