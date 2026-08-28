@@ -139,6 +139,18 @@ def main():
                 score[e] += float((dW @ Lc).square().sum())
                 del We, dW
             del W
+        # ⛔ la massa di instradamento E' parte dell'impatto (misurato sul 397B:
+        # senza p_e l'overlap con la frequenza era 0/16 — esperti freddi a pesi
+        # grossi in testa). impact_e = p_e * ||dW_e sqrt(diag H)||^2
+        pe = None
+        r_im = GGUFReader(str(A.imatrix))
+        for tc in r_im.tensors:
+            if tc.name == f"blk.{L}.ffn_gate_exps.weight.counts":
+                c = np.array(tc.data).astype(np.float64).ravel()
+                pe = c / max(c.sum(), 1.0)
+                break
+        if pe is not None:
+            score = score * pe
         rank = [int(x) for x in np.argsort(-score)]
         _impact_cache[key] = rank
         _impact_cache_path.write_text(json.dumps(_impact_cache))

@@ -21,8 +21,10 @@ import numpy as np, torch
 torch.set_num_threads(4)   # la forgia v3 ha la precedenza sulla CPU
 sys.path.insert(0, str(Path(__file__).parent))
 import ternary_gpu as G
+sys.path.insert(0, "/home/angelo/build-llamacpp-tq1/gguf-py")
 
 NAS = Path("/mnt/nas/CACHEDEV1_DATA/modelli-fp/Ornith-1.5-397B")
+IMATRIX = Path("/home/angelo/odino-lab/imatrix/Ornith-1.5-397B-imatrix.gguf")
 HESS = Path("/mnt/models/gguf/odino-hessiane")
 E = 512
 
@@ -35,6 +37,15 @@ def main() -> None:
     done = json.loads(out_path.read_text()) if out_path.exists() else {}
     from safetensors import safe_open
     idx = json.load(open(NAS / "model.safetensors.index.json"))["weight_map"]
+    # ⛔ La massa di instradamento E' parte dell'impatto: un esperto mai chiamato
+    # non consegna il suo errore. Primo giro SENZA p_e: overlap con la frequenza
+    # 0/16 — classifica dominata dagli esperti freddi a pesi grossi. Score:
+    #   impact_e = p_e * ||dW_e sqrt(diag H)||^2
+    from gguf import GGUFReader
+    counts = {}
+    for tt in GGUFReader(str(IMATRIX)).tensors:
+        if tt.name.endswith(".ffn_gate_exps.weight.counts"):
+            counts[int(tt.name.split(".")[1])] = np.array(tt.data).astype(np.float64).ravel()
     dev = "cuda" if torch.cuda.is_available() else "cpu"
     for L in range(lo, hi + 1):
         if str(L) in done:
@@ -64,6 +75,8 @@ def main() -> None:
                     del W, dW
                 if e % 128 == 0:
                     log(f"  layer {L}: esperto {e}/512")
+        pe = counts[L] / max(counts[L].sum(), 1.0)
+        score = score * pe
         done[str(L)] = [int(x) for x in np.argsort(-score)]
         out_path.write_text(json.dumps(done))
         log(f"layer {L}: classificato in {(time.time()-t0)/60:.1f} min · "
