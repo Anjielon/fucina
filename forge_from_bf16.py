@@ -44,7 +44,23 @@ K_HOT = int(os.getenv("FORGE_HOT", "16"))   # experts col 2° plan (su 512)
 OUTPUT = os.getenv("FORGE_OUT", "/mnt/lavoro/ODINO-v31/ODINO-397B-v31.gguf")
 GPTQ = os.getenv("FORGE_GPTQ", "1") == "1"
 ONLY_LAYERS = int(os.getenv("FORGE_ONLY_LAYERS", "0"))
-TWO_PLANE_LAYERS = {int(x) for x in os.getenv("FORGE_TWO_PLANE_LAYERS", "57,58,59").split(",") if x.strip()}     # >0 = prova su pochi layers
+# ⛔ TWO_PLANE_LAYERS (57,58,59) era un residuo MAI USATO: la v3.1 ha forgiato
+# il 2° piano su TUTTI gli strati e la ricetta l'ha strippato dopo. Ora la
+# profondita' e' un PREDICATO UNICO che alimenta tutti i siti accoppiati
+# (piano nel plan, coppia congiunta, permutazione router) — la stessa
+# disciplina di forge_gguf.has_p2.
+P2_LAYERS = os.getenv("FORGE_P2_LAYERS", "")        # es. "44-59"; vuoto = tutti
+FOEM_BETA = float(os.getenv("FORGE_FOEM_BETA", "0"))
+_IMPACT_JSON = os.getenv("FORGE_IMPACT_JSON", "")   # classifica impact pre-calcolata
+_IMPACT = json.load(open(_IMPACT_JSON)) if _IMPACT_JSON and Path(_IMPACT_JSON).exists() else {}
+
+def has_p2(L: int) -> bool:
+    if not K_HOT:
+        return False
+    if not P2_LAYERS:
+        return True
+    lo, hi = (int(x) for x in P2_LAYERS.split("-"))
+    return lo <= L <= hi
 
 def log(*a): print(f"[{time.strftime('%H:%M:%S')}]", *a, flush=True)
 
@@ -159,6 +175,8 @@ def hot_experts(L: int, k: int):
     Allocating per LAYER instead would give 36.1% — traffic concentrates among
     experts far more than sensitivity concentrates among layers.
     """
+    if _IMPACT and str(L) in _IMPACT:
+        return np.array(_IMPACT[str(L)][:k], int)
     if not _HOT:
         r = GGUFReader(str(IMATRIX))
         for t in r.tensors:
@@ -310,7 +328,7 @@ def main():
             # The engine treats `_exps2` as TENSOR_NOT_REQUIRED: layers without
             # it skip the branch, layers with it sum inside build_moe_ffn.
             plan.append((name, shape_, T.TQ1_0, ("forgia", name)))
-            if K_HOT > 0:      # second plane: same tensor, only K experts
+            if has_p2(L):      # second plane: same tensor, only K experts
                 f2 = list(shape_); f2[2] = K_HOT
                 plan.append((name.replace(".weight", "2.weight"), f2, T.TQ1_0, ("forgia", name)))
         else:
@@ -369,7 +387,7 @@ def main():
             f8 = q8_override(orig)
             if f8 is not None:
                 w.write_tensor_data(np.fromfile(f8, dtype=np.uint8))
-            elif K_HOT and orig.endswith(".ffn_gate_inp.weight"):
+            elif K_HOT and orig.endswith(".ffn_gate_inp.weight") and has_p2(int(orig.split(".")[1])):
                 # ⛔ The hot-first expert reordering must be FOLDED INTO the
                 # router rows as well, or the router keeps addressing the old
                 # expert indices. Row e is the logit of expert e.
@@ -412,12 +430,12 @@ def main():
             #        pair, which is the defect that shipped in the first build
             pz = int(os.getenv("ODINO_PEZZO","3000000"))
             Wt = torch.from_numpy(W.reshape(-1, ind)).float()
-            d1, q1 = G.quantize_one_plane(Wt, Hc, chunk=pz) if Hc is not None \
+            d1, q1 = G.quantize_one_plane(Wt, Hc, chunk=pz, foem_beta=FOEM_BETA) if Hc is not None \
                      else (lambda r: (r[0], r[1]))(G.quantize(Wt, None, rounds=2, chunk=pz))
             # ⚡ Il 2° plan serve ONLY_LAYERS ai 28 experts hot su 512: quantizzare
             #    all 512 with two planes would be 18x the necessary work.
             righe_esp0 = W.reshape(-1, ind).shape[0] // E
-            caldi0 = hot_experts(L, K_HOT) if K_HOT else np.array([], int)
+            caldi0 = hot_experts(L, K_HOT) if has_p2(L) else np.array([], int)
             if len(caldi0):
                 sel0 = np.concatenate([np.arange(e*righe_esp0, (e+1)*righe_esp0) for e in caldi0])
                 Wc2 = torch.from_numpy(np.ascontiguousarray(W.reshape(-1, ind)[sel0])).float()
@@ -425,7 +443,7 @@ def main():
                 # first build discarded the joint plane-1 and kept the
                 # dedicated one, leaving an orphaned pair: a plane-2 optimized
                 # against a plane-1 the file no longer contained.
-                j1d, j1q, d2, q2 = G.quantize(Wc2, Hc, rounds=2, chunk=pz)
+                j1d, j1q, d2, q2 = G.quantize(Wc2, Hc, rounds=2, chunk=pz, foem_beta=FOEM_BETA)
                 del Wc2
             else:
                 j1d = j1q = d2 = q2 = None
@@ -464,15 +482,15 @@ def main():
                 Eg, og, indg = Wg.shape
                 Hg = hchol(int(gem.split(".")[1])) if indg == 4096 else None
                 Wgt = torch.from_numpy(Wg.reshape(-1, indg)).float()
-                g1, gq1 = G.quantize_one_plane(Wgt, Hg, chunk=pz) if Hg is not None \
+                g1, gq1 = G.quantize_one_plane(Wgt, Hg, chunk=pz, foem_beta=FOEM_BETA) if Hg is not None \
                           else (lambda r: (r[0], r[1]))(G.quantize(Wgt, None, rounds=2, chunk=pz))
                 rg0 = Wg.reshape(-1, indg).shape[0] // Eg
                 Lg = int(gem.split(".")[1])
-                cg0 = hot_experts(Lg, K_HOT) if K_HOT else np.array([], int)
+                cg0 = hot_experts(Lg, K_HOT) if has_p2(Lg) else np.array([], int)
                 if len(cg0):
                     sg0 = np.concatenate([np.arange(e*rg0, (e+1)*rg0) for e in cg0])
                     Wg2 = torch.from_numpy(np.ascontiguousarray(Wg.reshape(-1, indg)[sg0])).float()
-                    gj1d, gj1q, g2, gq2 = G.quantize(Wg2, Hg, rounds=2, chunk=pz)   # coppia congiunta
+                    gj1d, gj1q, g2, gq2 = G.quantize(Wg2, Hg, rounds=2, chunk=pz, foem_beta=FOEM_BETA)   # coppia congiunta
                     del Wg2
                 else:
                     gj1d = gj1q = g2 = gq2 = None
