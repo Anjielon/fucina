@@ -880,6 +880,21 @@ layers 30-45, **which is exactly the beneficial tail** (44-59: 6.1591 against
 6.1845). Selection quality tracks the damage profile of the 397B layer by
 layer, and its difference between the two models tracks the sign flip.
 
+The full 60-layer curve sharpens this and bounds it honestly:
+
+| 397B band | mean selection overlap | mean impact lost | damage (12-chunk ppl) |
+|---|---|---|---|
+| 0-19 | **9.9/28** | **42.6%** | 6.7850 |
+| 20-39 | 25.0/28 | 1.5% | 6.3542 |
+| 40-59 | 25.1/28 | 3.4% | 6.1357 |
+
+Per-layer impact-lost against band damage correlates at **+0.788**. And the
+limit is visible in the same table: bands 20-39 and 40-59 have essentially
+identical selection (25.0 against 25.1) and different damage. **Selection
+explains the catastrophic head; the centre-to-tail gradient that remains is a
+depth effect** — consistent with the mid-depth fragility measured independently
+on the 35B. Two factors, both now quantified, neither reducible to the other.
+
 Coverage, measured on the same imatrices, moves in the same direction but
 weakly: the top-28 carry a median 30.77% of traffic on the 35B against 19.66%
 on the 397B — a reduction, not a collapse, and per-layer coverage was already
