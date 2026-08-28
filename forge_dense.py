@@ -142,7 +142,12 @@ def main() -> None:
             shp = [int(x) for x in t.shape]               # (n_in, n_out)
             n_in, n_out = shp[0], shp[1]
             W = GQ.dequantize(np.asarray(t.data), t.tensor_type).reshape(n_out, n_in)
+            # the Hessian is measured on the residual stream (hidden size):
+            # it applies to gate/up, NOT to down, whose input is the
+            # intermediate activation. Same rule as the MoE forge.
             H = hchol(L)
+            if H is not None and H.shape[0] != n_in:
+                H = None
             d1, q1 = TG.quantize_one_plane(
                 torch.from_numpy(W.astype(np.float32)), H, chunk=A.chunk)
             raw = pack_tq1(np.asarray(d1), np.asarray(q1), n_out, n_in)
