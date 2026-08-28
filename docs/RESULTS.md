@@ -1289,3 +1289,58 @@ to four decimals: with up+gate corrected everywhere, the tail-band down
 correction contributes nothing measurable — evidence that the projections'
 corrective contributions are not independent (consistent with the band
 sweep's two-layer configuration cliff).
+
+## TCQ1_7 pre-test F1 (28/8 notte)
+
+First contact of the TCQ1_7 design (docs/TCQ1_7_DESIGN.md) with a REAL
+tensor. Exact Viterbi encoder over the full 4096-state bitshift trellis
+(L=12), schedule (2,2,1)×80+(2)×16 = 432 bits, per-256 block payload
+**2B fp16 scale + 54B stream = 56B = 1.75 bpw exact**, closed-form offsets
+verified against the cumulative schedule. Tool:
+`experiments/tcq_encode_real.py` (CPU-only, numpy; no GPU touched).
+
+**Tensor**: `blk.29.attn_gate.weight` of the **397B** (central layer of 60),
+dims [4096, 8192] = 33.5M weights = 131,072 blocks, dequantized from the
+Q8_0 reference dump `/mnt/models/gguf/odino-q8/` (Q8_0 error ≪ the effects
+measured). TCQ encoded on a **random subset of 4096 blocks** (1.05M weights,
+seed 0, uniform over the tensor — declared subset, encoding the whole tensor
+would take ~58 min); the RTN baseline is measured on BOTH the subset and the
+full tensor (they agree to 4 decimals, so the subset is representative).
+
+| quantizer | bpw | rel_err (‖err‖₂/‖w‖₂) | MSE vs RTN |
+|---|---|---|---|
+| RTN ternary, exact optimal scale per 256 (full tensor) | 1.6875 (TQ1_0 pack) | 0.4420 | — |
+| RTN ternary, same, on the 4096-block subset | | 0.4421 | reference |
+| **TCQ1_7, Viterbi exact + fp16 refit scale** | **1.75** | **0.3473** | **−38.3%** |
+| decoded back from the packed 56B payload | 1.75 | 0.3473 | identical |
+
+Chain of validation: gaussian sim 0.3329 → real tensor 0.3473 (the same
++~1% excess over gaussian that RTN shows: 0.4362 Lloyd → 0.4420 real).
+The design's −42% MSE gaussian projection lands at **−38.3% measured** on
+real weights. The ~21.5% figure in the design doc is the *H-metric after
+the GPTQ wrapper* (extrapolated) — F1 is plain-L2 only, that number is
+for the forge phase (F2).
+
+Details that will matter for the forge:
+- **Tail-biting converges**: iterative constrained Viterbi (constrain the
+  10 wrap bits to the previous pass's final state) reaches the fixed point
+  on 4093/4096 blocks in ≤3 extra passes; the 3 stragglers decode with a
+  localized state mismatch whose cost is invisible at 4 decimals. The
+  54B payload is self-consistent — no side bits needed.
+- **1MAD costs ~3% MSE at L=12**: the computed codebook lands only 713
+  distinct values on 4096 states (byte-sum collisions). Control run with a
+  seeded gaussian table, same 1024 blocks: 0.3422 vs 1MAD 0.3477. A 4096×
+  fp16 LUT (8 KiB, fits in shared memory) would recover it — decision for
+  the Vulkan kernel, not blocking.
+- **Roundtrip is bit-exact**: pack → unpack via closed-form offsets with
+  wraparound reproduces the encoder states on every converged block.
+
+**Timing** (numpy, single process, includes 2–4 full Viterbi passes for
+tail-biting + scale refit): **26.5 ms/block** = ~97 kweights/s. Whole
+tensors of the 397B at this rate: this attn_gate ~58 min; the full expert
+complement (~385B weights ≈ 1.5G blocks) ~460 process-days — confirming
+the design doc's call that the forge needs the torch-vectorized
+`tcq_plane.py` (single-pass, batched rows) and/or 32-way process
+parallelism (~2 weeks CPU worst case) rather than this reference encoder.
+Seed 0 throughout; rerun: `python3 experiments/tcq_encode_real.py
+--blocks 4096 --batch 512 --gauss-control 1024`.
