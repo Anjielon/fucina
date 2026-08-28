@@ -1,3 +1,5 @@
+<p align="center"><img src="assets/odino_logo.png" alt="ODINO" width="300"/></p>
+
 # FUCINA — A General Ternary Forge for Mixture-of-Experts Models
 
 **Fucina** (Italian for *forge*) turns any GGUF Mixture-of-Experts model into a
