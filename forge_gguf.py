@@ -57,6 +57,12 @@ def main():
     ap.add_argument("--chunk", type=int, default=3_000_000, help="rows per GPU chunk")
     ap.add_argument("--foem-beta", type=float, default=0.0,
         help="FOEM first-order correction (arXiv 2507.11017); 0 = plain GPTQ")
+    ap.add_argument("--hot-select", choices=("freq", "impact"), default="freq",
+        help="how the K hot experts are chosen: 'freq' = imatrix routing counts "
+             "(historical); 'impact' = trace(H dW^T dW) of the plane-1 error — "
+             "what the residual stream actually feels. Frequency wastes 42.6%% "
+             "of impact in the head (measured); inside the good band the "
+             "Hessian-weighted score is the published metric (MoPEQ).")
     ap.add_argument("--plane2-layers", default=None,
                     help="layer range that RECEIVES the second plane, e.g. 30-40. "
                          "Default: every layer with imatrix counts (historical "
@@ -66,6 +72,8 @@ def main():
                          "recipe — baked at forge time instead of stripped "
                          "afterwards.")
     A = ap.parse_args()
+    if A.hot_select == "impact" and not A.hessians:
+        ap.error("--hot-select impact requires --hessians (the score IS the Hessian)")
     K = A.hot
 
     src = GGUFReader(A.source)
@@ -103,8 +111,45 @@ def main():
         if not f.exists(): return None
         return torch.from_numpy(D.prepare_hessian(np.load(f).astype(np.float64)).astype(np.float32))
 
+    import json
+    _impact_cache_path = Path(A.output + ".impact.json")
+    _impact_cache = json.loads(_impact_cache_path.read_text()) if _impact_cache_path.exists() else {}
+
+    def impact_order(L):
+        """Rank experts by trace(H dW^T dW) of a fast dedicated-plane RTN on
+        gate+up (H measured on the residual stream applies to both). Cached
+        in a sidecar so resume never recomputes."""
+        key = str(L)
+        if key in _impact_cache:
+            return _impact_cache[key]
+        Hraw = np.load(Path(A.hessians) / f"H_{L:02d}.npy").astype(np.float64)
+        n = Hraw.shape[0]
+        Hraw[np.diag_indices(n)] += 0.01 * np.mean(np.diag(Hraw))
+        Lc = torch.from_numpy(np.linalg.cholesky(Hraw).astype(np.float32))
+        dev = "cuda" if torch.cuda.is_available() else "cpu"
+        Lc = Lc.to(dev)
+        score = np.zeros(E)
+        for part in ("gate", "up"):
+            tt = tensors[f"blk.{L}.ffn_{part}_exps.weight"]
+            W = GQ.dequantize(np.asarray(tt.data), tt.tensor_type)  # (E,out,in)
+            for e in range(E):
+                We = torch.from_numpy(W[e]).float().to(dev)
+                d, q = G._scale_one_plane(We.reshape(-1, 256))
+                dW = We - (d * q).reshape(We.shape)
+                score[e] += float((dW @ Lc).square().sum())
+                del We, dW
+            del W
+        rank = [int(x) for x in np.argsort(-score)]
+        _impact_cache[key] = rank
+        _impact_cache_path.write_text(json.dumps(_impact_cache))
+        f_top = [int(x) for x in hot_order[L][:K]]
+        overlap = len(set(rank[:K]) & set(f_top))
+        log(f"  impact rank layer {L}: overlap with freq top-{K}: {overlap}/{K}")
+        return rank
+
     def permutation_for(L):
-        hot = [int(x) for x in hot_order[L][:K]]
+        order = impact_order(L) if A.hot_select == "impact" else hot_order[L]
+        hot = [int(x) for x in order[:K]]
         return hot_first_order(hot, E), hot
 
     # ── write plan ──────────────────────────────────────────────────────
