@@ -65,7 +65,7 @@ def main() -> None:
         perm = np.array(hot + [e for e in range(E) if e not in set(hot)])
         chunk = d.nbytes // E                    # bytes per esperto (packed, contigui)
         v = d.reshape(E, chunk)
-        return np.ascontiguousarray(v[perm]).reshape(-1)
+        return np.ascontiguousarray(v[perm]).reshape(d.shape)
 
     rs = GGUFReader(A.src); rd = GGUFReader(A.donor)
     ts = {t.name: t for t in rs.tensors}; td = {t.name: t for t in rd.tensors}
