@@ -100,6 +100,125 @@ determinism patches currently take on faith.
    the residual-stream rank correlation that failed to replicate across
    models, reported as a cautionary tale.
 
+## Section 1 draft — Introduction
+
+A 397-billion-parameter mixture-of-experts model does not fit in the memory
+of any consumer machine at the precisions its authors shipped. At 1.69
+bits/weight it does: 84 GiB, resident in the unified memory of a desktop
+APU, served by ternary Vulkan kernels we contribute upstream. This paper is
+about what happened when we tried to make that model *better* — and measured,
+twice, that the intuitive way to do so makes it worse.
+
+The corrective mechanism is a second ternary plane on the most-routed
+experts: a residual quantization that demonstrably halves weight
+reconstruction error (46% → 22%) and halves the single-expert output error
+under the layer's own captured activations. Every local metric of fidelity
+improves. Applied uniformly across the network, perplexity degrades — on
+both a 35B and a 397B model of the same family. This is the correction
+paradox, and it is not a bug: we verified the file layout, the expert
+permutations (28/28 correct on all 40 layers), the scales, and the delivered
+error, and then spent the balance of the work localising *where* the paradox
+lives.
+
+The answer is depth. Per-layer engine switches (enabling the correction for
+arbitrary layer ranges at load time, without re-forging) show that the same
+perturbation, delivered at the same relative magnitude to every layer's
+output, improves the model in the final quarter of the network and is
+catastrophic near the middle: one single mid-depth layer moves perplexity
+from 8.72 to 37.8, while the correction restricted to the tail improves on
+the uncorrected baseline. The fraction of depth at which the sign flips is
+the same on both models — 73% — at a 10× parameter difference. Eight
+candidate explanations, each pre-registered as a falsifiable prediction
+before its measurement ran, are refuted in Section 4; what survives is a
+statement about position, not fidelity. Section 5 turns the statement into a
+recipe that ships inside the file. Section 6 reports a measurement the
+routing-stability literature has so far assumed: the distribution of the
+top-k routing margin, whose skew explains why the one published mean curve
+misleads.
+
+We write from a deployment setting the quantization literature rarely
+occupies — one machine, no cluster, no fp16 reference for the largest model
+— and we are explicit throughout about what that setting does to
+measurement: paired estimators where absolute error bars would drown the
+effect, functional probes where benchmark harnesses disagree with each
+other, and a stated evaluation debt where neither suffices.
+
+## Section 5 draft — The depth rule and the recipe in the file
+
+**The rule.** On both models, the second plane helps if and only if it is
+restricted to the final ~quarter of the depth. On the 35B (41 layers,
+counted 0-40) the beneficial band is 30-39: 73.2% of depth. On the 397B (60
+MoE layers with routed experts, band 44-59): 73.3%. Between the bands and
+the mountains sits no gradual transition on the 35B — layer 20 (0.488 of
+depth) alone accounts for most of the uniform-application damage — while
+the 397B decays monotonically from the head (catastrophic, 2/28 selection
+overlap) through the middle (harmful) to the tail (beneficial). The
+coincidence of the two flip points at 73% of depth, across a 10×
+size difference and two different routing topologies, is the paper's
+central empirical fact. We claim the measurement, not a law: two models,
+one family (Section 8).
+
+**The recipe.** Because the engine switches that made the anatomy measurable
+are ours, we could ship the rule as a runtime flag — and explicitly do not.
+A flag is a claim about every future file; a file is a claim about itself.
+The forge takes `--plane2-layers LO-HI` and bakes the tail-only correction
+in: plane-2 tensors exist only for the beneficial band, the expert
+permutation and router reordering are applied only where the plane exists
+(one predicate feeds all three coupled decisions), and a strip tool
+retrofits the same profile onto already-forged files, reclaiming the dead
+plane-2 bytes (4.1 GiB on the 397B). The resulting file runs on the
+unmodified engine at full speed with no configuration.
+
+**Confirmation, 35B.** Tail-only (30-39) perplexity 8.2501 against 8.72
+uncorrected — a 5.4% improvement — where uniform application had *degraded*
+the same model. Functional probes (verifiable-answer arithmetic and
+string-manipulation set) unchanged or improved; no regression observed.
+
+**Confirmation, 397B, paired.** At 397B the absolute error bar at 30 chunks
+(±0.087) is larger than the expected effect, so the confirmation is paired
+(`--kl-divergence-base`, same chunks, reference logits stored): mean
+Δp = +0.048% ± 0.014% (3.4σ) for tail-only over uncorrected, improvement in
+every evaluation chunk, and the verifiable-answer probes intact. The gain is
+small and real; the point is its *sign*, which uniform application gets
+wrong at 10× the magnitude.
+
+**Cost.** The tail-only file is strictly smaller than the uniform one (the
+correction exists on 16/60 rather than 40/60 layer-equivalents), loads
+nothing extra at the head where it would do harm, and the depth rule
+transfers across the two models tested at zero search cost — against
+EvoPress-style whole-model search, which subsumes the selection problem but
+must re-run per model.
+
+## Section 6 draft — The routing-margin distribution
+
+**Definition.** For a token routed to k of E experts, the margin is the gap
+between the k-th and (k+1)-th router score — the distance to the nearest
+routing flip. ReMoE defines it in probability space as the premise of a
+stability lemma; arXiv 2608.11212 defines it in logit space and collapses it
+to a single AUC. Neither reports its distribution; arXiv 2602.02443 reports
+a token-averaged mean over depth. We measure the distribution on the 397B's
+captured router probabilities (16,640 tokens × 60 layers, the same capture
+that feeds the forge's Hessians).
+
+**The distribution.** The median margin is 10.1× narrower than the uniform
+share 1/E; the 1st percentile is 806× narrower; 2.95% of tokens sit within
+one bf16 ULP of the 8th/9th boundary — for these, the routing decision is
+below the numerical noise floor of the arithmetic that computes it. The
+distribution is right-skewed, mean/median 1.76: the mean curve published in
+prior work sits 76% above the typical token, which is precisely the
+regime where a mean reassures and a median warns.
+
+**What follows and what does not.** The qualitative half of this measurement
+was asserted, on synthetic weights, by the author of sglang PR #35916 —
+batch-invariant routing motivated by adjacent scores within one ULP on this
+very topology — who lacked hardware for the real model; this section
+supplies the measurement. What does *not* follow is the tempting link to
+Section 4's damage profile: route-flip counts anti-correlate with damage
+(the all-layers configuration flips 5× more routes than the worst single
+layer at 3.5× less damage), and the one published flip classifier sits at
+chance (AUC 0.490). Fragile margins are a fact of the router; they are not,
+by count alone, the mechanism of the correction paradox.
+
 ## Section 2 draft — Setup and measurement honesty
 
 **Hardware.** Everything runs on one consumer machine: Ryzen AI Max+ 395,
