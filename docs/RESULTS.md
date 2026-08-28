@@ -911,6 +911,23 @@ explains the catastrophic head; the centre-to-tail gradient that remains is a
 depth effect** — consistent with the mid-depth fragility measured independently
 on the 35B. Two factors, both now quantified, neither reducible to the other.
 
+⛔ **The causal form of this hypothesis is refuted — the eighth
+pre-registered refutation.** The prediction was written before the run: band
+30-45, whose selection is the best in the entire model (25-27/28 overlap,
+0.2-1.5% impact lost), must beat the reference if selection is the mechanism.
+Measured: **6.3002 against 6.1845 — it harms.** Selection quality is not
+sufficient: with the targets chosen almost perfectly, correcting layers 30-45
+still damages the model. The +0.788 correlation was confounded with depth —
+the 397B's head is both badly selected *and* shallow, and the experiment that
+separates the two has spoken.
+
+**What survives on both models is depth alone: only the final quarter
+tolerates the correction.** 35B: layers 30-39 of 41 — from 73% of depth. 397B:
+layers 44-59 of 60 — from 73% of depth. The same fraction, at a 10× size
+difference. Selection quality remains a real, measured property of the forge
+(and choosing by frequency at 512 experts does waste 42.6% of the impact in
+the head) — but it does not decide the sign.
+
 Coverage, measured on the same imatrices, moves in the same direction but
 weakly: the top-28 carry a median 30.77% of traffic on the 35B against 19.66%
 on the 397B — a reduction, not a collapse, and per-layer coverage was already
