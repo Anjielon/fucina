@@ -105,3 +105,33 @@ Two models, same architecture family, one calibration set, no ablation over
 architecture, not merely a different size — is the single experiment that moves
 the paper most, and it needs three lines of engine change written *before* the
 run or it silently measures nothing.
+
+## Pinned lm-eval protocol (researched 2026-08-28 — run before submission)
+
+Verified against master source: llama-server still rejects `echo` on
+/v1/completions ("Only no echo is supported" in server-common.cpp), so the
+path is lm-eval's `gguf` model against `python -m llama_cpp.server`, with
+our fork's libllama loaded via `LLAMA_CPP_LIB` (build shared from
+build-llamacpp-tq1; llama-cpp-python's ctypes loader honours it).
+
+Pin: `lm-eval==0.4.12` (re-check PyPI at run time). Flags that matter:
+`max_length=4096` (GGUFLM default 2048 silently truncates MMLU 5-shot),
+`tokenizer=<HF path>` explicit, chat template OFF (loglikelihood = raw),
+`--seed 1234 --log_samples`, acc+acc_norm where upstream defines them
+(winogrande and mmlu have NO acc_norm upstream — state it, don't invent it).
+Wall-clock: serial HTTP → HellaSwag full ~3-6h, MMLU 5-shot the worst;
+schedule overnight or on the second bench.
+
+```bash
+export FORK=/home/angelo/build-llamacpp-tq1
+cmake -S $FORK -B $FORK/build-shared -DGGML_VULKAN=ON -DBUILD_SHARED_LIBS=ON && cmake --build $FORK/build-shared -j
+export LLAMA_CPP_LIB=$FORK/build-shared/bin/libllama.so
+pip install "lm-eval==0.4.12" llama-cpp-python
+python -m llama_cpp.server --model MODEL.gguf --n_gpu_layers -1 --port 8899 &
+for T in hellaswag winogrande arc_easy arc_challenge; do
+  lm_eval --model gguf --model_args base_url=http://127.0.0.1:8899,max_length=4096 \
+    --tasks $T --num_fewshot 0 --seed 1234 --batch_size 1 --output_path results/$T.json --log_samples
+done
+lm_eval --model gguf --model_args base_url=http://127.0.0.1:8899,max_length=4096 \
+  --tasks mmlu --num_fewshot 5 --seed 1234 --batch_size 1 --output_path results/mmlu.json --log_samples
+```
