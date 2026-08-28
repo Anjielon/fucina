@@ -798,6 +798,78 @@ healthy model. Below two bits the sampling recipe is part of the measurement.
 | stripping the second plane | 84.00 GiB written in ~8 minutes |
 
 
+## ⛔ The two threats that decide whether any of this is publishable
+
+Found by deliberate adversarial search, and both are more serious than anything
+in the section below.
+
+### 1. Every number here is perplexity, and perplexity inverts orderings
+
+This is the threat that would sink the paper, and it is not speculative.
+arXiv 2607.16721 §5.4, titled *"Perplexity is not a viable gate for pruning
+studies"*, measures a randomly-pruned model scoring **better held-out code
+perplexity than the base model — 4.82 against 5.38 — while losing 57.9 points
+of pass@1**. On its second model the perplexity ranking across criteria
+*anti-correlates* with the pass@1 ranking. Corroborated three ways: EvoPress
+Table 3 (an allocation 2.4× worse on perplexity is *better* on zero-shot
+average); MoPEQ Table 2 (8-bit beats 16-bit on MME-Perception); arXiv 2606.09864
+(Mistral-7B loses 15.2% of refusals at 1.03× perplexity, because safety features
+occupy a low-dimensional subspace 10²-10³× more vulnerable than the average
+perplexity measures).
+
+And the closest prior art in our own method family says it outright — Tied
+Trit-Planes (arXiv 2608.08910): *"higher weight-reconstruction error and worse
+perplexity, a measured dissociation between proxy metrics and reference
+fidelity."*
+
+**Required before publication:** at least one functional evaluation on the
+configurations that carry the claim. If the effect survives on a behavioural
+metric, it is a result; if not, it is a perplexity artefact.
+
+### 2. The expert-selection criterion is the leading alternative explanation
+
+We select the 28 corrected experts by **routing frequency**. That is precisely
+the criterion MoPEQ (arXiv 2509.02512) abandoned — *"instead of relying on the
+activation frequency of the expert"* — and that AlphaQ (arXiv 2606.04980)
+independently rejected.
+
+AWQ's Table 1 shows what happens when the selection criterion is wrong, at
+identical budget and identical mechanism:
+
+| model, INT3-g128 | unprotected | 1% by activation | 1% by weight magnitude | 1% random |
+|---|---|---|---|---|
+| OPT-6.7B | 23.54 | **11.39** | 22.37 | **24.23** |
+| OPT-13B | 46.04 | **10.43** | **48.96** | 42.00 |
+
+**Protecting the wrong 1% is worse than protecting nothing** — 24.23 against
+23.54, and 48.96 against 46.04. Same budget, same mechanism; the *sign* of the
+effect is set entirely by whether the criterion tracks true sensitivity.
+
+That is structurally our 397B result. So the parsimonious hypothesis is not
+"28 of 512 is below a coverage threshold" but **"routing frequency is a good
+sensitivity proxy at 256 experts and a bad one at 512"**.
+
+⚠️ The coverage hypothesis is further undermined by the only relevant published
+sweep: SqueezeLLM (arXiv 2306.07629, Table D.2) finds the benefit of protecting
+sensitive values **saturates at 0.05%** — both 5.5% and 11% are two orders of
+magnitude past it, so they should be on the same side of any threshold. And no
+paper anywhere reports a threshold on the fraction of experts protected; the
+literature is unanimous that efficacy is governed by selection *accuracy*, not
+set size (a single super weight moves perplexity three orders of magnitude;
+three experts of 6,144 are catastrophic).
+
+**The decisive experiment, and it is cheap:** re-select the 397B's 28 experts by
+Hessian trace instead of hotness, holding everything else fixed. The Hessians
+already exist (16,640 samples per layer). If the sign flips back, coverage is
+dead and the mechanism is selection.
+
+⛔ **Do not cite arXiv 2604.18128.** It gives the most seductive account of our
+`up`/`gate` versus `down` asymmetry — a reader/generator decomposition of
+SwiGLU — and it has been **withdrawn by its authors following internal review**.
+The idea that `down` writes into the residual stream while `up` and `gate` only
+read from it remains the natural reading of our data, but it has to be
+established here, not borrowed.
+
 ## What this evidence does not yet support
 
 Written down before anyone else has to point it out.
