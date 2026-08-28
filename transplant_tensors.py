@@ -98,14 +98,14 @@ def main() -> None:
             d = np.asarray(t.data)
         w.add_tensor_info(name, list(d.shape), d.dtype, int(d.nbytes),
                           raw_dtype=t.tensor_type)
-        plan.append((name, t))
+        plan.append((name, d))
     log(f"{len(plan)} tensori · {n_don} dal donatore · {n_drop} eliminati")
     assert n_don > 0, "nessun tensore combacia con --match"
 
     w.open_output_file(Path(A.dst))
     w.write_header_to_file(); w.write_kv_data_to_file(); w.write_ti_data_to_file()
-    for i, (name, t) in enumerate(plan):
-        w.write_tensor_data(np.asarray(t.data))
+    for i, (name, d) in enumerate(plan):
+        w.write_tensor_data(d)
         if i % 200 == 0:
             log(f"  {i}/{len(plan)}")
     w.close()
