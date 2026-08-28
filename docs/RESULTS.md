@@ -1259,3 +1259,16 @@ generation: down +29 ppl (collapse), up +8.4 (collapse), gate +5.4
 sensitivity ladder measured end-to-end — unpublished elsewhere — and QAT+KD
 (EfficientQAT-style, plan in QAT_PILOT_PLAN.md) as the only remaining path
 below ~3 bpw for this architecture.
+
+## MILESTONE (2026-08-28, carved by the owner's decision)
+
+**First known deployment of a ~400B-parameter model with ALL expert weights
+in true ternary (TQ1_0, three levels — 97% of parameters), served end-to-end
+on a single consumer machine with custom Vulkan ternary kernels, measured
+and in production**: ODINO v3.3, 85.1 GiB, wikitext ppl 6.1291, tail-only
+corrective plane sealed by paired logits at 3.4σ, serving the household.
+Stated qualifiers, by our own hand: the 28 hot experts of layers 44-59 sum
+two ternary planes (9 levels on ~1.3% of weights, ternary per-plane); the
+non-expert path (~8 of 85 GiB) is shelf-quantized. Nearest prior art:
+BitNet-class native ternary at 100× smaller scale; PTQTP's "1.58-bit-class"
+stores 3.17 bpw; IQ1_M is not ternary.
