@@ -186,6 +186,21 @@ def quantize_one_plane(W, Hchol, chunk: int = 3_000_000, device="cuda"):
     nb = n_in // BLOCK
     D1 = torch.empty(n_rows, nb, 1, dtype=torch.float32)
     Q1 = torch.empty(n_rows, n_in, dtype=torch.int8)
+    if Hchol is None:
+        # No Hessian: a dedicated plane with the optimal scale, no error
+        # propagation. NOT the joint plane-1 used alone — that is the
+        # ten-point trap this function's docstring documents.
+        i0 = 0
+        rows_per_chunk = max(1, chunk // nb)
+        while i0 < n_rows:
+            i1 = min(i0 + rows_per_chunk, n_rows)
+            B = W[i0:i1].to(device, torch.float32).reshape(-1, BLOCK)
+            d, q = _scale_one_plane(B)
+            D1[i0:i1] = d.reshape(i1 - i0, nb, 1).cpu()
+            Q1[i0:i1] = q.reshape(i1 - i0, n_in).to(torch.int8).cpu()
+            del B
+            i0 = i1
+        return D1.numpy(), Q1.numpy()
     H = Hchol.to(device)
     rows_per_chunk = max(1, chunk // nb)
     i0 = 0
