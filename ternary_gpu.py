@@ -88,8 +88,16 @@ def _scale_one_plane(B, grid=(0.55, 0.66, 0.76, 0.86, 1.00, 1.20)):
 
 
 @torch.no_grad()
-def quantize(W, Hchol=None, rounds: int = 4, chunk: int = 2_000_000, device="cuda"):
-    """W: (n_rows, n_in) on CPU → (d1, q1, d2, q2) on CPU, int8 for the signs."""
+def quantize(W, Hchol=None, rounds: int = 4, chunk: int = 2_000_000, device="cuda",
+             foem_beta: float = 0.0):
+    """W: (n_rows, n_in) on CPU → (d1, q1, d2, q2) on CPU, int8 for the signs.
+
+    foem_beta > 0 enables the FOEM first-order correction (arXiv 2507.11017):
+    after each block's GPTQ push, the not-yet-quantized columns are pulled
+    back toward the ORIGINAL weights by beta * (W - W_orig) @ Hinv^T @ Hinv,
+    cancelling the drift the progressive compensation accumulates. beta=0 is
+    bit-identical to plain GPTQ. Implementation note: (dW @ H^T) @ H — two
+    rows*r^2 products — never form the r^3 matrix H^T @ H."""
     n_rows, n_in = W.shape
     assert n_in % BLOCK == 0
     nb = n_in // BLOCK
@@ -138,6 +146,7 @@ def quantize(W, Hchol=None, rounds: int = 4, chunk: int = 2_000_000, device="cud
             #       an optimization, it is the method.
             rows = i1 - i0
             M = B.reshape(rows, nb, BLOCK)          # (rows, blocks, 256)
+            M0 = M.clone() if foem_beta > 0 else None   # FOEM anchor: originals
             S1 = d1.reshape(rows, nb, 1); S2 = d2.reshape(rows, nb, 1)
             Q1p = torch.empty_like(M); Q2p = torch.empty_like(M)
             for b in range(nb):
@@ -155,6 +164,11 @@ def quantize(W, Hchol=None, rounds: int = 4, chunk: int = 2_000_000, device="cud
                         Wb[:, j+1:] -= e.unsqueeze(1) * H[j0 + j, j0+j+1 : j0+BLOCK].unsqueeze(0)
                 if b + 1 < nb:       # spinta sui blocks successivi: UN matmul
                     M[:, b+1:, :] -= (err @ H[j0:j0+BLOCK, j0+BLOCK:]).reshape(rows, nb-b-1, BLOCK)
+                    if foem_beta > 0:   # FOEM: pull drifted latents toward originals
+                        j1f = j0 + BLOCK
+                        Hr = H[j1f:, j1f:]
+                        dW = (M[:, b+1:, :] - M0[:, b+1:, :]).reshape(rows, -1)
+                        M[:, b+1:, :] -= (((dW @ Hr.T) @ Hr) * foem_beta).reshape(rows, nb-b-1, BLOCK)
             q1 = Q1p.reshape(-1, BLOCK); q2 = Q2p.reshape(-1, BLOCK)
         D1[i0:i1] = d1.reshape(i1 - i0, nb, 1).cpu()
         D2[i0:i1] = d2.reshape(i1 - i0, nb, 1).cpu()
@@ -166,7 +180,8 @@ def quantize(W, Hchol=None, rounds: int = 4, chunk: int = 2_000_000, device="cud
 
 
 @torch.no_grad()
-def quantize_one_plane(W, Hchol, chunk: int = 3_000_000, device="cuda"):
+def quantize_one_plane(W, Hchol, chunk: int = 3_000_000, device="cuda",
+                       foem_beta: float = 0.0):
     """A SINGLE ternary plane, with GPTQ and the scale RECOMPUTED per block.
 
     ⛔⛔ Why this function exists — ten points of error, measured:
@@ -211,6 +226,7 @@ def quantize_one_plane(W, Hchol, chunk: int = 3_000_000, device="cuda"):
         except torch.OutOfMemoryError:
             torch.cuda.empty_cache(); rows_per_chunk = max(1, rows_per_chunk // 2); continue
         rows = i1 - i0
+        W0 = Wc.clone() if foem_beta > 0 else None   # FOEM anchor: originals
         dloc = torch.empty(rows, nb, 1, device=device)
         qloc = torch.empty(rows, n_in, device=device)
         for b in range(nb):
@@ -230,7 +246,10 @@ def quantize_one_plane(W, Hchol, chunk: int = 3_000_000, device="cuda"):
                     block[:, j+1:] -= e.unsqueeze(1) * H[j0 + j, j0+j+1 : j1].unsqueeze(0)
             if j1 < n_in:
                 Wc[:, j1:] -= err @ H[j0:j1, j1:]
+                if foem_beta > 0:   # FOEM: pull drifted latents toward originals
+                    Hr = H[j1:, j1:]
+                    Wc[:, j1:] -= ((Wc[:, j1:] - W0[:, j1:]) @ Hr.T) @ Hr * foem_beta
         D1[i0:i1] = dloc.cpu(); Q1[i0:i1] = qloc.to(torch.int8).cpu()
-        del Wc, dloc, qloc
+        del Wc, dloc, qloc, W0
         i0 = i1
     return D1.numpy(), Q1.numpy()

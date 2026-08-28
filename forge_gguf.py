@@ -55,6 +55,8 @@ def main():
     ap.add_argument("--imatrix", required=True)
     ap.add_argument("--hessians", default=None, help="directory of H_XX.npy — enables GPTQ on gate/up")
     ap.add_argument("--chunk", type=int, default=3_000_000, help="rows per GPU chunk")
+    ap.add_argument("--foem-beta", type=float, default=0.0,
+        help="FOEM first-order correction (arXiv 2507.11017); 0 = plain GPTQ")
     ap.add_argument("--plane2-layers", default=None,
                     help="layer range that RECEIVES the second plane, e.g. 30-40. "
                          "Default: every layer with imatrix counts (historical "
@@ -179,7 +181,7 @@ def main():
                 H = hchol(L) if ind == hidden else None
                 Wt = torch.from_numpy(W.reshape(-1, ind)).float()
                 if H is not None:
-                    d1, q1 = G.quantize_one_plane(Wt, H, chunk=A.chunk)
+                    d1, q1 = G.quantize_one_plane(Wt, H, chunk=A.chunk, foem_beta=A.foem_beta)
                 else:
                     r = G.quantize(Wt, None, rounds=2, chunk=A.chunk); d1, q1 = r[0], r[1]
                 p1 = pack(d1.reshape(-1, 1), q1.reshape(-1, 256))
@@ -187,7 +189,7 @@ def main():
                     perm, hot = permutation_for(L)
                     sel = np.concatenate([np.arange(e*out_, (e+1)*out_) for e in hot])
                     Wc = torch.from_numpy(np.ascontiguousarray(W.reshape(-1, ind)[sel])).float()
-                    j1d, j1q, d2, q2 = G.quantize(Wc, H, rounds=2, chunk=A.chunk)
+                    j1d, j1q, d2, q2 = G.quantize(Wc, H, rounds=2, chunk=A.chunk, foem_beta=A.foem_beta)
                     del Wc
                     pj1 = pack(j1d.reshape(-1, 1), j1q.reshape(-1, 256))
                     v1 = p1.reshape(E, nb_e, 54)
