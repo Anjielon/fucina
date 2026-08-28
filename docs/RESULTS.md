@@ -1212,3 +1212,16 @@ architecture. Next rungs, in cost order: QERA-approx correction as
 diagnostic (half day; if it moves nothing, the base is the problem), then
 gate-only ternary (the FP4-sensitivity ladder says up is nearly as
 sensitive as down; ~45 min forge).
+
+### Band sweep on the 35B (12-chunk, engine switches) — a two-layer configuration cliff
+
+up+gate plane-2 everywhere, down banded: 26-39→9.80 · 28-39→8.69 ·
+**30-39→8.2501 (the recipe, confirmed optimal)** · 32-39→**19.33** ·
+34-39→8.44 · 30-37→8.27. The 32-39 figure is reproducible to four decimals
+(deterministic eval, re-run identical). Read it against its neighbours:
+down@32-33 is harmless when 30-31 is also covered (8.25) and catastrophic
+when it is not (19.33), while removing 30-33 entirely is fine (8.44). A
+two-layer difference in the correction's support flips the model by 11
+perplexity points in the non-monotone direction — the sharpest instance of
+correction non-additivity in the record, and a warning against any greedy
+per-layer band search that assumes local moves have local costs.
