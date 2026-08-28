@@ -1192,3 +1192,23 @@ down-projection bottleneck (D²Quant) and super-weight (2411.07191)
 literature, confirmed on a hybrid dense at 27B. Next: QERA-approx low-rank
 correction (closed-form, LoRA-GGUF servable) and the 73-fixture functional
 bench.
+
+### Dense v3b, functional verdict (13:57): perplexity and generation DISSOCIATE
+
+The 73-fixture bench was started on the ppl-19.63 model and stopped after
+five zeros, because two direct probes settled it faster: with the chat
+template the model returns EMPTY content; raw completion degenerates into a
+loop of broken Italian ("la capitale della Francia e il capolino del mondo",
+repeated). **A 2048-token perplexity of 19.6 coexists with functionally
+collapsed generation** — exactly the failure mode the recurrent-hybrid
+literature predicts (FFN error integrates in the GatedDeltaNet state over
+generation length; teacher-forced ppl windows never see the accumulation).
+Method consequence, now a rule for every hybrid: a "pass" verdict requires
+a long-generation functional probe, never ppl alone. Fixtures recorded:
+T01-T05 = 0/5, run aborted deliberately.
+
+Ladder position after v3b: gate+up ternary is still too much for this
+architecture. Next rungs, in cost order: QERA-approx correction as
+diagnostic (half day; if it moves nothing, the base is the problem), then
+gate-only ternary (the FP4-sensitivity ladder says up is nearly as
+sensitive as down; ~45 min forge).
