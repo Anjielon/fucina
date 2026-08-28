@@ -1136,3 +1136,23 @@ model never feels. With impact_e = p_e·‖ΔW_e·√diag(H)‖² the tail-band
 ranking nearly coincides with frequency (layer 44 top-4 identical set) —
 independently confirming the earlier finding that frequency selection is
 near-optimal in the good band and wrong only in the head.
+
+### FOEM post-mortem: beta is not scale-invariant (the mathematics, 13:15)
+
+The FOEM term is `d ← d·(1 − β·λ)` per application, in the eigenbasis of the
+sliced `H⁻¹`: divergence whenever `β·λmax(H⁻¹) > 2`. With 1% mean-diagonal
+damping and a rank-deficient sample Hessian, `λmin(H) ≈ 0.01·mean(diag H)`,
+so `λmax(H⁻¹) ≈ 100/mean(diag H)` — **the effective β scales inversely with
+the activation energy of the layer**, and the paper never normalises it
+(its experiments live at 3-4 bit on one activation scale). Measured on the
+27B's own Hessians, against the damage the verify had already localised:
+
+| layer | mean diag(H) | β·λmax(H⁻¹) at β=0.003 | prediction | observed |
+|---|---|---|---|---|
+| 9 | 0.0502 | **5.98** | diverges (>2) | up.9 error 16,649% |
+| 32 | 0.4147 | 0.72 | stable | gate.32 error 53.4% |
+
+One number predicts exactly which tensors died. A safe re-enable would
+require per-layer `β ≤ 1/λmax(H⁻¹)` (i.e. β normalised by the damping
+floor), which is a different method from the paper's — left as a note, not
+pursued: the clean sweep shows no gain even where stable.
