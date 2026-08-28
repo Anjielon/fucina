@@ -267,6 +267,78 @@ ships with the artefact. Two hypotheses were "confirmed" by a first
 measurement and killed by a second (residual-stream rank; selection quality);
 both stages are kept in the record.
 
+## Section 3 draft — The paradox and the per-layer anatomy
+
+**The paradox, stated with its numbers.** On the 35B, the second plane halves
+the weight reconstruction error of every expert it touches and halves the
+single-expert output error under captured activations. Enabled everywhere:
+perplexity 8.72 → 10.91. Every micro-level metric says the file got closer to
+the source model; the model says otherwise.
+
+**Coarse localisation.** The per-projection switches split the damage
+immediately: `up`-only 8.42 and `gate`-only 8.52 are both *better* than
+baseline, `up+gate` better still (8.35) — and `down`-only alone is 11.24,
+worse than everything enabled together. One projection carries all of it,
+the same projection D²Quant calls a "well-known bottleneck" — except here
+the bottleneck is not low-bit difficulty but the *correction itself* doing
+harm.
+
+**Fine localisation.** Layer-range switches on `down` walk the damage to its
+address: below the mountain (1-12) nearly harmless (9.02), above it (28-39)
+neutral-to-helpful (8.71, and 8.36 for 30-39), the middle catastrophic —
+13-27 gives 25.34, and bisection lands on a single layer: **layer 20, alone,
+8.72 → 37.80.** One layer of forty, corrected — by a mechanism that
+demonstrably improves that layer's own reconstruction — multiplies
+perplexity by 4.3. Neighbouring layers step down smoothly (25: 22.5; 30:
+8.69), so this is a region, not a defect in one tensor; the boundary-check
+asserts and the permutation audit (Section 4, #6) close the trivial
+explanations.
+
+**The same anatomy at 10×.** The 397B repeats the shape with its own
+geometry: the head is catastrophic, the middle harmful, and from layer 44 of
+60 — 73% of depth, the same fraction as the 35B's 30 of 41 — the correction
+turns beneficial. The magnitude scales down with model size (the 397B's
+worst bands cost points, not multiples), which is itself consistent with the
+redundancy argument the MoE-robustness literature makes; the *sign
+structure* is what transfers exactly.
+
+**Why "paradox" is the right word.** Sections 4-5 will show the perturbation
+delivered to each layer's output is depth-invariant (ratio 1.000-1.002 to
+the weight-space figure): the network is not receiving a bigger insult at
+layer 20 — it is receiving the *same* insult at a depth that cannot absorb
+it. Heterogeneous fidelity, not insufficient fidelity, is the failure mode.
+
+## Section 8 draft — Limitations
+
+- **Two models, one family.** Both are Qwen-lineage MoEs (35B and 397B) with
+  shared tokenizer and expert topology conventions. The 73% coincidence is
+  measured twice, not derived; a third family is the obvious next
+  falsification, and the dense-forge experiment (running as this draft is
+  written) asks whether the rule needs experts at all — early evidence says
+  dense FFNs at this bit-rate fail globally before any depth structure can
+  be read, consistent with the MoE-robustness literature (MoQE), which would
+  make the depth rule a property of *corrections to survivable
+  quantizations* rather than of quantization per se.
+- **Perplexity-first evaluation.** Our confirmations are paired logit-level
+  comparisons plus verifiable-answer functional probes; the standardised
+  benchmarks we can run at n=300 resolve 6.9 pp at best and are used only as
+  "not broken" evidence. The pinned lm-eval pass is stated as debt, not
+  waved at.
+- **The selection confound is quantified, not closed.** Frequency-selection
+  wastes 42.6% of plane-2 impact in the head and its correlational profile
+  tracks damage at +0.788; the causal test refutes it as *the* mechanism,
+  but a Hessian-impact-selected reforge (the artefact exists; the run is
+  scheduled) is required before selection can be fully dismissed as a
+  contributor to the magnitude, as opposed to the sign.
+- **No mechanism.** We offer a rule and eight dead hypotheses. The
+  representational-transition literature is consistent with the boundary we
+  measure and predicts none of its consequences quantitatively. We consider
+  naming this openly a feature of the paper, not a gap in it.
+- **One quantization primitive.** Everything is TQ1_0-shaped ternary with
+  two-level scale search and GPTQ; whether the depth rule survives a change
+  of primitive (say, trellis-coded or lattice quantization at matched bpw)
+  is untested.
+
 ## Section 4 draft — Eight refutations, each with its pre-registered prediction
 
 The method note that carries the section: every hypothesis was written down as

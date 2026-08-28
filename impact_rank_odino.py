@@ -45,15 +45,15 @@ def main() -> None:
         key = f"model.language_model.layers.{L}.mlp.experts.gate_up_proj"
         t0 = time.time()
         score = np.zeros(E)
-        with safe_open(NAS / idx[key], framework="numpy") as f:
-            sl = f.get_slice(key)                     # (E, in, 2*out) fused
+        with safe_open(str(NAS / idx[key]), "pt") as f:
+            sl = f.get_slice(key)                 # (E, 2*out, hidden) fused
             shp = sl.get_shape()
-            half = shp[2] // 2
+            half = shp[1] // 2                    # gate = righe [:half], up = [half:]
+            assert shp[2] == n, (shp, n)          # colonne = residuo = dim Hessiana
             for e in range(E):
-                fused = np.asarray(sl[e])             # (in, 2*out) bf16→numpy
-                for part in (fused[:, :half], fused[:, half:]):   # gate, up
-                    W = torch.from_numpy(
-                        np.ascontiguousarray(part.T).astype(np.float32)).to(dev)
+                fused = sl[e].to(torch.float32).numpy()   # (2*out, hidden)
+                for part in (fused[:half, :], fused[half:, :]):   # gate, up — (out, in)
+                    W = torch.from_numpy(np.ascontiguousarray(part)).to(dev)
                     d, q = G._scale_one_plane(W.reshape(-1, 256))
                     dW = W - (d * q).reshape(W.shape)
                     score[int(e)] += float((dW @ Lc).square().sum())
