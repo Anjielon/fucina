@@ -1156,3 +1156,39 @@ One number predicts exactly which tensors died. A safe re-enable would
 require per-layer `β ≤ 1/λmax(H⁻¹)` (i.e. β normalised by the damping
 floor), which is a different method from the paper's — left as a note, not
 pursued: the clean sweep shows no gain even where stable.
+
+### FOEM, third and final round: the repo diverges from its own paper; the paper's formula still does not pay at ternary
+
+Investigation (issue #2 on the FOEM repo shows the same NaN failure on
+Qwen3-30B-A3B; the author replies "the code in this repo has problems", no
+mechanism given): the standalone repo scales the correction by **H⁻¹**
+(`(W−W₀)·HinvᵀHinv·β`) — but the paper's Eq. 19 derives that H and H⁻¹
+*cancel*, leaving plain `−β(W−W₀)`, which is what the GPTQModel integration
+implements (β∈[0.1,0.25], 5% damping). Our divergence measurement
+(β·λmax(H⁻¹)=5.98 → 16,649% error) therefore diagnoses **a bug in the
+deprecated repo**, previously unexplained. Re-measured with the paper's
+correct formula on the clean synthetic:
+
+| beta (Eq. 19) | output error | vs plain GPTQ 35.012% |
+|---|---|---|
+| 0.05 | 35.058% | worse |
+| 0.1 | 35.190% | worse |
+| 0.2 | 35.718% | worse |
+| 0.25 | 36.056% | worse |
+
+Monotonically harmful across the paper's own recommended range. The negative
+result stands on the correct formula: at 1.69 bpw the drift FOEM corrects is
+not the binding error source, and pulling latents toward the originals only
+discards Hessian compensation. Paper section material: one primitive, two
+implementations, one diverges with a one-number predictor, the correct one
+is measurably non-beneficial in the ternary regime the paper never tested.
+
+### Dense 27B, v3b verdict: ppl 19.63 — alive
+
+gate+up ternary (plain GPTQ) + down_proj verbatim Q4 donor: WikiText ppl
+**19.63** against 48.70 (all-ternary GPTQ) and 54.28 (all-ternary RTN).
+The single flag `--ternary-parts gate,up` recovered 29 points — the
+down-projection bottleneck (D²Quant) and super-weight (2411.07191)
+literature, confirmed on a hybrid dense at 27B. Next: QERA-approx low-rank
+correction (closed-form, LoRA-GGUF servable) and the 73-fixture functional
+bench.

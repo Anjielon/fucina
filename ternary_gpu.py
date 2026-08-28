@@ -164,11 +164,8 @@ def quantize(W, Hchol=None, rounds: int = 4, chunk: int = 2_000_000, device="cud
                         Wb[:, j+1:] -= e.unsqueeze(1) * H[j0 + j, j0+j+1 : j0+BLOCK].unsqueeze(0)
                 if b + 1 < nb:       # spinta sui blocks successivi: UN matmul
                     M[:, b+1:, :] -= (err @ H[j0:j0+BLOCK, j0+BLOCK:]).reshape(rows, nb-b-1, BLOCK)
-                    if foem_beta > 0:   # FOEM: pull drifted latents toward originals
-                        j1f = j0 + BLOCK
-                        Hr = H[j1f:, j1f:]
-                        dW = (M[:, b+1:, :] - M0[:, b+1:, :]).reshape(rows, -1)
-                        M[:, b+1:, :] -= (((dW @ Hr.T) @ Hr) * foem_beta).reshape(rows, nb-b-1, BLOCK)
+                    if foem_beta > 0:   # FOEM Eq.19: -beta*(W-W0), niente H^-1 (vedi quantize_one_plane)
+                        M[:, b+1:, :] -= foem_beta * (M[:, b+1:, :] - M0[:, b+1:, :])
             q1 = Q1p.reshape(-1, BLOCK); q2 = Q2p.reshape(-1, BLOCK)
         D1[i0:i1] = d1.reshape(i1 - i0, nb, 1).cpu()
         D2[i0:i1] = d2.reshape(i1 - i0, nb, 1).cpu()
@@ -246,9 +243,14 @@ def quantize_one_plane(W, Hchol, chunk: int = 3_000_000, device="cuda",
                     block[:, j+1:] -= e.unsqueeze(1) * H[j0 + j, j0+j+1 : j1].unsqueeze(0)
             if j1 < n_in:
                 Wc[:, j1:] -= err @ H[j0:j1, j1:]
-                if foem_beta > 0:   # FOEM: pull drifted latents toward originals
-                    Hr = H[j1:, j1:]
-                    Wc[:, j1:] -= ((Wc[:, j1:] - W0[:, j1:]) @ Hr.T) @ Hr * foem_beta
+                if foem_beta > 0:
+                    # FOEM Eq.19 (paper): H e H^-1 si CANCELLANO — il termine
+                    # giusto e' il semplice -beta*(W - W0), contrazione pura.
+                    # ⛔ La prima versione copiava il repo standalone, che scala
+                    # per H^-1: bug rispetto al paper stesso (issue #2 del repo,
+                    # divergenza misurata qui: beta*lambda_max(Hinv)=5.98 →
+                    # errore 16,649%, ppl 417k). GPTQModel implementa Eq.19.
+                    Wc[:, j1:] -= foem_beta * (Wc[:, j1:] - W0[:, j1:])
         D1[i0:i1] = dloc.cpu(); Q1[i0:i1] = qloc.to(torch.int8).cpu()
         del Wc, dloc, qloc, W0
         i0 = i1
