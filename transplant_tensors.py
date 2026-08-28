@@ -36,7 +36,36 @@ def main() -> None:
                     help="substring: these tensors are omitted entirely")
     ap.add_argument("--drop-key", action="append", default=[],
                     help="KV keys to omit from the header")
+    ap.add_argument("--permute-imatrix", default=None,
+        help="imatrix GGUF with routing counts: expert tensors from the donor "
+             "are reordered hot-first per layer to match a target whose experts "
+             "(and router) were born permuted. ⛔ Without this, transplanting "
+             "experts into a permuted file MISALIGNS them with the router "
+             "(measured: ppl 8.25 -> 124.5).")
+    ap.add_argument("--hot", type=int, default=28)
     A = ap.parse_args()
+
+    hot_order = {}
+    if A.permute_imatrix:
+        rim = GGUFReader(A.permute_imatrix)
+        for tt in rim.tensors:
+            if tt.name.endswith(".ffn_gate_exps.weight.counts"):
+                L = int(tt.name.split(".")[1])
+                hot_order[L] = np.argsort(np.array(tt.data).astype(np.float64).ravel())[::-1]
+
+    def permuta_esperti(name: str, t) -> np.ndarray:
+        d = np.asarray(t.data)
+        if not A.permute_imatrix or "_exps" not in name:
+            return d
+        L = int(name.split(".")[1])
+        if L not in hot_order:
+            return d
+        E = int(t.shape[2])                      # GGUF order: (in, out, E)
+        hot = [int(x) for x in hot_order[L][:A.hot]]
+        perm = np.array(hot + [e for e in range(E) if e not in set(hot)])
+        chunk = d.nbytes // E                    # bytes per esperto (packed, contigui)
+        v = d.reshape(E, chunk)
+        return np.ascontiguousarray(v[perm]).reshape(-1)
 
     rs = GGUFReader(A.src); rd = GGUFReader(A.donor)
     ts = {t.name: t for t in rs.tensors}; td = {t.name: t for t in rd.tensors}
@@ -63,9 +92,10 @@ def main() -> None:
         if any(s in name for s in A.match):
             assert name in td, f"{name}: assente nel donatore"
             t = td[name]; n_don += 1
+            d = permuta_esperti(name, t)
         else:
             t = ts[name]
-        d = np.asarray(t.data)
+            d = np.asarray(t.data)
         w.add_tensor_info(name, list(d.shape), d.dtype, int(d.nbytes),
                           raw_dtype=t.tensor_type)
         plan.append((name, t))
