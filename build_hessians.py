@@ -14,6 +14,14 @@ import numpy as np
 
 
 def main() -> None:
+    import glob as _g, sys as _s
+    _files = _g.glob(str(_s.argv[1] if len(_s.argv) > 1 else "") + "/*.f32")
+    if not _files:
+        print("ERROR: dump directory is empty - refusing to report success. "
+              "An empty capture means the filter did not match or the "
+              "capture crashed; writing zero Hessians and printing 'written' "
+              "is how a silent absence becomes a forged model without GPTQ.")
+        raise SystemExit(1)
     """Read the activation dumps and write one Hessian per layer."""
     DUMPS = sys.argv[1] if len(sys.argv) > 1 else "/mnt/models/gguf/odino-dumps"
     OUT = sys.argv[2] if len(sys.argv) > 2 else "/mnt/models/gguf/odino-hessians"
