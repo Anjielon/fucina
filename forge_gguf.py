@@ -55,6 +55,14 @@ def main():
     ap.add_argument("--imatrix", required=True)
     ap.add_argument("--hessians", default=None, help="directory of H_XX.npy — enables GPTQ on gate/up")
     ap.add_argument("--chunk", type=int, default=3_000_000, help="rows per GPU chunk")
+    ap.add_argument("--plane2-layers", default=None,
+                    help="layer range that RECEIVES the second plane, e.g. 30-40. "
+                         "Default: every layer with imatrix counts (historical "
+                         "behaviour). Measured on two models: the correction "
+                         "helps only in the final ~quarter of the depth, so a "
+                         "band like 30-40 (of 41) or 44-59 (of 60) is the "
+                         "recipe — baked at forge time instead of stripped "
+                         "afterwards.")
     A = ap.parse_args()
     K = A.hot
 
@@ -65,6 +73,18 @@ def main():
         if f.name.endswith(".architecture"):
             arch = str(bytes(f.parts[-1]), "utf8"); break
     hot_order = read_counts(Path(A.imatrix))
+    p2_layers = None
+    if A.plane2_layers:
+        lo, hi = (int(x) for x in A.plane2_layers.split("-"))
+        p2_layers = set(range(lo, hi + 1))
+
+    def has_p2(L: int) -> bool:
+        """One predicate for all three coupled decisions: the extra tensor in
+        the plan, the joint pair + hot-first reorder, and the router-row
+        permutation. Using it inconsistently recreates the two historical
+        bugs at once: an orphaned joint plane-1 (non-optimal alone, measured
+        c=0.882) and a router permuted against unpermuted experts."""
+        return bool(K) and L in hot_order and (p2_layers is None or L in p2_layers)
     layers = sorted({int(n.split(".")[1]) for n in tensors if ".ffn_gate_exps.weight" in n})
     t0e = tensors[f"blk.{layers[0]}.ffn_gate_exps.weight"]
     E = int(t0e.shape[2])
@@ -99,7 +119,7 @@ def main():
         if exp:
             shape_ = [int(x) for x in t.shape]
             plan.append((name, shape_, "forge"))
-            if K and int(name.split(".")[1]) in hot_order:
+            if has_p2(int(name.split(".")[1])):
                 f2 = list(shape_); f2[2] = K
                 plan.append((name.replace(".weight", "2.weight"), f2, "forge2"))
         else:
@@ -136,7 +156,7 @@ def main():
         if i < resume_at: continue
         if kind == "copy":
             t = tensors[name]
-            if K and name.endswith(".ffn_gate_inp.weight") and int(name.split(".")[1]) in hot_order:
+            if name.endswith(".ffn_gate_inp.weight") and has_p2(int(name.split(".")[1])):
                 L = int(name.split(".")[1])
                 rt = np.asarray(t.data)
                 assert rt.ndim == 2 and rt.shape[0] == E
@@ -163,7 +183,7 @@ def main():
                 else:
                     r = G.quantize(Wt, None, rounds=2, chunk=A.chunk); d1, q1 = r[0], r[1]
                 p1 = pack(d1.reshape(-1, 1), q1.reshape(-1, 256))
-                if L in hot_order:
+                if has_p2(L):
                     perm, hot = permutation_for(L)
                     sel = np.concatenate([np.arange(e*out_, (e+1)*out_) for e in hot])
                     Wc = torch.from_numpy(np.ascontiguousarray(W.reshape(-1, ind)[sel])).float()
@@ -182,7 +202,8 @@ def main():
                     err = float(np.linalg.norm(rebuilt - Wv) / np.linalg.norm(Wv))
                     del j1d, j1q, d2, q2
                 else:
-                    # layer without counts (MTP): plane-1 only, no reordering
+                    # no second plane here (MTP layer, or outside
+                    # --plane2-layers): DEDICATED plane-1, no reordering
                     p2 = None
                     rebuilt = GQ.dequantize(p1[:nb_e], T.TQ1_0).reshape(out_, ind)
                     Wv = W[0].astype(np.float32)
