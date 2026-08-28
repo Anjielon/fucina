@@ -596,6 +596,48 @@ extreme damage, which is the opposite of what the propagation account needs.
 "layer 20 is unremarkable in its activations" is a measurement rather than an
 inference from two sampled layers.
 
+### Every local explanation is excluded by measurement
+
+The chain of pre-registered predictions, each written before the run:
+
+| candidate | prediction | measured | verdict |
+|---|---|---|---|
+| correction magnitude | larger where it hurts | 0.412-0.423 at **every** layer, ρ = −0.56 | refuted |
+| routing concentration | lower where it hurts | ρ = **+0.013** | refuted |
+| residual-stream rank | peaks with damage | ρ = +0.651 on 35B, **opposite sign on 397B** | not replicated |
+| `down`-input kurtosis | peaks with damage | ρ = **−0.186** | refuted |
+| `down`-input effective rank | peaks with damage | ρ = **+0.284** | refuted |
+| hot-first permutation | wrong at damaged layers | **28/28 correct on all 40 layers** | refuted |
+| **projected error ‖ΔW·X‖** | larger where it hurts | see below | **refuted** |
+
+The last one is the decisive negative, because it is the quantity the model
+actually experiences. Under the layer's own captured activations:
+
+| layer | ‖ΔW‖/‖W₁‖ | ‖ΔW·X‖/‖W₁X‖ | ratio | damage |
+|---|---|---|---|---|
+| 10 | 0.4154 | 0.4158 | 1.001 | 8.81 |
+| 15 | 0.4140 | 0.4144 | 1.001 | 20.12 |
+| **20** | **0.4115** | **0.4120** | **1.001** | **37.80** |
+| 30 | 0.4168 | 0.4168 | 1.000 | 8.69 |
+
+**The perturbation delivered to the output is identical at every layer** —
+ratio between 1.000 and 1.002 throughout, so the activation covariance neither
+amplifies nor attenuates it differentially. Correlation with damage is
+**−0.599**: where the damage is greatest, the delivered perturbation is
+slightly *smaller*.
+
+So the statement the evidence supports is not "we do not understand it" but
+something sharper and testable: **an identical perturbation, delivered
+identically to the layer's output, produces damage that varies by a factor of
+1,579 depending only on which layer receives it.** Nothing local to the layer —
+its weights, its activations, or the projection of one onto the other —
+distinguishes the layer that breaks the model from the one that improves it.
+
+Whatever mediates this is downstream of the perturbation, and the obvious
+downstream candidate has already been measured and does not order the
+configurations correctly either (see the route-flip count above). That is the
+open problem, stated as narrowly as the measurements allow.
+
 ### The recipe, written into the file
 
 The two profiles compose. `up` and `gate` help at every depth; `down` helps
