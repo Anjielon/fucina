@@ -27,7 +27,16 @@ quality, input kurtosis, effective rank, permutation errors, delivered
 output error, and route-flip counts, the last of which *anti-correlates*
 with damage. The beneficial configuration is confirmed by a paired
 logit-level comparison (mean Δp = +0.048% ± 0.014%), ships as a file rather
-than a runtime flag, and improves every evaluation chunk. Alongside, we
+than a runtime flag, and improves every evaluation chunk. At the task level,
+on an internal evaluation suite (aggregate results only; not publicly
+released), the shipped 1.75 bits/weight file resolves 74.7% of 146 paired
+coding-and-agentic trials against 55.5% for a size-matched IQ1_M
+quantization of the same model (exact McNemar p = 2.5e-05) — matching the
+task success of a same-family 35B served at ~6.5 bits/weight. The same suite
+exposes a dissociation that perplexity inverts: the GPTQ-calibrated forge
+wins with reasoning off but degenerates into termination-token loops with
+reasoning on, while an RTN variant at the same bit-rate reasons correctly.
+Alongside, we
 report the first measured *distribution* of the MoE top-k routing margin:
 on 256 experts, the median gap between the 8th and 9th expert is 10× narrower
 than a uniform share, and 2.95% of tokens sit within one bf16 ULP of a
@@ -49,13 +58,23 @@ determinism patches currently take on faith.
    weight-space figure) and slightly *smaller* where damage is greatest
    (ρ = −0.599). Route-flip counts nearly invert the damage ordering
    (all-layers: 5× the flips of the worst single layer, 3.5× less damage).
-3. **The routing-margin distribution.** Defined twice in prior work (ReMoE's
+3. **Task-level evidence at matched size, and a quantizer-level
+   dissociation.** On an internal paired suite (two fixed seeds 7/42, 146
+   reported paired trials, identical llama.cpp server, reasoning off), the
+   shipped file resolves 74.7% against 55.5% for a size-matched IQ1_M
+   quantization of the same 397B (discordant pairs 36–8, exact McNemar
+   p = 2.54e-05; paired bootstrap 20k CI95 of the delta [+11.0, +27.4]
+   points). With
+   reasoning ON the ranking inverts: GPTQ-calibrated planes loop on
+   `</think>`, an RTN forge at the same bit-rate passes every reasoning
+   probe — a dissociation neither perplexity nor no-think task rate detects.
+4. **The routing-margin distribution.** Defined twice in prior work (ReMoE's
    γ in probability space; a logit-space "router margin" reduced to one AUC)
    and never measured: we give percentiles. Median 10.1× narrower than the
    uniform expert share; 1st percentile 806× narrower; 2.95% of tokens
    within one bf16 ULP. The distribution is skewed (mean/median 1.76), which
    is precisely why the published token-averaged mean misleads.
-4. **An engineering result.** TQ1_0 ternary kernels for Vulkan (upstream PR),
+5. **An engineering result.** TQ1_0 ternary kernels for Vulkan (upstream PR),
    a forge that produces two-plane ternary MoE files from bf16 on one
    consumer GPU (7.6 h for 397B), a strip tool that bakes measured layer
    profiles into files, and — new with this paper — a dense-model forge
@@ -89,6 +108,9 @@ determinism patches currently take on faith.
 4. Eight refutations, each with its pre-registered prediction. [RESULTS
    tables; LESSONS for the two that were "confirmed" then killed]
 5. The depth rule and the recipe-in-the-file; paired confirmation.
+5b. Task-level evaluation at matched size (internal paired suite vs IQ1_M;
+   aggregate only, suite not released) + the RTN/GPTQ reasoning
+   dissociation. [data/bench_v2.csv, 2026-08-28]
 6. The routing margin distribution. [RESULTS §The distribution]
 7. Related work — positioned against Tied Trit-Planes (arXiv 2608.08910,
    same primitive, no per-layer analysis by design), PTQTP, EvoPress,
@@ -188,6 +210,73 @@ nothing extra at the head where it would do harm, and the depth rule
 transfers across the two models tested at zero search cost — against
 EvoPress-style whole-model search, which subsumes the selection problem but
 must re-run per model.
+
+## Section 5b draft — Task-level evaluation at matched size (added 2026-08-28)
+
+*Provenance: every number below traces to `data/bench_v2.csv` in the MOGAVIS
+repo, models `odino_v33` (ODINO-v3.3, TQ1_0 plane-1 GPTQ + tail plane-2,
+1.75 bpw) and `odino_iq1m` (Ornith-1.5-397B-IQ1_M, size-matched), runs of
+2026-08-28 evening. Verified against the CSV before writing (totals, McNemar
+discordants, per-family splits all reproduce). ⛔ PRIVACY (ordine Angelo
+28/8): le famiglie F8/F9 sono fixture della casa e NON entrano nel paper,
+nemmeno in aggregato — tutti i numeri qui sotto sono ricalcolati sul CSV
+escludendo F8/F9 (146 coppie). Nel paper la suite si descrive come "internal
+private evaluation suite; aggregate results only; not publicly released",
+zero claim di riproducibilità su di essa (riproducibilità solo sui benchmark
+standard).*
+
+**Protocol.** Suite interna da 91 task; se ne riportano 73 (7 famiglie +
+legacy, quelle non legate all'ambiente di deploy) × 2 seed (7, 42) = 146
+trial appaiati per modello. Same llama.cpp server build, same 16,384-token
+context budget, reasoning off for both. A trial is resolved only if all
+target tests pass and no regression breaks; tool-call fixtures scored on the
+emitted call transcript.
+
+**Headline.** ODINO-v3.3 109/146 = 74.7% vs IQ1_M 81/146 = 55.5%
+(+19.2 points). Discordant pairs 36 vs 8; exact McNemar p = 2.54e-05.
+Paired bootstrap (20k resamples): CI95 of the delta [+11.0, +27.4] points.
+
+| family | task type | n | ODINO-v3.3 | IQ1_M |
+|---|---|---|---|---|
+| F1 | runtime bug-fixing | 18 | 12 (67%) | 4 (22%) |
+| F2 | refactoring | 18 | 12 (67%) | 6 (33%) |
+| F3 | test authoring (mutation-scored) | 18 | 8 (44%) | 5 (28%) |
+| F4 | long-context needle | 12 | 9 (75%) | 11 (92%) |
+| F5 | tool use | 12 | 12 (100%) | 11 (92%) |
+| F6 | deceptive code | 18 | 16 (89%) | 11 (61%) |
+| F7 | planning | 10 | 2 (20%) | 2 (20%) |
+| legacy | mixed original set | 40 | 38 (95%) | 31 (78%) |
+| **tot** | | **146** | **109 (74.7%)** | **81 (55.5%)** |
+
+**Honesty notes.** The aggregate is carried by the code-understanding
+families (F1/F2/F6: +22 to +45 points). F4 is the one family IQ1_M wins *as
+scored* (75% vs 92%): the 3 ODINO misses are infrastructure failures
+(ctx-window overflow / timeout) and ODINO is 9/9 on the trials that ran to
+completion — but the scored number stands, no re-scoring. F7/planning is a
+shared 20% floor for both no-think giants. Context (NOT a controlled
+comparison — earlier version of the internal suite): the production 35B
+titolare (Ornith-1.5-35B APEX, Q6-class) scores 75% there — the ternary 397B
+at 1.75 bpw reaches the task level of a full-working-precision same-family
+35B on the same hardware budget.
+
+**The RTN/GPTQ reasoning dissociation (new contribution, analysis section).**
+At matched bit-rate and layout, plane-1 RTN (v3.1) produces sane reasoning —
+3/3 on hard verifiable probes (23€ −15% −2€ → 17.55; Alice's-sisters trap →
+3; CANE → ENAC) — while plane-1 GPTQ with generic calibration (v3.2/v3.3)
+degenerates into `</think>` loops with reasoning on, despite winning at
+perplexity AND at no-think task rate. Consistent with the
+calibration-distribution-mismatch literature: GPTQ optimises error on the
+calibration corpus and displaces it off-distribution, and self-generated
+reasoning traces are exactly off-distribution w.r.t. generic text. Citations
+wired in main.tex: arXiv 2504.04823 (quantization hurts reasoning; CoT-style
+calibration recovers, 28%→65%), arXiv 2606.02011 (failure modes incl. loops,
+targeted recovery), arXiv 2608.01078 (ScaleQ-1.58: calibrate on the model's
+own traces, +25.5 pt at 1.58 bit), arXiv 2606.00206 (overthinking amplified),
+Unsloth R1 1.58-bit dynamic. Stated as consistent explanation, NOT a
+demonstrated mechanism; the discriminating experiment is the v3.4
+reasoning-trace reforge (falsifiable: loops disappear at unchanged no-think
+rate). Until then production runs reasoning-budget 0 and the whole table is
+no-think by construction.
 
 ## Section 6 draft — The routing-margin distribution
 
@@ -334,10 +423,33 @@ it. Heterogeneous fidelity, not insufficient fidelity, is the failure mode.
   representational-transition literature is consistent with the boundary we
   measure and predicts none of its consequences quantitatively. We consider
   naming this openly a feature of the paper, not a gap in it.
+- **Planning is a shared floor, and reasoning is off.** The suite's planning
+  family sits at 20% for BOTH 1.75-bit giants with reasoning disabled — the
+  comparison says nothing about which file plans better, only that neither
+  does at this bit-rate without chain-of-thought. Reasoning is disabled in
+  the shipped configuration (reasoning-budget 0) because of the GPTQ
+  dissociation; until the v3.4 reasoning-trace recalibration closes the gap,
+  all task-level claims are no-think claims.
 - **One quantization primitive.** Everything is TQ1_0-shaped ternary with
   two-level scale search and GPTQ; whether the depth rule survives a change
   of primitive (say, trellis-coded or lattice quantization at matched bpw)
-  is untested.
+  is untested. A preliminary result on real weights says the change of
+  primitive is worth forging (TCQ1_7 pre-test F1, docs/RESULTS.md,
+  2026-08-28): an exact tail-biting Viterbi encoder over a 4096-state
+  bitshift trellis (56 B per 256-weight block = 1.75 bpw exact), run on
+  `blk.29.attn_gate` of the 397B (dequantized from the Q8_0 reference;
+  4096 blocks sampled uniformly at seed 0 — a declared subset on which the
+  RTN baseline matches its full-tensor value to four decimals), reaches
+  rel_err 0.3473 @1.75 bpw against 0.4420 for optimal-scale ternary RTN
+  @1.69 bpw: **−38.3% MSE** at near-matched rate. The measurement behaves
+  like its theory: the gaussian simulation (0.3329) transfers to the real
+  tensor with the same ~1% excess that RTN shows over its Lloyd bound
+  (0.4362 → 0.4420); tail-biting converges on 4093/4096 blocks in ≤3 extra
+  passes; the packed 56 B payload decodes bit-exactly to the same error;
+  and the 1MAD codebook costs ~3% MSE that an 8 KiB LUT would recover.
+  This is a pre-test on one tensor, not a forged model: whether the
+  tensor-level −38% survives GPTQ, a full forge, and — the question this
+  paper makes precise — the depth rule, is exactly what remains untested.
 
 ## Section 4 draft — Eight refutations, each with its pre-registered prediction
 
@@ -460,3 +572,8 @@ rank and delivered error all fail to track the damage).
 - KL-divergence + top-token agreement against a Q8 proxy reference on the
   35B (fp16-reference validation of the method at 35B scale).
 - The dense-model experiment: does the 73% rule survive without experts?
+- The v3.4 reasoning-trace reforge (ScaleQ-style): falsifiable prediction —
+  `</think>` loops disappear at unchanged no-think task rate.
+- ~~Functional evaluation at matched size~~ — **PAID 2026-08-28**: internal
+  paired suite vs IQ1_M, 146 reported paired trials (Section 5b), source
+  `data/bench_v2.csv`.
