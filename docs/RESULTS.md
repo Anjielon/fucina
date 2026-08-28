@@ -114,6 +114,40 @@ it to a single AUC. Note also that we measure in **probability** space while
 that paper measures in **logit** space — a difference to state explicitly
 rather than let a reader discover.
 
+#### The distribution
+
+75,320 token·layer observations, 40 layers, plane off — the model as served.
+
+| percentile | margin | times narrower than 1/256 |
+|---|---|---|
+| 1% | 0.000005 | **806×** |
+| 5% | 0.000026 | 150× |
+| 10% | 0.000054 | 72× |
+| 25% | 0.000148 | 26× |
+| **50%** | **0.000385** | **10.1×** |
+| 75% | 0.000863 | 4.5× |
+| 90% | 0.001617 | 2.4× |
+| 99% | 0.004241 | 0.9× |
+| mean | 0.000678 | 5.8× |
+
+**The distribution is skewed — mean/median = 1.76 — which is exactly why the
+mean is the wrong statistic and why this measurement is worth making.** The one
+published aggregate reports a token-averaged curve; reporting the mean in place
+of the median makes the margin look 1.8× wider than it is for half of all
+tokens.
+
+Fraction of tokens below a threshold: **17.7%** under 1e-4, **42.4%** under
+3e-4, **79.1%** under 1e-3.
+
+**2.95% of tokens sit below one bf16 ULP** at the typical probability scale
+(1.53e-5). That is the quantitative half of what sglang PR #35916 asserts
+qualitatively on this same 256-expert top-8 topology — and it asserts it on
+*synthetic* weights, its author writing that a real comparison would be
+stronger but that they lack the hardware. This is that comparison.
+
+The margin also narrows with depth: median 0.00064 at layer 0, 0.00020 at
+layer 38.
+
 #### What is ours in that number, precisely
 
 Three independent sweeps of ~110 papers found no median, percentile, histogram
