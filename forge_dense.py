@@ -67,6 +67,12 @@ def main() -> None:
     ap.add_argument("--output", required=True)
     ap.add_argument("--hessians", default=None, help="dir of H_XX.npy per layer")
     ap.add_argument("--chunk", type=int, default=3_000_000)
+    ap.add_argument("--ternary-parts", default="gate,up,down",
+        help="which FFN parts get ternarized; the rest stay verbatim from the "
+             "donor. down is the published bottleneck (D2Quant; super weights "
+             "live in early down_proj) — 'gate,up' keeps it at donor precision")
+    ap.add_argument("--foem-beta", type=float, default=0.0,
+        help="FOEM first-order correction (arXiv 2507.11017); 0 = plain GPTQ")
     A = ap.parse_args()
 
     src = GGUFReader(A.bf16)
@@ -104,9 +110,12 @@ def main() -> None:
         except Exception:
             pass
 
+    parts = {x.strip() for x in A.ternary_parts.split(",") if x.strip()}
+    assert parts <= {"gate", "up", "down"}, parts
+
     def is_forged(name: str) -> bool:
         m = re.match(r"blk\.(\d+)\.ffn_(gate|up|down)\.weight$", name)
-        return bool(m) and int(m.group(1)) in forge_layers
+        return bool(m) and m.group(2) in parts and int(m.group(1)) in forge_layers
 
     plan = []
     for name in sorted(don_t):
@@ -149,7 +158,8 @@ def main() -> None:
             if H is not None and H.shape[0] != n_in:
                 H = None
             d1, q1 = TG.quantize_one_plane(
-                torch.from_numpy(W.astype(np.float32)), H, chunk=A.chunk)
+                torch.from_numpy(W.astype(np.float32)), H, chunk=A.chunk,
+                foem_beta=A.foem_beta)
             raw = pack_tq1(np.asarray(d1), np.asarray(q1), n_out, n_in)
             w.write_tensor_data(raw)
             err = float(np.linalg.norm(
