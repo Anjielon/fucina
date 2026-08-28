@@ -100,6 +100,51 @@ determinism patches currently take on faith.
    the residual-stream rank correlation that failed to replicate across
    models, reported as a cautionary tale.
 
+## Section 4 draft — Eight refutations, each with its pre-registered prediction
+
+The method note that carries the section: every hypothesis was written down as
+a falsifiable prediction *before* its measurement ran, and two of the eight
+were "confirmed" by a first measurement and then killed by a second. We keep
+both stages in the record, because the difference between a correlation and a
+mechanism is precisely what this section is about.
+
+| # | hypothesis | pre-registered prediction | measurement | verdict |
+|---|---|---|---|---|
+| 1 | Correction magnitude | ‖ΔW‖/‖W‖ larger where damage is larger | 0.412–0.423 at every layer (2% spread); ρ = −0.56 | refuted |
+| 2 | Routing concentration | hot-28 traffic share lower where damage is larger | ρ = +0.013; worst and best layers within 1.1 points of share | refuted |
+| 3 | Scale mismatch (expert level) | cold-expert compensation helps wherever plane-2 is on | helps `down`-only (−0.14), harms all-three (+0.70) | refuted |
+| 4 | Scale mismatch (layer level) | compensation helps a lot on the single worst layer, little on all layers | 37.80 → 37.67 (0.5% of the damage); *harms* the uniform case | refuted |
+| 5 | Input pathology (kurtosis / effective rank of the `down` input) | statistic peaks at the damaged layers | kurtosis ρ = −0.19; effective rank ρ = +0.28; layers 10 and 15 nearly identical rank, 2.3× different damage | refuted |
+| 6 | Hot-first permutation error | wrong expert order at damaged layers | 28/28 correct on all 40 layers, no exceptions | refuted |
+| 7 | Delivered output error | ‖ΔW·X‖/‖WX‖ larger where damage is larger | ratio to weight-space error 1.000–1.002 at every layer; ρ = −0.599 | refuted — the decisive one |
+| 8 | Expert-selection quality (frequency vs impact) | bands with near-perfect selection must benefit from the correction | 397B band 30-45: overlap 25-27/28, best in the model — and it *harms* (6.3002 vs 6.1845) | refuted in causal form |
+
+Two cautionary subplots, reported rather than smoothed away:
+
+- **The residual-stream rank correlation that did not replicate.** On the 35B,
+  effective rank of the residual stream correlates with damage at +0.651 —
+  publishable-looking. On the 397B the sign *reverses* (damage highest where
+  rank is lowest). One model would have made this a mechanism; the second
+  model made it a coincidence. We keep it as the section's epigraph.
+- **The selection hypothesis died twice.** Its correlational form is strong
+  (impact lost by frequency-selection tracks the 397B damage profile at
+  +0.788, and the head — 2/28 correct, 89.5% of impact lost — is exactly the
+  catastrophic band). Its causal form failed the pre-registered test above.
+  Selection quality is a real, quantified property of the forge and it does
+  not decide the sign. Both statements are true; conflating them is how the
+  literature acquires mechanisms it does not have.
+
+What survives all eight is a statement about *position*: an identical
+perturbation, delivered identically, has consequences that depend only on the
+depth at which it lands — beneficial in the final quarter (from 73% of depth
+on both models), catastrophic near the middle of the 35B (its worst layer sits
+at 0.488 of depth, on the representational boundary that five independent
+methods place at 0.47–0.53), and progressively less harmful with depth on the
+397B. Route-flip *counts* do not order the damage (they nearly invert it), so
+if routing mediates the effect it does so through *which* routes change, not
+how many — consistent with the one published attempt to classify flips, which
+achieves chance (AUC 0.490) at telling harmful from benign.
+
 ## Evaluation debt (must clear before submission)
 
 - lm-eval via llama-cpp-python server (llama-server's `echo` gap documented),
