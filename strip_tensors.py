@@ -70,8 +70,9 @@ def layer_of(name: str) -> int | None:
     return int(m.group(1)) if m else None
 
 
-def should_remove(name: str, match: str, keep_layers: set[int] | None) -> bool:
-    if match not in name:
+def should_remove(name: str, match, keep_layers: set[int] | None) -> bool:
+    matches = [match] if isinstance(match, str) else list(match)
+    if not any(m in name for m in matches):
         return False
     if not keep_layers:
         return True
@@ -121,9 +122,10 @@ def strip(src: str, dst: str, match: str, drop_keys: list[str],
             if not should_remove(t.name, match, keep_layers)]
     log(f"keeping {len(keep)} tensors, removing {len(reader.tensors) - len(keep)}")
     if keep_layers:
+        matches = [match] if isinstance(match, str) else list(match)
         survivors = sorted({layer_of(t.name) for t in keep
-                            if match in t.name} - {None})
-        log(f"'{match}' survives on layers: {survivors}")
+                            if any(m in t.name for m in matches)} - {None})
+        log(f"{matches} survive on layers: {survivors}")
 
     for t in keep:                                  # declare every tensor first
         d = np.asarray(t.data)
@@ -148,7 +150,9 @@ if __name__ == "__main__":
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("src")
     ap.add_argument("dst")
-    ap.add_argument("--match", required=True, help="substring of the tensor names to remove")
+    ap.add_argument("--match", required=True, action="append",
+                    help="substring of the tensor names to remove (repeatable — "
+                         "one pass, one output, however many families)")
     ap.add_argument("--drop-key", action="append", default=[],
                     help="substring of a metadata key to remove (repeatable)")
     ap.add_argument("--keep-layers", default=None,
