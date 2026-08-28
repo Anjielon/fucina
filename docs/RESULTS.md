@@ -858,7 +858,40 @@ literature is unanimous that efficacy is governed by selection *accuracy*, not
 set size (a single super weight moves perplexity three orders of magnitude;
 three experts of 6,144 are catastrophic).
 
-**The decisive experiment, and it is cheap:** re-select the 397B's 28 experts by
+**Measured, without reforging anything.** The expected impact of correcting
+expert *e* is not its frequency but frequency × ‖W‖² — the injected correction
+scales with the expert's size. Comparing the top-28 by frequency against the
+top-28 by impact:
+
+| | overlap (frequency vs impact) | impact lost by choosing on frequency |
+|---|---|---|
+| 35B, layers 0-39 | **24.8/28 mean** | 0.2-6.2% |
+| **397B layer 0** | **2/28** | **89.5%** |
+| 397B layer 15 | 11/28 | 37.8% |
+| 397B layer 30 | 27/28 | 0.2% |
+| 397B layer 45 | 26/28 | 1.2% |
+| 397B layer 59 | 19/28 | 18.1% |
+
+On the 35B, frequency picks nearly the right set everywhere — and the
+correction helps nearly everywhere. On the 397B it misses badly in the early
+layers — 2 of 28 right at layer 0, 89.5% of impact lost — **which is exactly
+where the damage is worst** (band 0-19: 6.7850), and it is nearly perfect at
+layers 30-45, **which is exactly the beneficial tail** (44-59: 6.1591 against
+6.1845). Selection quality tracks the damage profile of the 397B layer by
+layer, and its difference between the two models tracks the sign flip.
+
+Coverage, measured on the same imatrices, moves in the same direction but
+weakly: the top-28 carry a median 30.77% of traffic on the 35B against 19.66%
+on the 397B — a reduction, not a collapse, and per-layer coverage was already
+shown uncorrelated with damage (ρ = +0.013).
+
+⚠️ **Stated plainly: selection explains the 397B profile and the sign flip. It
+does not explain the 35B's layer-20 mountain** — that layer's selection is
+nearly perfect (25/28, 0.6% lost) and its damage is catastrophic. Two distinct
+phenomena, now separable: a selection-criterion failure that grows with expert
+count, and a mid-depth fragility that survives every local explanation.
+
+**The confirming experiment stays cheap:** re-select the 397B's 28 experts by
 Hessian trace instead of hotness, holding everything else fixed. The Hessians
 already exist (16,640 samples per layer). If the sign flips back, coverage is
 dead and the mechanism is selection.
