@@ -1225,3 +1225,37 @@ two-layer difference in the correction's support flips the model by 11
 perplexity points in the non-monotone direction — the sharpest instance of
 correction non-additivity in the record, and a warning against any greedy
 per-layer band search that assumes local moves have local costs.
+
+### The donor lever, generalised: Tony-downQ4 (transplant, no forge)
+
+Owner's suggestion, executed via the new `transplant_tensors.py`: take the
+all-plane ternary 35B, replace `ffn_down_exps` with the source Q4 tensors
+(hot-first permuted per layer — without the permutation the router
+misaligns: measured 8.25 → 124.5), drop the now-stale `ffn_down_exps2`
+residuals. 27 seconds of CPU. At matched 12-chunk conditions:
+
+| build | GiB | ppl@12 | ppl@30 | rep4 |
+|---|---|---|---|---|
+| source Q4 (APEX) | 16.7 | 7.263 | 7.917 | — |
+| **downQ4 (new)** | **13.5** | **7.807** | **8.348** | **0.000 (clean)** |
+| ternary recipe | 9.2 | 8.250 | — | — |
+| plain ternary | 9.2 | 8.720 | — | 0.005 |
+
+The transplant recovers 55% of the ternary→Q4 quality gap for 26% of the
+size gap — a true intermediate point on the quality/size frontier, produced
+without any re-quantization. Fleet recipe going forward: ternary up+gate
+(+ second plane) with donor-precision down, donor experts permuted to the
+file's hot-first order. Three implementation traps are now encoded in the
+tool: expert permutation (--permute-imatrix), writing the permuted bytes,
+and preserving the reader's byte-shape.
+
+### Dense 27B, closing verdict of the ladder
+
+Gate-only ternary (v3c, up+down from donor): ppl 11.18 but rep4 0.247
+(deterministically reproduced) — one prompt collapses, one borderline. On
+this GatedDeltaNet hybrid every rung of ternary PTQ damages free-running
+generation: down +29 ppl (collapse), up +8.4 (collapse), gate +5.4
+(partial degradation). The dense front closes with the per-projection
+sensitivity ladder measured end-to-end — unpublished elsewhere — and QAT+KD
+(EfficientQAT-style, plan in QAT_PILOT_PLAN.md) as the only remaining path
+below ~3 bpw for this architecture.
