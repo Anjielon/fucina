@@ -1272,3 +1272,20 @@ two ternary planes (9 levels on ~1.3% of weights, ternary per-plane); the
 non-expert path (~8 of 85 GiB) is shelf-quantized. Nearest prior art:
 BitNet-class native ternary at 100× smaller scale; PTQTP's "1.58-bit-class"
 stores 3.17 bpw; IQ1_M is not ternary.
+
+### 397B per-projection switch test (2026-08-28 18:20, runtime switches on v3.1)
+
+| config | ppl (12 ch) |
+|---|---|
+| all-three projections, layers 44-59 (= v3.3) | **6.1291** |
+| up+gate ALL layers + down 44-59 | 6.3025 |
+| up+gate ALL layers, down OFF | 6.3025 |
+
+Two findings. (1) The per-projection recipe that wins on the 35B (up+gate
+everywhere: −0.47 there) LOSES on the 397B (+0.17): the depth rule
+transfers across scale (73% on both), the per-projection asymmetry does
+NOT — recipes are model-specific above the depth rule. (2) B and C agree
+to four decimals: with up+gate corrected everywhere, the tail-band down
+correction contributes nothing measurable — evidence that the projections'
+corrective contributions are not independent (consistent with the band
+sweep's two-layer configuration cliff).
