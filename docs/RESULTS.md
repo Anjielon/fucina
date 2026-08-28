@@ -1049,3 +1049,53 @@ principle, which is decades-old vector-quantization theory. The contribution
 is measuring it on ternary LLM weights and drawing the consequence — not
 deriving it. It belongs as a lemma inside the pipeline work, not as a claim of
 its own.
+
+## 2026-08-28 — the day's additions (FOEM · impact selection · TQ1_B160 · dense v2)
+
+**FOEM (arXiv 2507.11017) wired into the forge** behind `--foem-beta` /
+`FORGE_FOEM_BETA`. Verification protocol and numbers, on a fully-coupled
+synthetic Hessian (dense random orthogonal mixing, eigenvalue decay k^-0.6,
+1024 dims, 256 rows — the first synthetic, with fast-decaying column scales,
+had zero cross-block coupling and showed nothing):
+
+| beta | output error ‖ΔW·X‖/‖W·X‖ | trits changed vs GPTQ |
+|---|---|---|
+| 0 (plain GPTQ) | 41.523% | — (bit-identical, asserted) |
+| 0.0003 (repo default) | 41.349% | 29,890 |
+| 0.003 | 40.674% | 44,885 |
+| 0.03 | 40.626% | 67,285 |
+| 0.1 | 54.459% | 119,944 |
+| 0.2 | 56.422% | 125,222 |
+
+The good region is beta ∈ [0.003, 0.03]; beyond it the pull toward the
+originals overwhelms the Hessian compensation and the error *rises* past
+plain GPTQ. Recipe value: **0.003** (conservative edge of the plateau).
+Implementation note: the correction is `((W−W₀) @ U^T) @ U · beta` — two
+rows·r² triangular products; forming `U^T U` (r³) would cost more than the
+quantization itself at 17k dims.
+
+**Impact selection for the second plane** (`--hot-select impact`,
+`FORGE_IMPACT_JSON`): experts ranked by the quantization error the residual
+stream actually feels rather than by routing frequency. The full score
+trace(H·ΔWᵀΔW) costs 35 TFLOP/layer on the 397B (measured: ~25 min/layer on
+CPU); the ranking uses the diagonal weighting ‖ΔW·√diag(H)‖² (QERA-approx's
+closed-form), which reduces the cost 1000× and preserves the ordering signal
+the selection needs. Ranking runs offline in daylight because the forge
+meets `down` before gate/up but needs one hot set per layer.
+
+**TQ1_B160 closed**: GET_ROWS validated GPU==CPU on Vulkan
+(test-backend-ops, rows 160·400 and 320·1000), byte-identical against the
+numpy reference encoder. The Flash-Next n-gram table path (26.8 GiB IQ4_NL →
+~10.1 GiB) is now an engine capability awaiting its model-level evaluation.
+
+**Dense 27B, second verdict.** Full-ternary FFN with true GPTQ: ppl 48.70
+(no-GPTQ v1: 54.28) — alive but far past usable; the per-tensor Frobenius
+error *rose* (57% vs 43.7% RTN) while ppl fell, which is GPTQ behaving as
+designed (H-weighted error traded against flat error), not a defect. v3
+(down_proj verbatim from the Q4 donor + FOEM 0.003 on gate/up) is forging.
+Literature context gathered today: MoQE measures expert FFNs surviving
+2-bit where dense FFNs die (cross-expert redundancy) — our 397B-lives /
+27B-dies pair is that measurement's field confirmation — and the
+Ternary-Mamba line warns that recurrent-state hybrids (this 27B is
+GatedDeltaNet) accumulate FFN error across generation, which post-hoc
+per-layer correction cannot cancel.

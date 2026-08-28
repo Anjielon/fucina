@@ -18,6 +18,7 @@ from __future__ import annotations
 import json, sys, time
 from pathlib import Path
 import numpy as np, torch
+torch.set_num_threads(4)   # la forgia v3 ha la precedenza sulla CPU
 sys.path.insert(0, str(Path(__file__).parent))
 import ternary_gpu as G
 
@@ -40,8 +41,11 @@ def main() -> None:
             log(f"layer {L}: gia' in cassa"); continue
         Hraw = np.load(HESS / f"H_{L:02d}.npy").astype(np.float64)
         n = Hraw.shape[0]
-        Hraw[np.diag_indices(n)] += 0.01 * np.mean(np.diag(Hraw))
-        Lc = torch.from_numpy(np.linalg.cholesky(Hraw).astype(np.float32)).to(dev)
+        # ⚡ DIAGONAL score, not the full trace(H dW^T dW): the full matmul is
+        # 35 TFLOP/layer (measured: 25 min/layer on CPU — 6.7 h for the band).
+        # For a RANKING the QERA-approx weighting ||dW sqrt(diag H)||^2 is the
+        # published closed-form stand-in (activation RMS per input channel).
+        wcol = torch.from_numpy(np.sqrt(np.abs(np.diag(Hraw))).astype(np.float32)).to(dev)
         key = f"model.language_model.layers.{L}.mlp.experts.gate_up_proj"
         t0 = time.time()
         score = np.zeros(E)
@@ -56,7 +60,7 @@ def main() -> None:
                     W = torch.from_numpy(np.ascontiguousarray(part)).to(dev)
                     d, q = G._scale_one_plane(W.reshape(-1, 256))
                     dW = W - (d * q).reshape(W.shape)
-                    score[int(e)] += float((dW @ Lc).square().sum())
+                    score[int(e)] += float((dW * wcol).square().sum())
                     del W, dW
                 if e % 128 == 0:
                     log(f"  layer {L}: esperto {e}/512")
