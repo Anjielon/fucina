@@ -162,7 +162,7 @@ serves as an auxiliary bench for the 35B model.
 
 \paragraph{Models and forge.} The 397B (512 experts $\times$ 60 layers, hybrid GatedDeltaNet
 attention) is forged from the bf16 checkpoint: expert tensors ternarized with
-a two-level optimal-scale search plus true GPTQ against per-layer input
+a two-level optimal-scale search plus true GPTQ \citep{gptq} against per-layer input
 Hessians (16{,}640 samples each); non-expert tensors from an existing shelf
 quantization. 7.6~h end-to-end. The 35B sibling is forged the same way from
 a shelf GGUF. Engine switches allow enabling the second plane per layer range
@@ -349,7 +349,7 @@ must re-run per model.
 \section{The routing-margin distribution}
 \label{sec:margin}
 
-\paragraph{Definition.} For a token routed to $k$ of $E$ experts, the margin is the gap
+\paragraph{Definition.} For a token routed to $k$ of $E$ experts \citep{switch}, the margin is the gap
 between the $k$-th and $(k+1)$-th router score --- the distance to the nearest
 routing flip. ReMoE \citep{zhu2026remoe} defines it in probability space as the premise of a
 stability lemma; \citet{gu2026routeflip} defines it in logit space and collapses it
@@ -401,7 +401,7 @@ time --- full quantization-aware noise \emph{worse} than none, partial better th
 both --- which is the same shape as our cancellation, in a different regime.
 
 \paragraph{Mixed precision within MoE.} The expert-wise bit-allocation literature
-(MoPEQ \citep{chittyvenkata2025mopeq}, AlphaQ, MC-MoE, GEMQ \citep{gemq}, BitsMoE) is uniformly monotone in its
+(MoPEQ \citep{chittyvenkata2025mopeq}, AlphaQ \citep{alphaq}, MC-MoE \citep{mcmoe}, GEMQ \citep{gemq}, BitsMoE \citep{bitsmoe}) is uniformly monotone in its
 assumptions: the only failure mode contemplated is mis-estimating importance.
 The phenomenon we isolate is visible, unremarked, in GEMQ's own Table~1
 (expert-level mixed precision losing to uniform at matched bits on
@@ -429,7 +429,7 @@ gravity, and their encoder controls); our worst layer sits at 0.488. The
 intervention literature, by contrast, is dominated by edge-sensitivity: GLU
 activation spikes at early \emph{and late} layers \citep{yang2024gluspikes},
 llama.cpp's own extra-bit heuristic on the first and last eighths, and layer-pruning work
-finding deep layers most redundant. The tension is real and stated: those
+finding deep layers most redundant \citep{shortgpt,gromov2024unreasonable}. The tension is real and stated: those
 works measure activation magnitude or deletion tolerance; we measure
 \emph{corruption} tolerance, and deletion-vs-corruption is exactly the distinction
 the reconciliation requires (a deleted layer passes the residual through; a
