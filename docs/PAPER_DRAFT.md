@@ -145,6 +145,75 @@ if routing mediates the effect it does so through *which* routes change, not
 how many — consistent with the one published attempt to classify flips, which
 achieves chance (AUC 0.490) at telling harmful from benign.
 
+## Section 7 draft — Related work
+
+**Ternary post-training quantization.** PTQTP (arXiv 2509.16989) introduces
+the dual trit-plane decomposition we build on, applied uniformly, with no
+per-layer analysis. Tied Trit-Planes (arXiv 2608.08910) is the closest work:
+two ternary planes on a disk-streamed MoE, same primitive, same deployment
+constraint — and it reports, without explanation, the same proxy/fidelity
+dissociation we measure (its higher-reconstruction-error variant scores
+*better* on MMLU). Its ladder is over tensor classes and, by its own
+statement, "localizes sensitivity to the final cumulative bundle, not to a
+single component"; per-layer localisation is precisely what we add. BitNet
+(arXiv 2402.17764) trains ternary from scratch and keeps embeddings
+high-precision; our setting is post-hoc, on weights never meant for ternary.
+
+**Non-additivity of compression error.** EvoPress (ICML 2025, arXiv
+2410.14649) opens on the observation that per-layer independence fails and
+that removing *more* blocks can help; its search machinery (fitness = whole-
+model KL) subsumes our selection procedure. What it explicitly does not do is
+isolate single catastrophic layers or offer a mechanism. QDrop (ICLR 2022)
+and Quant-Noise (ICLR 2021) establish the non-monotone shape at calibration
+time — full quantization-aware noise *worse* than none, partial better than
+both — which is the same shape as our cancellation, in a different regime.
+
+**Mixed precision within MoE.** The expert-wise bit-allocation literature
+(MoPEQ, AlphaQ, MC-MoE, GEMQ, BitsMoE) is uniformly monotone in its
+assumptions: the only failure mode contemplated is mis-estimating importance.
+The phenomenon we isolate is visible, unremarked, in GEMQ's own Table 1
+(expert-level mixed precision losing to uniform at matched bits on
+Qwen3-30B-A3B, −9.89 acc at 2.0 bpe) and named in HiFloat4 (arXiv 2607.26515:
+restoring one component to higher precision scores *below* uniform FP4).
+AWQ's Table 1 shows the selection-criterion analogue: protecting the wrong 1%
+is worse than protecting nothing. Our framing — heterogeneous fidelity, not
+insufficient fidelity — is the synthesis these scattered rows point to.
+
+**Routing fragility.** The margin at the top-k boundary is defined twice and
+measured never: ReMoE (arXiv 2605.27081, App. C.2) as the unmeasured premise
+of a stability lemma, in probability space; arXiv 2608.11212 in logit space,
+collapsed to one AUC (and its margin→harmful classifier sits at chance,
+0.490 — consistent with our flip-count anti-correlation). A token-averaged
+mean curve exists (arXiv 2602.02443); the distribution does not, and the
+mean-vs-median gap (1.76×) is exactly why it matters. sglang PR #35916
+asserts the qualitative half — adjacent scores within one bf16 ULP on this
+very topology — on synthetic weights, its author lacking hardware for the
+real measurement; we supply it.
+
+**Depth structure.** The representational-transition literature places a
+boundary at 0.47–0.53 of depth by five independent methods (semantic hub,
+activation patching — concept written at exactly 0.500 — probing centers of
+gravity, and their encoder controls); our worst layer sits at 0.488. The
+intervention literature, by contrast, is dominated by edge-sensitivity: GLU
+activation spikes at early *and late* layers (arXiv 2405.14428), llama.cpp's
+own extra-bit heuristic on the first and last eighths, and layer-pruning work
+finding deep layers most redundant. The tension is real and stated: those
+works measure activation magnitude or deletion tolerance; we measure
+*corruption* tolerance, and deletion-vs-corruption is exactly the distinction
+the reconciliation requires (a deleted layer passes the residual through; a
+corrupted one writes an actively wrong signal where the representation is
+being formed). One prior intervention study reports a mid-depth sensitivity
+peak (arXiv 2511.17194, activation injection, mean peak 54.9%).
+
+**Down-projection difficulty.** Known and named: D²Quant (arXiv 2602.02546)
+calls it "a well-known quantization bottleneck" and engineers a dedicated
+dual-scale quantizer. Community evidence on our very model family: unsloth's
+v3 recipe placing 20 large FFN tensors at 2 bits measurably degraded coding.
+What is not in the literature is the sign flip — `down` catastrophic on the
+mountain, *helpful* in the tail — nor any derivation from gated-activation
+statistics (our attempt at one is refuted by measurement: kurtosis, effective
+rank and delivered error all fail to track the damage).
+
 ## Evaluation debt (must clear before submission)
 
 - lm-eval via llama-cpp-python server (llama-server's `echo` gap documented),
