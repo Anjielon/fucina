@@ -1,0 +1,143 @@
+% References for "Depth, Not Fidelity".
+% All author lists below were verified against the arXiv abs pages on 2026-08-28,
+% except where a TODO comment says otherwise.
+
+@article{xiao2025ptqtp,
+  title   = {{PTQTP}: Post-Training Quantization to Trit-Planes for Large Language Models},
+  author  = {Xiao, He and Yang, Runming and Yang, Qingyao and Xu, Wendong and Li, Zhen and Su, Yupeng and Liu, Zhengwu and Yang, Hongxia and Wong, Ngai},
+  journal = {arXiv preprint arXiv:2509.16989},
+  year    = {2025}
+}
+
+@article{grella2026tiedtritplanes,
+  title   = {Tied Trit-Planes: Constraining {PTQTP} to a Uniform Nine-Level Quantizer, with a Persistent Folded Format for Disk-Streamed Mixture-of-Experts Serving},
+  author  = {Grella, Matteo},
+  journal = {arXiv preprint arXiv:2608.08910},
+  year    = {2026}
+}
+
+@article{ma2024bitnet,
+  title   = {The Era of 1-bit {LLMs}: All Large Language Models are in 1.58 Bits},
+  author  = {Ma, Shuming and Wang, Hongyu and Ma, Lingxiao and Wang, Lei and Wang, Wenhui and Huang, Shaohan and Dong, Li and Wang, Ruiping and Xue, Jilong and Wei, Furu},
+  journal = {arXiv preprint arXiv:2402.17764},
+  year    = {2024}
+}
+
+@inproceedings{sieberling2025evopress,
+  title     = {{EvoPress}: Accurate Dynamic Model Compression via Evolutionary Search},
+  author    = {Sieberling, Oliver and Kuznedelev, Denis and Kurtic, Eldar and Alistarh, Dan},
+  booktitle = {International Conference on Machine Learning (ICML)},
+  year      = {2025},
+  note      = {arXiv:2410.14649}
+}
+
+@inproceedings{wei2022qdrop,
+  title     = {{QDrop}: Randomly Dropping Quantization for Extremely Low-bit Post-Training Quantization},
+  author    = {Wei, Xiuying and Gong, Ruihao and Li, Yuhang and Liu, Xianglong and Yu, Fengwei},
+  booktitle = {International Conference on Learning Representations (ICLR)},
+  year      = {2022},
+  note      = {arXiv:2203.05740}
+}
+
+@inproceedings{fan2021quantnoise,
+  title     = {Training with Quantization Noise for Extreme Model Compression},
+  author    = {Fan, Angela and Stock, Pierre and Graham, Benjamin and Grave, Edouard and Gribonval, R{\'e}mi and J{\'e}gou, Herv{\'e} and Joulin, Armand},
+  booktitle = {International Conference on Learning Representations (ICLR)},
+  year      = {2021},
+  note      = {arXiv:2004.07320}
+}
+
+@article{chittyvenkata2025mopeq,
+  title   = {{MoPEQ}: Mixture of Mixed Precision Quantized Experts},
+  author  = {Chitty-Venkata, Krishna Teja and Ye, Jie and Emani, Murali},
+  journal = {arXiv preprint arXiv:2509.02512},
+  year    = {2025}
+}
+
+% TODO: no arXiv id was recorded for GEMQ in the draft; author list unverified.
+% Replace author/venue once the canonical reference is located.
+@misc{gemq,
+  title  = {{GEMQ}: Expert-Level Mixed-Precision Quantization for Mixture-of-Experts Models},
+  author = {{GEMQ authors (TODO: verify)}},
+  year   = {2026},
+  note   = {TODO: locate canonical reference (cited for Table~1, expert-level mixed precision vs.\ uniform at matched bits)}
+}
+
+@article{mak2026hifloat4,
+  title   = {{HiFloat4} Format for End-To-End Reinforcement Learning Post-Training of Large Language Models},
+  author  = {Mak, Hei Yi and Golestan, Shadan and Le, Hoang and Jazi, Mehran Taghian and Peng, Yunke and Wang, Yaoyuan and Wang, Yao and Wang, Junsong and Hu, Tianchi and He, Fengchen and Hu, Guipeng and Rahman, Tanzila and Raju, Anandharaju Durai},
+  journal = {arXiv preprint arXiv:2607.26515},
+  year    = {2026}
+}
+
+@inproceedings{lin2024awq,
+  title     = {{AWQ}: Activation-aware Weight Quantization for {LLM} Compression and Acceleration},
+  author    = {Lin, Ji and Tang, Jiaming and Tang, Haotian and Yang, Shang and Chen, Wei-Ming and Wang, Wei-Chen and Xiao, Guangxuan and Dang, Xingyu and Gan, Chuang and Han, Song},
+  booktitle = {Proceedings of Machine Learning and Systems (MLSys)},
+  year      = {2024},
+  note      = {arXiv:2306.00978}
+}
+
+@article{zhu2026remoe,
+  title   = {{ReMoE}: Boosting Expert Reuse through Router Fine-Tuning in Memory-Constrained {MoE} {LLM} Inference},
+  author  = {Zhu, Xiongwei and Liao, Xiaojian and Jiang, Tianyang and Zhang, Yusen and Wang, Liang and Xiao, Limin},
+  journal = {arXiv preprint arXiv:2605.27081},
+  year    = {2026}
+}
+
+@article{gu2026routeflip,
+  title   = {Detecting a Route Flip Is Easier Than Knowing Whether to Fix It: Causal Route-Mediated Damage in Quantized Mixture-of-Experts},
+  author  = {Gu, Parvel},
+  journal = {arXiv preprint arXiv:2608.11212},
+  year    = {2026}
+}
+
+@article{chen2026certainhead,
+  title   = {Certain Head, Uncertain Tail: Expert-Sample for Test-Time Scaling in Fine-Grained {MoE}},
+  author  = {Chen, Yuanteng and Wang, Peisong and Zeng, Nanxin and Shao, Yuantian and Qiu, Shuang and Li, Gang and Liu, Jing and Cheng, Jian},
+  journal = {arXiv preprint arXiv:2602.02443},
+  year    = {2026}
+}
+
+@misc{sglang35916,
+  title        = {Keep the {DeepSeek} router {GEMM} in fp32 under deterministic inference},
+  author       = {{pol-resina}},
+  year         = {2026},
+  howpublished = {Pull request \#35916, sgl-project/sglang, \url{https://github.com/sgl-project/sglang/pull/35916}},
+  note         = {Software pull request}
+}
+
+@article{yan2026d2quant,
+  title   = {{D$^2$Quant}: Accurate Low-bit Post-Training Weight Quantization for {LLMs}},
+  author  = {Yan, Xianglong and Bao, ChengZhu and Li, Zhiteng and Zhang, Tianao and Zhang, Shaoqiu and Xie, Ruobing and Sun, Samm and Zhang, Yulun},
+  journal = {arXiv preprint arXiv:2602.02546},
+  year    = {2026}
+}
+
+@article{yang2024gluspikes,
+  title   = {Mitigating Quantization Errors Due to Activation Spikes in {GLU}-Based {LLMs}},
+  author  = {Yang, Jaewoo and Kim, Hayun and Kim, Younghoon},
+  journal = {arXiv preprint arXiv:2405.14428},
+  year    = {2024}
+}
+
+@article{xu2025steering,
+  title   = {Steering in the Shadows: Causal Amplification for Activation Space Attacks in Large Language Models},
+  author  = {Xu, Zhiyuan and Abaimov, Stanislav and Gardiner, Joseph and Belguith, Sana},
+  journal = {arXiv preprint arXiv:2511.17194},
+  year    = {2025}
+}
+
+@article{kim2023moqe,
+  title   = {Mixture of Quantized Experts ({MoQE}): Complementary Effect of Low-bit Quantization and Robustness},
+  author  = {Kim, Young Jin and Fahim, Raffy and Awadalla, Hany Hassan},
+  journal = {arXiv preprint arXiv:2310.02410},
+  year    = {2023}
+}
+
+@article{yu2024superweight,
+  title   = {The Super Weight in Large Language Models},
+  author  = {Yu, Mengxia and Wang, De and Shan, Qi and Reed, Colorado J. and Wan, Alvin},
+  journal = {arXiv preprint arXiv:2411.07191},
+  year    = {2024}
+}
