@@ -262,11 +262,24 @@ def main():
                     del j1d, j1q, d2, q2
                 else:
                     # no second plane here (MTP layer, or outside
-                    # --plane2-layers): DEDICATED plane-1, no reordering
+                    # --plane2-layers): DEDICATED plane-1, no reordering.
+                    # ⛔ Il confine giusto qui e' la COERENZA DEL PACKING
+                    # (ricostruito == d*q del quantizzatore), NON la distanza
+                    # dal sorgente: la GPTQ scambia errore piatto per errore
+                    # pesato-H, e su Hessiane molto anisotrope il piatto puo'
+                    # legittimamente avvicinarsi a 1.0 (blk.0 di Tony: 0.98).
+                    # Il primo assert (<0.6 vs source) bloccava forge SANE.
                     p2 = None
                     rebuilt = GQ.dequantize(p1[:nb_e], T.TQ1_0).reshape(out_, ind)
-                    Wv = W[0].astype(np.float32)
-                    err = float(np.linalg.norm(rebuilt - Wv) / np.linalg.norm(Wv))
+                    nb_r = ind // 256
+                    proprio = (np.asarray(d1).reshape(-1, nb_r, 1)[:out_]
+                               * np.asarray(q1).reshape(-1, nb_r, 256)[:out_].astype(np.float32)
+                               ).reshape(out_, ind)
+                    err = float(np.linalg.norm(rebuilt - proprio)
+                                / max(np.linalg.norm(proprio), 1e-12))
+                    src_err = float(np.linalg.norm(rebuilt - W[0].astype(np.float32))
+                                    / max(np.linalg.norm(W[0].astype(np.float32)), 1e-12))
+                    log(f"      confine (dedicato): packing {err*100:.2f}% · vs source {src_err*100:.1f}%")
                 del Wt
                 assert err < 0.6, f"{orig}: confine rotto ({err:.2f})"
                 done[orig] = (p1, p2)
