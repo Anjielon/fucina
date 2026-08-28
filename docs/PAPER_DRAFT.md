@@ -100,6 +100,54 @@ determinism patches currently take on faith.
    the residual-stream rank correlation that failed to replicate across
    models, reported as a cautionary tale.
 
+## Section 2 draft — Setup and measurement honesty
+
+**Hardware.** Everything runs on one consumer machine: Ryzen AI Max+ 395,
+128 GB unified memory (~96 GiB exposed as Vulkan VRAM), Fedora, our llama.cpp
+fork with TQ1_0 Vulkan kernels (scalar, coopmat1 and coopmat2 paths; the
+coopmat2 decode functions were later validated on an RTX 4060, the first
+hardware to exercise them). A second consumer laptop (RTX 4060 Laptop 8 GB)
+serves as an auxiliary bench for the 35B model.
+
+**Models and forge.** The 397B (512 experts × 60 layers, hybrid GatedDeltaNet
+attention) is forged from the bf16 checkpoint: expert tensors ternarized with
+a two-level optimal-scale search plus true GPTQ against per-layer input
+Hessians (16,640 samples each); non-expert tensors from an existing shelf
+quantization. 7.6 h end-to-end. The 35B sibling is forged the same way from
+a shelf GGUF. Engine switches allow enabling the second plane per layer range
+and per projection at load time, which is what makes the per-layer anatomy
+measurable without re-forging.
+
+**What our perplexity numbers are, and are not.** All perplexity is
+llama.cpp's, wikitext-2, ctx 2048, chunk counts stated per table. Absolute
+error bars at 30 chunks are ±0.087, so any comparison inside that band is
+resolved with the *paired* estimator (`--kl-divergence-base`): same chunks,
+reference logits stored, uncertainty propagated from the logits. The headline
+confirmation (tail-only correction on the 397B) is paired: mean
+Δp = +0.048% ± 0.014%.
+
+**What our task numbers are, and are not.** llama.cpp's built-in scorers
+label their output `acc_norm` but normalise endings by **token count**;
+lm-eval's `acc_norm` normalises by **character length**, and for Winogrande
+and MMLU lm-eval has no `acc_norm` at all. Our HellaSwag/Winogrande figures
+are therefore a third quantity, comparable only within this paper. At n=300
+their resolvable difference between two builds is 6.9 pp against typical
+quantization effects of 1-4 pp: we use them solely as "the model is not
+broken" evidence and never as a measurement of quantization damage. The
+final evaluation (pinned lm-eval via a server that implements prompt-token
+logprobs; `acc` and `acc_norm` both; full task sets) is listed in the debt
+section, and we explicitly do not use IRT-subsampled minibenchmarks: the
+published gp-IRT weights put only 12-30% of the reported figure on responses
+actually observed, calibrated on a 2024 pool of full-precision models that
+excludes the near-chance region a sub-2-bit model can occupy — a simulation
+on the published parameters shrinks true damage in the flattering direction.
+
+**Pre-registration discipline.** Every hypothesis in Section 4 was written as
+a falsifiable prediction before its measurement ran, in the project log that
+ships with the artefact. Two hypotheses were "confirmed" by a first
+measurement and killed by a second (residual-stream rank; selection quality);
+both stages are kept in the record.
+
 ## Section 4 draft — Eight refutations, each with its pre-registered prediction
 
 The method note that carries the section: every hypothesis was written down as
