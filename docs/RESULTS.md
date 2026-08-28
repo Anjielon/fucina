@@ -531,6 +531,27 @@ than applying no correction, while `down` alone measures 37.9258.
 The damage is therefore attached to the layer's own SwiGLU output, not to what
 passes through it.
 
+⚠️ **But the residual stream is not ordinary at the damaged layer, and that
+weakens this defence.** Measured from captured activations, effective rank of
+the residual stream per layer: **15.58% at layer 20** against **10.39% at layer
+30** — a 50% difference in the wrong direction, correlating with damage at
+**+0.651**. The curve rises from 5.0% at layer 0 to a plateau of ~15% across
+layers 15-27 — which is our damage band — then falls monotonically to 5.5% at
+layer 39.
+
+So the layer where the correction is catastrophic *is* distinguished in its
+activations, and an earlier version of this document said the propagation
+account was excluded. It is not excluded; it is weakened by the projection
+decomposition and left standing by this measurement. Both facts belong in the
+paper.
+
+The remaining distinction is still real but now carries the burden of proof:
+`up` and `gate` read this residual stream and are harmless at that very layer,
+while `down` reads the layer-local SwiGLU product and carries the entire
+catastrophe. If the residual stream's rank were the mediator, the projections
+reading it should suffer. The measurement that resolves this is the same
+effective-rank curve computed on the `down` input, which is pending.
+
 Two further facts point the same way. The correction's relative magnitude is
 constant with depth (0.412-0.423), so the peak is not a bigger perturbation.
 And the `down` input's kurtosis is 38,770 at layer 0 against 45-150 elsewhere —
