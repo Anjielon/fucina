@@ -657,6 +657,22 @@ The file carries the recipe rather than the operator having to remember it,
 which is also the only form in which a recipe survives being handed to someone
 else.
 
+## The paired verdict on the 397B tail
+
+The absolute comparison — 6.1591 against 6.1845 at 30 chunks — sits inside the
+±0.087 absolute error bar three times over, so it cannot support the claim on
+its own. The paired estimator can: same chunks, reference logits stored, the
+corpus variance cancelled.
+
+**Mean Δp = +0.048% ± 0.014%** — the tail-44-59 build assigns more probability
+to the correct token than the plane-off build, at **3.4σ** with uncertainty
+propagated from the logits. Median Δp is also positive. The gain is real.
+
+⚠️ Operational lesson recorded rather than hidden: the harness filtered the
+scorer's output through a `grep` that discarded the perplexity-ratio lines; the
+verdict survived only because the Δp lines happened to match the filter. Store
+raw output, filter afterwards.
+
 ## The projection factor
 
 `c = ⟨Ŵ,W⟩/⟨W,W⟩`, the fraction of weight energy retained.
