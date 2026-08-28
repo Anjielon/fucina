@@ -35,12 +35,24 @@ producing false positives.
 
 ```bash
 python forge_gguf.py \
-    --sorgente model.gguf \
-    --uscita   model-ternary.gguf \
-    --caldi    28 \
+    --source   model.gguf \
+    --output   model-ternary.gguf \
+    --hot      28 \
     --imatrix  imatrix.gguf \
-    --hessiane hessians/
+    --hessians hessians/
 ```
+
+Optional refinements, both measured on real models (see `--help` for the
+numbers):
+
+- `--hot-select impact` — choose the K hot experts by `trace(H dWᵀ dW)` of the
+  plane-1 error instead of raw routing frequency (requires `--hessians`).
+- `--plane2-layers 44-59` — restrict the second plane to a layer band; on both
+  models we measured, the correction helps only in the final ~quarter of the
+  depth.
+- `--foem-beta` — FOEM first-order correction (arXiv 2507.11017); `0` (default)
+  is plain GPTQ.
+- `--chunk` — rows per GPU chunk, tune to your VRAM.
 
 Output, one line per expert tensor:
 
@@ -52,7 +64,7 @@ Output, one line per expert tensor:
 the bytes actually written and compared against the source. If it exceeds the
 threshold the forge stops rather than producing a plausible-looking bad file.
 
-The run is resumable. `<output>.giornale` records the tensor index and byte
+The run is resumable. `<output>.journal` records the tensor index and byte
 offset after every write; re-running the same command continues from there.
 
 ## 3. Validate

@@ -53,6 +53,7 @@ W ≈ d₁·T₁ + d₂·T₂        T ∈ {-1, 0, +1},  256-weight blocks,  f16
 | `forge.py` | orchestrator: applies each lever *only if it wins its own test on the current model* |
 | `forge_gguf.py` | forge from an already-quantized GGUF → two-plane TQ1_0, resumable via journal |
 | `forge_from_bf16.py` | forge from the original bf16 checkpoint — **this is what produced the case study** |
+| `forge_dense.py` | forge for a *dense* (non-MoE) model: ternary FFN from bf16, every other tensor verbatim from a donor GGUF |
 | `ternary_gpu.py` | GPU quantizer: joint two-plane optimization + full-propagation GPTQ |
 | `two_planes.py` | Hessian preparation (damping, Cholesky) |
 | `tq1_pack.py` | GPU TQ1_0 bit-packing + hot-first permutation (self-tested against the reference decoder) |
@@ -60,6 +61,8 @@ W ≈ d₁·T₁ + d₂·T₂        T ∈ {-1, 0, +1},  256-weight blocks,  f16
 | `levers.py` | the lever registry: 34 techniques with prior, test protocol, cost, source |
 | `safe_repair.py` | the gate: a repair is kept only if its gain exceeds the benchmark's own noise |
 | `paired_compare.py` | per-chunk paired sign test — resolves effects smaller than the absolute error bar |
+| `generation_health.py` | free-running repetition probe — the number that goes *next to* every perplexity (teacher-forced windows never see the collapse) |
+| `qera_lora.py` | QERA closed-form low-rank correction of the quantization error, exported as a llama.cpp LoRA-GGUF |
 | `promote_tensors.py` | selective precision promotion by file rewrite — **read its warning first** |
 | `strip_tensors.py` | remove tensors a model no longer needs, and the metadata that declares them |
 | `selective_rollback.py` | tensor-level diff / guard / restore between two builds |
@@ -76,6 +79,25 @@ python3 forge_gguf.py \
     --hot       28                  # experts that receive the second plane
     --imatrix   imatrix.gguf        # must contain per-expert routing counts
     --hessians  H_DIR/              # optional: enables GPTQ on gate/up projections
+```
+
+Optional flags, each backed by a measurement (details in `--help` and
+[docs/USAGE.md](docs/USAGE.md)): `--hot-select {freq,impact}` (choose hot
+experts by Hessian-weighted impact instead of routing frequency; requires
+`--hessians`), `--plane2-layers 44-59` (restrict the second plane to the layer
+band where it actually helps — the final ~quarter of the depth on both models
+measured), `--foem-beta` (FOEM first-order correction, arXiv 2507.11017;
+default 0 = plain GPTQ), `--chunk` (rows per GPU chunk).
+
+For a dense (non-MoE) model, use `forge_dense.py`:
+
+```bash
+python3 forge_dense.py \
+    --bf16      model-bf16.gguf     # FFN source
+    --donor     model-Q4_K_XL.gguf  # every non-FFN tensor, verbatim
+    --output    model-ternary.gguf
+    --hessians  H_DIR/              # optional: enables GPTQ
+    # --ternary-parts gate,up       # keep down_proj at donor precision
 ```
 
 Runtime requirements: a llama.cpp build with TQ1_0 Vulkan kernels **and** the

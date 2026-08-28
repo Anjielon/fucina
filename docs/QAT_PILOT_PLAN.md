@@ -1,253 +1,252 @@
-# EfficientQAT ternary pilot — piano (nessun training eseguito)
+# EfficientQAT ternary pilot — plan (no training executed)
 
-> Scritto il 2026-08-28. Solo lettura del codice + verifiche locali (metadata
-> GGUF, config HF via web, moduli transformers installati in
-> `/home/angelo/venv-catq`). Nessun training, nessuna GPU usata per produrre
-> questo documento.
+> Written 2026-08-28. Code reading + local checks only (GGUF metadata, HF
+> config via web, transformers modules installed in
+> `/home/angelo/venv-catq`). No training, no GPU was used to produce this
+> document.
 
-## 0. Obiettivo
+## 0. Goal
 
-Il PTQ (post-training, il nostro `forge_dense.py`) rompe la generazione sul
-27B denso ibrido quando si spinge la ternarizzazione oltre `ffn_{gate,up,down}`.
-EfficientQAT (Block-AP + E2E-QP, ACL 2025) fa QAT block-wise con ricostruzione
-MSE contro l'output fp — potenzialmente recupera dove il PTQ puro collassa.
-Questo documento pianifica un **pilota** (2-3 blocchi, non tutto il modello)
-per capire se vale la pena investire nel porting completo.
+PTQ (post-training, our `forge_dense.py`) breaks generation on the hybrid
+dense 27B when ternarization is pushed beyond `ffn_{gate,up,down}`.
+EfficientQAT (Block-AP + E2E-QP, ACL 2025) does block-wise QAT with MSE
+reconstruction against the fp output — potentially recovering where pure PTQ
+collapses. This document plans a **pilot** (2–3 blocks, not the whole model)
+to decide whether the full port is worth the investment.
 
-## 1. Il modello — chi è davvero (risolto)
+## 1. The model — what it really is (resolved)
 
-Il nostro `qwen38-27b-bf16.gguf` (54.66 GB, `/mnt/models/gguf/qwen38-tern/`)
-ha architettura GGUF `qwen35` con chiavi `qwen35.ssm.*` +
-`qwen35.full_attention_interval` + `qwen35.nextn_predict_layers` → è il
-backbone testuale di **`Qwen/Qwen3.8-27B`**, rilasciato ufficialmente su
-HuggingFace (mirror anche `unsloth/Qwen3.8-27B`, origine dei GGUF UD-Q4_K_XL
-già in flotta come `mogavis-qwen38-exec`).
+Our `qwen38-27b-bf16.gguf` (54.66 GB, `/mnt/models/gguf/qwen38-tern/`) has
+GGUF architecture `qwen35` with `qwen35.ssm.*` keys +
+`qwen35.full_attention_interval` + `qwen35.nextn_predict_layers` → it is the
+text backbone of **`Qwen/Qwen3.8-27B`**, officially released on HuggingFace
+(mirrored as `unsloth/Qwen3.8-27B`, the origin of the UD-Q4_K_XL GGUFs
+already in our fleet as `mogavis-qwen38-exec`).
 
-**Config reale** (letta da `huggingface.co/Qwen/Qwen3.8-27B/raw/main/config.json`):
+**Actual config** (read from `huggingface.co/Qwen/Qwen3.8-27B/raw/main/config.json`):
 ```
 architectures: ["Qwen3_5ForConditionalGeneration"]
 model_type: "qwen3_5"
 hidden_size: 5120
 num_hidden_layers: 64
-layer_types: ibrido, full_attention_interval=4 (16 layer full-attention, 48 GatedDeltaNet)
+layer_types: hybrid, full_attention_interval=4 (16 full-attention layers, 48 GatedDeltaNet)
 ```
-64 layer combacia **esattamente** con i 64 file Hessiani già presenti
+64 layers matches **exactly** the 64 Hessian files already on disk
 (`/mnt/models/gguf/qwen38-tern/hessiane/H_00.npy`…`H_63.npy`, shape
-`(5120, 5120) float32` — combacia con `hidden_size=5120`). Le Hessiane sono
-riusabili come calibrazione/validazione senza ricalcolarle.
+`(5120, 5120) float32` — consistent with `hidden_size=5120`). The Hessians are
+reusable for calibration/validation without recomputing them.
 
-### ⚠️ Trappola: il checkpoint HF è un VLM, non un CausalLM puro
-`Qwen3_5ForConditionalGeneration` (classe dichiarata nel config) è il wrapper
-multimodale: `Qwen3_5Model` ha `self.visual` (torre vision) +
-`self.language_model` (il backbone testuale, un `Qwen3_5TextModel` generico
-via `AutoModel.from_config`). Esiste **anche** una classe testo-puro
+### ⚠️ Trap: the HF checkpoint is a VLM, not a plain CausalLM
+`Qwen3_5ForConditionalGeneration` (the class declared in the config) is the
+multimodal wrapper: `Qwen3_5Model` has `self.visual` (vision tower) +
+`self.language_model` (the text backbone, a generic `Qwen3_5TextModel` via
+`AutoModel.from_config`). There is **also** a text-only class,
 `Qwen3_5ForCausalLM` (`transformers/models/qwen3_5/modeling_qwen3_5.py:1613`)
-con `self.model = Qwen3_5TextModel(config)` — quella con `embed_tokens`,
-`layers`, `norm`, `rotary_emb` allo stile Llama che EfficientQAT si aspetta.
+with `self.model = Qwen3_5TextModel(config)` — the one with `embed_tokens`,
+`layers`, `norm`, `rotary_emb` in the Llama style that EfficientQAT expects.
 
-**Implicazione pratica**: scaricare il repo `Qwen/Qwen3.8-27B` porta anche la
-torre vision (peso extra, non serve a noi — il nostro GGUF non la contiene
-affatto: llama.cpp separa mmproj). Per usare EfficientQAT bisogna:
-1. scaricare il checkpoint completo (bf16, ~54-58 GB incluso vision tower);
-2. estrarre SOLO i pesi `model.language_model.*` dal state-dict, rinominarli
-   `model.*`, e caricarli in `Qwen3_5ForCausalLM` con `config.text_config`
-   (una `Qwen3_5TextConfig`) — EfficientQAT **non fa questo automaticamente**:
-   `main_block_ap.py:128` chiama `AutoModelForCausalLM.from_pretrained(args.model)`
-   col config crudo del repo (che dichiara `ForConditionalGeneration`) →
-   fallisce o carica la classe sbagliata. Serve uno script di estrazione
-   state-dict prima di invocare `main_block_ap.py` (mezza giornata di lavoro,
-   pattern identico a quanto già fa `gguf_surgeon.py`/`forge_dense.py` per il
-   lato GGUF, ma sul lato safetensors HF).
+**Practical implication**: downloading the `Qwen/Qwen3.8-27B` repo also pulls
+the vision tower (extra weight, useless to us — our GGUF does not contain it
+at all: llama.cpp keeps mmproj separate). To use EfficientQAT one must:
+1. download the full checkpoint (bf16, ~54–58 GB including the vision tower);
+2. extract ONLY the `model.language_model.*` weights from the state dict,
+   rename them `model.*`, and load them into `Qwen3_5ForCausalLM` with
+   `config.text_config` (a `Qwen3_5TextConfig`) — EfficientQAT **does not do
+   this automatically**: `main_block_ap.py:128` calls
+   `AutoModelForCausalLM.from_pretrained(args.model)` with the repo's raw
+   config (which declares `ForConditionalGeneration`) → it fails or loads the
+   wrong class. A state-dict extraction script is needed before invoking
+   `main_block_ap.py` (half a day of work, the same pattern
+   `gguf_surgeon.py`/`forge_dense.py` already implement on the GGUF side, but
+   on the HF safetensors side).
 
-Non esiste un convertitore gguf→HF ufficiale per questa architettura ibrida
-in llama.cpp: **l'unica via pulita è ri-scaricare l'originale HF**, non
-convertire il nostro GGUF a ritroso.
+There is no official gguf→HF converter for this hybrid architecture in
+llama.cpp: **the only clean path is re-downloading the HF original**, not
+converting our GGUF backwards.
 
-## 2. Quantizzatore — dove sta il fake-quant, file:riga esatti
+## 2. Quantizer — where the fake-quant lives, exact file:line
 
-Catena di chiamata (dal punto in cui Block-AP sostituisce i Linear):
+Call chain (from the point where Block-AP replaces the Linears):
 ```
-quantize/block_ap.py:166-169   → per ogni nn.Linear nel blocco:
+quantize/block_ap.py:166-169   → for each nn.Linear in the block:
                                   quantlinear = int_linear_fake.QuantLinear(module, args.wbits, args.group_size)
 quantize/int_linear_fake.py:34 → self.weight_quantizer = UniformAffineQuantizer(wbits, group_size, weight=org_module.weight)
-quantize/int_linear_fake.py:41 → weight = self.weight_quantizer(self.weight)   # nel forward
-quantize/quantizer.py:23-86    → class UniformAffineQuantizer  ← IL FAKE-QUANT VERO E PROPRIO
-  quantize/quantizer.py:40-50  →   init scale/zero_point per-gruppo da min-max del peso (asimmetrico)
-  quantize/quantizer.py:58-74  →   fake_quant(): round-clamp-dequant INT affine con zero_point
+quantize/int_linear_fake.py:41 → weight = self.weight_quantizer(self.weight)   # in the forward
+quantize/quantizer.py:23-86    → class UniformAffineQuantizer  ← THE ACTUAL FAKE-QUANT
+  quantize/quantizer.py:40-50  →   per-group scale/zero_point init from weight min-max (asymmetric)
+  quantize/quantizer.py:58-74  →   fake_quant(): affine INT round-clamp-dequant with zero_point
   quantize/quantizer.py:35-36  →   group_size (assert weight.shape[-1] % group_size == 0)
 ```
 
-**Sostituzione per la nostra semantica TQ1_0** (ternario {-1,0,+1}, scala
-per-blocco 256, **simmetrico, niente zero_point**):
-- Riscrivere `UniformAffineQuantizer.__init__` (righe 24-50): niente
-  `qmin/qmax` da bit-width, niente `zero_point` (parametro da rimuovere, non
-  solo azzerare — un `zero_point` allenabile romperebbe la simmetria
-  ternaria); `group_size` fissato a 256 (il nostro BLOCK, coerente con
-  `forge_dense.py:47` `BLOCK = 256`); scala iniziale = `absmax(gruppo) `
-  (stessa euristica del nostro `ternary_gpu.py`, non min-max asimmetrico).
-- Riscrivere `fake_quant()` (righe 58-74): `x_int = round_ste(x / scale).clamp(-1, 1)`
-  (STE già presente in `quantizer.py:10-14`, riusabile) invece di
+**Replacement for our TQ1_0 semantics** (ternary {-1,0,+1}, per-block-256
+scale, **symmetric, no zero_point**):
+- Rewrite `UniformAffineQuantizer.__init__` (lines 24-50): no `qmin/qmax`
+  derived from bit-width, no `zero_point` (the parameter must be removed, not
+  merely zeroed — a trainable `zero_point` would break the ternary symmetry);
+  `group_size` fixed at 256 (our BLOCK, consistent with `forge_dense.py:47`
+  `BLOCK = 256`); initial scale = `absmax(group)` (the same heuristic as our
+  `ternary_gpu.py`, not asymmetric min-max).
+- Rewrite `fake_quant()` (lines 58-74): `x_int = round_ste(x / scale).clamp(-1, 1)`
+  (the STE is already in `quantizer.py:10-14`, reusable) instead of
   `round-add(zero_point)-clamp(qmin,qmax)-sub(zero_point)`; dequant =
-  `x_int * scale` (nessun offset).
-- `int_linear_fake.py` non richiede modifiche strutturali: il forward è già
-  agnostico al tipo di quantizzatore (`weight = self.weight_quantizer(self.weight)`),
-  basta che la nuova classe esponga la stessa interfaccia (`forward`,
-  `.scale` come `nn.Parameter` allenabile per E2E-QP).
-- `quant_parameters`/`weight_parameters` in `quantize/utils.py` iterano per
-  nome parametro (`scale`, `zero_point` esclusi esplicitamente da qualche
-  parte?) — da verificare riga per riga quando si passa all'implementazione:
-  se filtrano per nome `"zero_point"` va tolto il riferimento, altrimenti
-  l'ottimizzatore proverà a allenare un parametro che non esiste più.
+  `x_int * scale` (no offset).
+- `int_linear_fake.py` needs no structural change: the forward is already
+  agnostic to the quantizer type (`weight = self.weight_quantizer(self.weight)`);
+  the new class just has to expose the same interface (`forward`, `.scale` as
+  a trainable `nn.Parameter` for E2E-QP).
+- `quant_parameters`/`weight_parameters` in `quantize/utils.py` iterate by
+  parameter name (`scale`, `zero_point` explicitly filtered somewhere?) — to
+  be verified line by line at implementation time: if they filter on the name
+  `"zero_point"` the reference must go, otherwise the optimizer will try to
+  train a parameter that no longer exists.
 
-### ⚠️ Secondo problema, più importante del quantizzatore: QUALI Linear toccare
-`block_ap.py:166-167` fa `for name, module in qlayer.named_modules(): if
-isinstance(module, torch.nn.Linear)` — **generico, tocca OGNI Linear del
-blocco**, incluse le proiezioni interne del GatedDeltaNet (`in_proj_qkvz`,
-`in_proj_ba`, `out_proj` — nomi verificati in
-`transformers/models/qwen3_5/modeling_qwen3_5.py`, classe
-`Qwen3_5GatedDeltaNet`). La parte ricorsiva vera (state-space scan, `A_log`,
-`dt_bias`, `conv1d`) NON è `nn.Linear` → resta intoccata di default, questo è
-corretto. Ma le **proiezioni lineari del GDN lo sono**, e il nostro
-`docs/LEVERS.md:92` misura già che le proiezioni GatedDeltaNet ternarizzate
-sbagliano **47-51%**, mentre a Q8 l'errore scende dal 25.4% al 17.1%. Il
-comportamento out-of-the-box di Block-AP le ternarizzerebbe insieme a
-`mlp.{gate,up,down}_proj`, **contraddicendo la nostra scoperta più costosa**.
-**Serve un allowlist per nome modulo** in `block_ap.py:166-169` (es. regex
-`r"\.mlp\.(gate|up|down)_proj$"` oppure, per replicare esattamente
-`forge_dense.py`, anche i `q/k/v/o_proj` delle 16 full-attention layer)
-prima ancora di lanciare il pilota — altrimenti si misura la QAT sulla
-combinazione sbagliata di tensori e si butta via il segnale.
+### ⚠️ Second problem, bigger than the quantizer: WHICH Linears to touch
+`block_ap.py:166-167` does `for name, module in qlayer.named_modules(): if
+isinstance(module, torch.nn.Linear)` — **generic, it touches EVERY Linear in
+the block**, including the internal projections of the GatedDeltaNet
+(`in_proj_qkvz`, `in_proj_ba`, `out_proj` — names verified in
+`transformers/models/qwen3_5/modeling_qwen3_5.py`, class
+`Qwen3_5GatedDeltaNet`). The truly recurrent part (state-space scan, `A_log`,
+`dt_bias`, `conv1d`) is NOT `nn.Linear` → it stays untouched by default, which
+is correct. But the **GDN linear projections are**, and our
+`docs/LEVERS.md:92` already measures that ternarized GatedDeltaNet projections
+are **47–51% wrong**, while at Q8 the model-level error drops from 25.4% to
+17.1%. Block-AP's out-of-the-box behaviour would ternarize them along with
+`mlp.{gate,up,down}_proj`, **contradicting our most expensive finding**.
+**A per-module-name allowlist is needed** in `block_ap.py:166-169` (e.g. regex
+`r"\.mlp\.(gate|up|down)_proj$"`, or, to replicate `forge_dense.py` exactly,
+also the `q/k/v/o_proj` of the 16 full-attention layers) before the pilot is
+even launched — otherwise QAT gets measured on the wrong tensor combination
+and the signal is thrown away.
 
-## 3. Verdetto supporto modello
+## 3. Model-support verdict
 
-**Non gira out-of-the-box.** Due incompatibilità concrete trovate leggendo il
-codice *installato* di transformers 5.15.1 contro le assunzioni di
-EfficientQAT (scritto contro transformers==4.40.1, pre-refactor RoPE):
+**It does not run out of the box.** Two concrete incompatibilities found by
+reading the *installed* transformers 5.15.1 code against EfficientQAT's
+assumptions (written against transformers==4.40.1, pre-RoPE-refactor):
 
-1. **Firma del decoder layer** — `Qwen3_5DecoderLayer.forward()`
-   (`modeling_qwen3_5.py:756+`, stesso pattern di `Qwen3NextDecoderLayer`
-   verificato a `modeling_qwen3_next.py:840-848`) richiede
-   `position_embeddings: tuple[Tensor, Tensor]` come argomento posizionale
-   **senza default**, calcolato una volta sola a monte da
+1. **Decoder-layer signature** — `Qwen3_5DecoderLayer.forward()`
+   (`modeling_qwen3_5.py:756+`, same pattern as `Qwen3NextDecoderLayer`,
+   verified at `modeling_qwen3_next.py:840-848`) requires
+   `position_embeddings: tuple[Tensor, Tensor]` as a positional argument
+   **without a default**, computed once upstream by
    `Qwen3_5TextModel.forward()` (`modeling_qwen3_5.py:1198`,
-   `self.rotary_emb(hidden_states, position_ids)`) e propagato a ogni layer.
-   `quantize/block_ap.py` chiama i layer con `layer(inps,
-   attention_mask=attention_mask, position_ids=position_ids)` in DUE punti
-   (`update_dataset()` riga 22-30 e il `Catcher.forward` riga 79-95, usato
-   anche per catturare gli input) — **mai** `position_embeddings` → `TypeError`
-   immediato al primo forward del blocco. Fix: calcolare
+   `self.rotary_emb(hidden_states, position_ids)`) and propagated to every
+   layer. `quantize/block_ap.py` calls the layers with `layer(inps,
+   attention_mask=attention_mask, position_ids=position_ids)` in TWO places
+   (`update_dataset()` lines 22-30 and the `Catcher.forward` lines 79-95,
+   also used to capture the inputs) — **never** `position_embeddings` → an
+   immediate `TypeError` on the first block forward. Fix: compute
    `position_embeddings = model.model.rotary_emb(hidden_states, position_ids)`
-   una volta e infilarlo nella chiamata al layer in entrambi i punti (patch
-   piccola ma non opzionale, e specifica per architetture "RoPE-once"
-   post-refactor: Llama-2 non ne soffre, per questo il repo non l'ha mai
-   avuta).
-2. **Nesting VLM** — vedi §1: `model.model.layers` (usato da `block_ap.py:49`)
-   esiste solo se si carica `Qwen3_5ForCausalLM`, non
-   `Qwen3_5ForConditionalGeneration` (quello che il config del repo dichiara
-   di default). Serve l'estrazione di state-dict descritta sopra.
+   once and thread it into the layer call at both sites (a small but
+   non-optional patch, specific to post-refactor "RoPE-once" architectures:
+   Llama-2 does not suffer from it, which is why the repo never needed it).
+2. **VLM nesting** — see §1: `model.model.layers` (used by `block_ap.py:49`)
+   only exists when loading `Qwen3_5ForCausalLM`, not
+   `Qwen3_5ForConditionalGeneration` (what the repo's config declares by
+   default). The state-dict extraction described above is required.
 
-Nessuna delle due è un muro invalicabile — sono ~1 giorno di patch in totale
-— ma **"out of the box" è falso**: chi lancia `main_block_ap.py --model
-Qwen/Qwen3.8-27B` senza questi due fix ottiene un crash al primo blocco, non
-un training lento o degradato.
+Neither is an impassable wall — together roughly one day of patching — but
+**"out of the box" is false**: running `main_block_ap.py --model
+Qwen/Qwen3.8-27B` without these two fixes gets a crash at the first block, not
+a slow or degraded training run.
 
-Il resto dell'iterazione è genuinamente generico: `layers = model.model.layers`
-(no dispatch per-architettura), `qlayer.named_modules()` per raccogliere i
-Linear (no lista hardcoded di nomi Llama), `update_dataset()` chiama i layer
-come moduli neri — con i due fix sopra e l'allowlist del §2, il resto della
-pipeline Block-AP (cattura input, MSE per blocco, ottimizzatore separato
-weight/quant params, salvataggio periodico) non richiede altre modifiche
-strutturali.
+The rest of the iteration is genuinely generic: `layers = model.model.layers`
+(no per-architecture dispatch), `qlayer.named_modules()` to collect the
+Linears (no hardcoded Llama name list), `update_dataset()` calls the layers as
+black boxes — with the two fixes above and the §2 allowlist, the rest of the
+Block-AP pipeline (input capture, per-block MSE, separate weight/quant-param
+optimizers, periodic saving) needs no further structural change.
 
-## 4. Verdetto dipendenze
+## 4. Dependency verdict
 
-| Voce | requirements.txt | venv-catq | Verdetto |
+| Item | requirements.txt | venv-catq | Verdict |
 |---|---|---|---|
-| torch | `2.2.2` (CUDA) | `2.11.0+rocm7.13.0a20260426` | Nessuna versione con `torch==2.2.2` supporta ROCm gfx1151 su questo stack: si usa **venv-catq**, non i requirements pinnati. |
-| transformers | `4.40.1` | `5.15.1` | **Incompatibilità strutturale, non solo di versione**: `qwen3_5`/`qwen3_next` non esistono affatto in transformers 4.40.1 (i modelli Qwen3.8/Qwen3-Next sono molto più recenti). Non esiste un transformers che soddisfi contemporaneamente "requirements.txt come pubblicato" e "supporto Qwen3.8" — installare i requirements originali non è un'opzione, si usa **venv-catq così com'è**, che è la causa diretta del blocco §3.1 (il repo non è mai stato aggiornato al nuovo contratto dei decoder layer). |
-| triton | `2.2.0` | `3.6.0+rocm7.13.0a20260426` (+ `pytorch-triton-rocm 3.5.1`) | Usato SOLO in `quantize/int_linear_real.py` (packing INT reale post-training, 2/3/4/8 bit) — **non serve al pilota** (Block-AP fake-quant non lo importa; l'export finale in TQ1_0 lo facciamo con la nostra toolchain GGUF già in `fucina/`, non con `model_transfer/`). Già presente e funzionante in venv-catq comunque. |
-| flash-attn | non richiesto | non installato | **Zero hit** per `flash_attn` in tutto il repo (grep su `*.py`, `quantize/*.py`, `model_transfer/*.py`) — nessun problema ROCm, il modello usa sdpa/eager di default. |
-| accelerate | `0.28.0` | `1.14.0` | API usate (`infer_auto_device_map`, `dispatch_model`, `init_empty_weights`, `load_checkpoint_in_model`) stabili tra le due versioni — rischio basso. |
-| bitsandbytes | `0.41.0` | non verificato in venv-catq | Non referenziato nel path Block-AP/E2E-QP core (`main_block_ap.py`, `quantize/block_ap.py`) — verificare solo se si useranno script accessori. |
+| torch | `2.2.2` (CUDA) | `2.11.0+rocm7.13.0a20260426` | No `torch==2.2.2` build supports ROCm gfx1151 on this stack: we use **venv-catq**, not the pinned requirements. |
+| transformers | `4.40.1` | `5.15.1` | **Structural incompatibility, not just a version gap**: `qwen3_5`/`qwen3_next` do not exist at all in transformers 4.40.1 (Qwen3.8/Qwen3-Next are far more recent). No transformers version satisfies both "requirements.txt as published" and "Qwen3.8 support" — installing the original requirements is not an option; we use **venv-catq as is**, which is the direct cause of the §3.1 blocker (the repo was never updated to the new decoder-layer contract). |
+| triton | `2.2.0` | `3.6.0+rocm7.13.0a20260426` (+ `pytorch-triton-rocm 3.5.1`) | Used ONLY in `quantize/int_linear_real.py` (real INT packing post-training, 2/3/4/8 bit) — **not needed for the pilot** (Block-AP fake-quant does not import it; the final TQ1_0 export is done with our own GGUF toolchain in `fucina/`, not with `model_transfer/`). Present and working in venv-catq anyway. |
+| flash-attn | not required | not installed | **Zero hits** for `flash_attn` in the whole repo (grep over `*.py`, `quantize/*.py`, `model_transfer/*.py`) — no ROCm problem; the model uses sdpa/eager by default. |
+| accelerate | `0.28.0` | `1.14.0` | APIs used (`infer_auto_device_map`, `dispatch_model`, `init_empty_weights`, `load_checkpoint_in_model`) are stable across the two versions — low risk. |
+| bitsandbytes | `0.41.0` | not verified in venv-catq | Not referenced in the core Block-AP/E2E-QP path (`main_block_ap.py`, `quantize/block_ap.py`) — check only if the accessory scripts get used. |
 
-**Sintesi**: si lavora dentro **venv-catq** ignorando `requirements.txt` del
-repo. Questo è anche l'unico modo per avere Qwen3.8 supportato — ma è
-esattamente ciò che rompe la firma dei decoder layer (§3.1), perché
-EfficientQAT non è mai stato toccato da quando transformers ha introdotto
+**Summary**: we work inside **venv-catq**, ignoring the repo's
+`requirements.txt`. That is also the only way to have Qwen3.8 supported — but
+it is exactly what breaks the decoder-layer signature (§3.1), because
+EfficientQAT has not been touched since transformers introduced
 `position_embeddings`.
 
-## 5. Disegno del pilota (2-3 blocchi, NON tutto il modello)
+## 5. Pilot design (2–3 blocks, NOT the whole model)
 
-Scopo: verificare se Block-AP recupera dove il PTQ collassa, PRIMA di
-investire nel porting completo (patch §3 + allowlist §2 + loop di training
-vero).
+Purpose: verify whether Block-AP recovers where PTQ collapses, BEFORE
+investing in the full port (§3 patches + §2 allowlist + a real training loop).
 
-1. **Patch minime** (§3.1 position_embeddings, §3.2 estrazione text-only,
-   §2 allowlist Linear) — necessarie anche solo per far girare 1 blocco.
-2. **Selezione blocchi**: 2-3 layer full-attention (più semplici, nessuna
-   proiezione GDN da escludere) oppure 2-3 layer GatedDeltaNet con
-   l'allowlist attiva — meglio iniziare dai layer full-attention per isolare
-   il problema del quantizzatore da quello della GDN.
-3. **Calibrazione**: riuso delle Hessiane esistenti
-   (`/mnt/models/gguf/qwen38-tern/hessiane/H_XX.npy`, 64 file, una per layer,
-   `(5120,5120) float32`) come termine di controllo/validazione della
-   direzione dell'errore, PIÙ un piccolo set wikitext-2 (già supportato
-   nativamente da `datautils_block.py::get_loaders`) per l'input reale ai
-   blocchi durante Block-AP (le Hessiane da sole non bastano a Block-AP, che
-   ha bisogno di batch di hidden-state in ingresso/uscita, non solo della
-   matrice di covarianza).
-4. **Quantizzatore**: sostituzione ternaria come da §2, `group_size=256`.
-5. **Training**: `--epochs` basso (2-4, non i default da centinaia usati per
-   Llama-2 nel paper — è un pilota, non la ricetta finale), solo sui 2-3
-   blocchi scelti, resto del modello invariato (fp16/bf16 o dal donor
-   Q4_K_XL esistente per il resto).
-6. **Patch dei blocchi nel modello reale**: dopo Block-AP sui 2-3 blocchi,
-   sostituire SOLO quei layer nel modello caricato (fp16 pieno o dal GGUF via
-   dequantizzazione) e far girare generazione libera (non teacher-forced).
+1. **Minimal patches** (§3.1 position_embeddings, §3.2 text-only extraction,
+   §2 Linear allowlist) — needed even to run a single block.
+2. **Block selection**: 2–3 full-attention layers (simpler, no GDN
+   projections to exclude) or 2–3 GatedDeltaNet layers with the allowlist
+   active — better to start from full-attention layers, to separate the
+   quantizer problem from the GDN problem.
+3. **Calibration**: reuse the existing Hessians
+   (`/mnt/models/gguf/qwen38-tern/hessiane/H_XX.npy`, 64 files, one per layer,
+   `(5120,5120) float32`) as a control/validation term for the error
+   direction, PLUS a small wikitext-2 set (natively supported by
+   `datautils_block.py::get_loaders`) for the real block inputs during
+   Block-AP (the Hessians alone are not enough for Block-AP, which needs
+   batches of input/output hidden states, not just the covariance matrix).
+4. **Quantizer**: ternary replacement per §2, `group_size=256`.
+5. **Training**: low `--epochs` (2–4, not the hundreds used for Llama-2 in
+   the paper — this is a pilot, not the final recipe), only on the 2–3
+   chosen blocks, rest of the model untouched (fp16/bf16, or from the
+   existing Q4_K_XL donor for the remainder).
+6. **Patching the blocks into the real model**: after Block-AP on the 2–3
+   blocks, substitute ONLY those layers in the loaded model (full fp16, or
+   dequantized from the GGUF) and run free-running generation (not
+   teacher-forced).
 
-### Criteri GO/NO-GO (dalla nostra ricerca precedente)
-| Criterio | Soglia | Fonte |
+### GO/NO-GO criteria (from our earlier research)
+| Criterion | Threshold | Source |
 |---|---|---|
-| Convergenza ricostruzione blocco | MSE Block-AP scende in modo monotono e si stabilizza entro gli epoch previsti (no NaN, no oscillazione) | prassi standard EfficientQAT |
-| Generazione libera con SOLO quei blocchi patchati | non collassa (no ripetizione degenere, no garbage) su almeno 3 prompt lunghi (>200 token) | requisito esplicito della task; il nostro `generation_health.py` già misura "teacher-forced perplexity non vede l'errore che si accumula in free-running" — usarlo come guardia MA non come unico giudice |
-| Norma dello stato GDN stabile | nessuna crescita/esplosione della norma dello stato ricorrente lungo la generazione libera (confrontare col checkpoint fp16 sullo stesso prompt) | coerente con `docs/RESULTS.md:1100` ("GatedDeltaNet accumula errore FFN nello stato durante la generazione") — se lo stato diverge, il problema è nella ricorrenza, non nel quantizzatore |
-| Confronto con PTQ puro sugli stessi blocchi | Block-AP deve battere il PTQ ternario diretto (stesso layer, stessa scala) sia in MSE di ricostruzione sia in salute della generazione, altrimenti il costo QAT non si giustifica | criterio di business del pilota |
+| Block reconstruction convergence | Block-AP MSE decreases monotonically and stabilises within the planned epochs (no NaN, no oscillation) | standard EfficientQAT practice |
+| Free-running generation with ONLY those blocks patched | does not collapse (no degenerate repetition, no garbage) on at least 3 long prompts (>200 tokens) | explicit task requirement; our `generation_health.py` already measures that "teacher-forced perplexity never sees the error that free-running accumulates" — use it as a guard BUT not as the only judge |
+| GDN state norm stable | no growth/explosion of the recurrent-state norm along free-running generation (compare against the fp16 checkpoint on the same prompt) | consistent with `docs/RESULTS.md:1100` ("GatedDeltaNet accumulates FFN error in the state during generation") — if the state diverges, the problem is in the recurrence, not the quantizer |
+| Comparison against pure PTQ on the same blocks | Block-AP must beat direct ternary PTQ (same layer, same scale) both in reconstruction MSE and in generation health, otherwise the QAT cost is not justified | the pilot's business criterion |
 
-Se anche solo il criterio "generazione libera non collassa" fallisce sui 2-3
-blocchi pilota, **NO-GO**: il problema non è la mancanza di QAT ma qualcosa
-di più strutturale nel ternario applicato al GDN (coerente con
-`docs/LEVERS.md:92`), e il porting completo (patch + allowlist + loop E2E-QP)
-non varrebbe l'investimento.
+If even just the "free-running generation does not collapse" criterion fails
+on the 2–3 pilot blocks, **NO-GO**: the problem is not the absence of QAT but
+something more structural about ternary applied to the GDN (consistent with
+`docs/LEVERS.md:92`), and the full port (patches + allowlist + E2E-QP loop)
+would not be worth the investment.
 
-## 6. Stima wall-clock (pilota, 2-3 blocchi, non tutto il modello)
+## 6. Wall-clock estimate (pilot, 2–3 blocks, not the whole model)
 
-Stime, NON misure (nessun training eseguito):
-- Patch §3.1 + §3.2 + allowlist §2: **0.5-1 giornata** di lavoro (codice, non
+Estimates, NOT measurements (no training executed):
+- §3.1 + §3.2 patches + §2 allowlist: **0.5–1 day** of work (code, not
   compute).
-- Download `Qwen/Qwen3.8-27B` bf16+vision (~54-58 GB stimati, coerente con i
-  54.66 GB del nostro GGUF testuale + torre vision) via rete di casa: dipende
-  dalla banda disponibile, ordine di **1-3 ore** a velocità tipiche HF hub.
-- Estrazione state-dict testo-puro: minuti (I/O locale, nessuna GPU).
-- Block-AP su 2-3 blocchi, poche epoch, batch piccolo: sul nostro hardware
-  (Ryzen AI Max+ 395, 96 GiB VRAM Vulkan/ROCm) l'ordine di grandezza per
-  blocco è **decine di minuti** per pochi epoch su un dense (nessun overhead
-  MoE/router), quindi **1-2 ore totali** per 2-3 blocchi — cifra ottimistica,
-  da ricalibrare al primo run reale (Block-AP fa forward+backward pieno per
-  blocco, non solo forward come il PTQ).
-- Validazione (generazione libera + norma stato + confronto PTQ): **30-60
-  minuti**.
-- **Totale pilota stimato: mezza giornata di calcolo + 1 giornata di porting
-  codice**, escluso il tempo di download che dipende dalla rete.
+- Download of `Qwen/Qwen3.8-27B` bf16+vision (~54–58 GB estimated, consistent
+  with the 54.66 GB of our text-only GGUF + vision tower) over the home
+  network: depends on available bandwidth, on the order of **1–3 hours** at
+  typical HF hub speeds.
+- Text-only state-dict extraction: minutes (local I/O, no GPU).
+- Block-AP on 2–3 blocks, few epochs, small batch: on our hardware (Ryzen AI
+  Max+ 395, 96 GiB Vulkan/ROCm VRAM) the per-block order of magnitude is
+  **tens of minutes** for a few epochs on a dense model (no MoE/router
+  overhead), so **1–2 hours total** for 2–3 blocks — an optimistic figure, to
+  be recalibrated at the first real run (Block-AP does a full
+  forward+backward per block, not forward-only like PTQ).
+- Validation (free-running generation + state norm + PTQ comparison):
+  **30–60 minutes**.
+- **Estimated pilot total: half a day of compute + 1 day of code porting**,
+  excluding the network-dependent download time.
 
-## 7. Il blocco più grande
+## 7. The biggest blocker
 
-**Non è il quantizzatore** (sostituzione localizzata, ~50 righe in
-`quantize/quantizer.py`, interfaccia già astratta). **È che il checkpoint HF
-ufficiale è un modello VLM (`Qwen3_5ForConditionalGeneration`) e EfficientQAT
-assume un CausalLM piatto stile Llama** — servono un'estrazione di
-state-dict testo-puro (nessun tool esistente nel repo la fa) *e* una patch
-alla firma dei decoder layer per il nuovo contratto `position_embeddings` di
-transformers post-refactor, PRIMA che si possa anche solo caricare un blocco.
-Nessuna delle due patch è nel repo upstream, e senza la seconda (allowlist
-del §2 sui Linear della GatedDeltaNet) il pilota misurerebbe comunque la cosa
-sbagliata, ripetendo l'errore già pagato in `docs/LEVERS.md`.
+**It is not the quantizer** (a localised replacement, ~50 lines in
+`quantize/quantizer.py`, behind an already-abstract interface). **It is that
+the official HF checkpoint is a VLM (`Qwen3_5ForConditionalGeneration`) while
+EfficientQAT assumes a flat Llama-style CausalLM** — a text-only state-dict
+extraction (no existing tool in the repo does it) *and* a decoder-layer
+signature patch for the post-refactor `position_embeddings` contract of
+transformers are both required BEFORE a single block can even be loaded.
+Neither patch exists upstream, and without the second one (the §2 allowlist on
+the GatedDeltaNet Linears) the pilot would measure the wrong thing anyway,
+repeating the mistake already paid for in `docs/LEVERS.md`.
