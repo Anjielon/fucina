@@ -118,7 +118,7 @@ def quantize(W, Hchol=None, rounds: int = 4, chunk: int = 2_000_000, device="cud
     while i0 < n_rows:
         i1 = min(i0 + rows_per_chunk, n_rows)
         try:
-            B = W[i0:i1].to(device, torch.float32, non_blocking=True).reshape(-1, BLOCK)
+            B = W[i0:i1].to(device, torch.float32, non_blocking=True).clone().reshape(-1, BLOCK)
         except torch.OutOfMemoryError:
             torch.cuda.empty_cache()
             rows_per_chunk = max(1, rows_per_chunk // 2)
@@ -209,7 +209,7 @@ def quantize_one_plane(W, Hchol, chunk: int = 3_000_000, device="cuda",
         rows_per_chunk = max(1, chunk // nb)
         while i0 < n_rows:
             i1 = min(i0 + rows_per_chunk, n_rows)
-            B = W[i0:i1].to(device, torch.float32).reshape(-1, BLOCK)
+            B = W[i0:i1].to(device, torch.float32).clone().reshape(-1, BLOCK)
             d, q = _scale_one_plane(B)
             D1[i0:i1] = d.reshape(i1 - i0, nb, 1).cpu()
             Q1[i0:i1] = q.reshape(i1 - i0, n_in).to(torch.int8).cpu()
@@ -222,7 +222,7 @@ def quantize_one_plane(W, Hchol, chunk: int = 3_000_000, device="cuda",
     while i0 < n_rows:
         i1 = min(i0 + rows_per_chunk, n_rows)
         try:
-            Wc = W[i0:i1].to(device, torch.float32, non_blocking=True)
+            Wc = W[i0:i1].to(device, torch.float32, non_blocking=True).clone()
         except torch.OutOfMemoryError:
             torch.cuda.empty_cache(); rows_per_chunk = max(1, rows_per_chunk // 2); continue
         rows = i1 - i0

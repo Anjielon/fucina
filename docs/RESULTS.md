@@ -1099,3 +1099,40 @@ Literature context gathered today: MoQE measures expert FFNs surviving
 Ternary-Mamba line warns that recurrent-state hybrids (this 27B is
 GatedDeltaNet) accumulate FFN error across generation, which post-hoc
 per-layer correction cannot cancel.
+
+### ⛔ Correction, same day (12:40): the FOEM sweep above was CONTAMINATED
+
+The morning sweep called the quantizer repeatedly on the same tensor. On CPU
+`Tensor.to(device)` returns *the same storage* when dtype and device already
+match, and the GPTQ loop compensates **in place** — so every call after the
+first started from weights the previous call had already destroyed. (GPU
+callers were never affected: `.to("cuda")` always copies. All forged files
+stand.) A defensive `.clone()` now guards every chunk load, an
+input-unchanged assert is part of the self-tests, and the clean sweep says
+the opposite of the dirty one:
+
+| beta | output error (clean) | verdict |
+|---|---|---|
+| 0 (plain GPTQ) | 35.012% | reference |
+| 0.0003 | 35.016% | neutral |
+| 0.003 | 35.142% | slightly worse |
+| 0.03 | 66.957% | harmful |
+| 0.1 | 2880% | catastrophic |
+
+**FOEM does not pay at 1.69 bpw on this synthetic.** The published gains are
+at 2-4 bit, where the latent drift is small relative to the grid; at ternary
+the rounding is so coarse that the pull toward the originals mostly fights
+the Hessian compensation. The flag stays in the forge (beta=0 default,
+bit-identical to GPTQ — asserted); the recipe for tonight's 397B v4 drops
+FOEM and keeps depth-in-file + impact selection. The 27B v3 forge launched
+before this correction runs with beta=0.003 — a ≤0.15% perturbation on the
+synthetic, noted for the record rather than worth a restart.
+
+### Impact selection: routing mass is part of the impact (same day, 12:34)
+
+First ranking omitted p_e and produced a top-16 DISJOINT from the frequency
+top-16 (0/16): rarely-routed experts with large weights, whose error the
+model never feels. With impact_e = p_e·‖ΔW_e·√diag(H)‖² the tail-band
+ranking nearly coincides with frequency (layer 44 top-4 identical set) —
+independently confirming the earlier finding that frequency selection is
+near-optimal in the good band and wrong only in the head.
