@@ -18,10 +18,11 @@ Usage:
       [--drop-key qwen35moe.expert_count2]
 """
 from __future__ import annotations
+import os
 import argparse, sys, time
 from pathlib import Path
 import numpy as np
-sys.path.insert(0, "/home/angelo/build-llamacpp-tq1/gguf-py")
+sys.path.insert(0, os.environ.get("GGUF_PY", os.path.expanduser("~/build-llamacpp-tq1/gguf-py")))
 from gguf import GGUFReader, GGUFWriter
 
 def log(*a): print(f"[{time.strftime('%H:%M:%S')}]", *a, flush=True)

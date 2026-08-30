@@ -41,11 +41,12 @@ Usage:
 The source is opened read-only and never modified.
 """
 from __future__ import annotations
+import os
 import argparse, sys, time
 from pathlib import Path
 import numpy as np
 
-sys.path.insert(0, "/home/angelo/build-llamacpp/gguf-py")
+sys.path.insert(0, os.environ.get("GGUF_PY", os.path.expanduser("~/build-llamacpp/gguf-py")))
 from gguf import GGUFReader, GGUFWriter, GGMLQuantizationType as T
 from gguf import quants as GQ
 

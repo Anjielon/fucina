@@ -15,10 +15,10 @@
 #
 # llama-perplexity stampa il valore progressivo blocco per blocco: basta
 # tenerlo invece di buttarlo.
-/home/angelo/odino-lab/odino/spazio_per.sh 12 gpu || exit 1
-B=/home/angelo/build-llamacpp-tq1/build
+$HOME/odino-lab/odino/spazio_per.sh 12 gpu || exit 1
+B=$HOME/build-llamacpp-tq1/build
 M=/mnt/models/gguf/tony-tern/Tony-tern-TQ1.gguf
-W=/home/angelo/odino-lab/collaudo/corpus/wiki.test.raw
+W=$HOME/odino-lab/collaudo/corpus/wiki.test.raw
 export LD_LIBRARY_PATH=$B/bin
 D=/tmp/danno_forma; mkdir -p $D
 for CFG in "rif:ODINO_NO_P2=1" "solo20:ODINO_P2_LAYERS=20-20" \

@@ -15,16 +15,17 @@ Score per expert e:  sum over gate,up of  ||dW_e @ L||_F^2  with H = L L^T
 Usage: impact_rank_odino.py LO-HI OUT.json
 """
 from __future__ import annotations
+import os
 import json, sys, time
 from pathlib import Path
 import numpy as np, torch
 torch.set_num_threads(4)   # la forgia v3 ha la precedenza sulla CPU
 sys.path.insert(0, str(Path(__file__).parent))
 import ternary_gpu as G
-sys.path.insert(0, "/home/angelo/build-llamacpp-tq1/gguf-py")
+sys.path.insert(0, os.environ.get("GGUF_PY", os.path.expanduser("~/build-llamacpp-tq1/gguf-py")))
 
-NAS = Path("/mnt/nas/CACHEDEV1_DATA/modelli-fp/Ornith-1.5-397B")
-IMATRIX = Path("/home/angelo/odino-lab/imatrix/Ornith-1.5-397B-imatrix.gguf")
+NAS = Path(os.environ.get("FP_CHECKPOINT_DIR", "/mnt/checkpoints/Ornith-1.5-397B"))
+IMATRIX = Path(os.path.expanduser("~/odino-lab/imatrix/Ornith-1.5-397B-imatrix.gguf"))
 HESS = Path("/mnt/models/gguf/odino-hessiane")
 E = 512
 

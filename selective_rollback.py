@@ -18,11 +18,12 @@ General rule: a repair that touches few tensors is always reversible in place.
 Record *which* tensors a repair writes, not merely that it writes some.
 """
 from __future__ import annotations
+import os
 import argparse, random, sys
 from pathlib import Path
 import numpy as np
 
-sys.path.insert(0, "/home/angelo/build-llamacpp/gguf-py")
+sys.path.insert(0, os.environ.get("GGUF_PY", os.path.expanduser("~/build-llamacpp/gguf-py")))
 sys.path.insert(0, str(Path(__file__).parent))
 from gguf import GGUFReader
 from gguf_surgeon import GGUFSurgeon

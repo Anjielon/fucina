@@ -11,7 +11,7 @@ e si ferma se la RAM disponibile scende. ODINO sta girando.
 """
 import glob, os, re, sys
 import numpy as np
-sys.path.insert(0, "/home/angelo/build-llamacpp-tq1/gguf-py")
+sys.path.insert(0, os.environ.get("GGUF_PY", os.path.expanduser("~/build-llamacpp-tq1/gguf-py")))
 from gguf import GGUFReader, quants as GQ
 
 M = "/mnt/models/gguf/tony-tern/Tony-tern-TQ1.gguf"

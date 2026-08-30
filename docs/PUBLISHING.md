@@ -123,7 +123,7 @@ Wall-clock: serial HTTP → HellaSwag full ~3-6h, MMLU 5-shot the worst;
 schedule overnight or on the second bench.
 
 ```bash
-export FORK=/home/angelo/build-llamacpp-tq1
+export FORK=~/build-llamacpp-tq1
 cmake -S $FORK -B $FORK/build-shared -DGGML_VULKAN=ON -DBUILD_SHARED_LIBS=ON && cmake --build $FORK/build-shared -j
 export LLAMA_CPP_LIB=$FORK/build-shared/bin/libllama.so
 pip install "lm-eval==0.4.12" llama-cpp-python

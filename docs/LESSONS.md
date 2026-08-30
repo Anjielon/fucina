@@ -815,10 +815,11 @@ followed by a shuffle, which makes every id in a row **distinct**. A masked
 second-plane path clamps most slots onto the same index, so the entire suite
 could pass while that regime was never exercised.
 
-We added `MOGAVIS_DUP_IDS=<cap>` to generate rows that repeat the same expert,
-and re-ran the TQ1_0 cases: **83/83 pass**. Duplicate ids are handled
-correctly; the hypothesis is closed, and the environment variable stays as
-permanent coverage for anyone porting a masked expert path.
+We added an environment switch (`*_DUP_IDS=<cap>`) to our llama.cpp fork that
+generates rows repeating the same expert, and re-ran the TQ1_0 cases:
+**83/83 pass**. Duplicate ids are handled correctly; the hypothesis is closed,
+and the switch stays as permanent coverage for anyone porting a masked expert
+path.
 
 Recording this matters as much as a positive result would: the next person to
 suspect duplicate ids can read that it was measured, not assumed.

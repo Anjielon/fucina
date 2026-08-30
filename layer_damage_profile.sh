@@ -12,10 +12,10 @@
 # Predizione secca, falsificabile: PPL(solo 0) > PPL(solo 10) > PPL(solo 20)
 # > PPL(solo 30) > PPL(solo 39). Se invece il danno e' piatto, o peggiora in
 # fondo, l'ipotesi dell'instradamento muore come le altre otto.
-/home/angelo/odino-lab/odino/spazio_per.sh 12 gpu || exit 1
-B=/home/angelo/build-llamacpp-tq1/build
+$HOME/odino-lab/odino/spazio_per.sh 12 gpu || exit 1
+B=$HOME/build-llamacpp-tq1/build
 M=/mnt/models/gguf/tony-tern/Tony-tern-TQ1.gguf
-W=/home/angelo/odino-lab/collaudo/corpus/wiki.test.raw
+W=$HOME/odino-lab/collaudo/corpus/wiki.test.raw
 export LD_LIBRARY_PATH=$B/bin
 m() {
   local ETICHETTA="$1"; shift

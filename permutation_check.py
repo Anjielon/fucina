@@ -11,8 +11,9 @@ correzione andrebbe agli esperti sbagliati e la maschera coprirebbe i freddi.
 Si verifica confrontando l'ordine nel file con i conteggi dell'imatrix.
 """
 import re, sys
+import os
 import numpy as np
-sys.path.insert(0, "/home/angelo/build-llamacpp-tq1/gguf-py")
+sys.path.insert(0, os.environ.get("GGUF_PY", os.path.expanduser("~/build-llamacpp-tq1/gguf-py")))
 from gguf import GGUFReader, quants as GQ
 
 TONY = "/mnt/models/gguf/tony-tern/Tony-tern-TQ1.gguf"

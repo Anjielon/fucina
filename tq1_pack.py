@@ -9,6 +9,7 @@ reference decoder. A well-known third-party fork silently truncated to 8 bits,
 and only a round-trip test catches that class of bug.
 """
 from __future__ import annotations
+import os
 import numpy as np
 import torch
 
@@ -60,7 +61,7 @@ def reorder_experts(blocks: np.ndarray, perm: np.ndarray) -> np.ndarray:
 def _self_test() -> None:
     """packing must match the reference decoder, on random values."""
     import sys
-    sys.path.insert(0, "/home/angelo/build-llamacpp/gguf-py")
+    sys.path.insert(0, os.environ.get("GGUF_PY", os.path.expanduser("~/build-llamacpp/gguf-py")))
     from gguf import quants as GQ
     from gguf import GGMLQuantizationType as T
     rng = np.random.default_rng(7)

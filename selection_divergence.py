@@ -17,8 +17,9 @@ Tony), quindi: posizione i = i-esimo piu' frequente, e le frequenze ordinate
 decrescenti si allineano alle posizioni. Nessuna GPU; un esperto alla volta.
 """
 import sys
+import os
 import numpy as np
-sys.path.insert(0, "/home/angelo/build-llamacpp-tq1/gguf-py")
+sys.path.insert(0, os.environ.get("GGUF_PY", os.path.expanduser("~/build-llamacpp-tq1/gguf-py")))
 from gguf import GGUFReader, quants as GQ
 
 K = 28
@@ -29,7 +30,7 @@ CASI = {
         [0, 10, 20, 30, 39]),
     "ODINO (512 esperti)": (
         "/mnt/models/gguf/odino-v31/ODINO-397B-v31.gguf",
-        "/home/angelo/odino-lab/imatrix/Ornith-1.5-397B-imatrix.gguf",
+        os.path.expanduser("~/odino-lab/imatrix/Ornith-1.5-397B-imatrix.gguf"),
         [0, 15, 30, 45, 59]),
 }
 

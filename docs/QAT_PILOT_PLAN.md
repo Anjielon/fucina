@@ -2,7 +2,7 @@
 
 > Written 2026-08-28. Code reading + local checks only (GGUF metadata, HF
 > config via web, transformers modules installed in
-> `/home/angelo/venv-catq`). No training, no GPU was used to produce this
+> `~/venv-catq`). No training, no GPU was used to produce this
 > document.
 
 ## 0. Goal
@@ -20,8 +20,8 @@ Our `qwen38-27b-bf16.gguf` (54.66 GB, `/mnt/models/gguf/qwen38-tern/`) has
 GGUF architecture `qwen35` with `qwen35.ssm.*` keys +
 `qwen35.full_attention_interval` + `qwen35.nextn_predict_layers` → it is the
 text backbone of **`Qwen/Qwen3.8-27B`**, officially released on HuggingFace
-(mirrored as `unsloth/Qwen3.8-27B`, the origin of the UD-Q4_K_XL GGUFs
-already in our fleet as `mogavis-qwen38-exec`).
+(mirrored as `unsloth/Qwen3.8-27B`, the origin of the UD-Q4_K_XL GGUFs we
+already run locally).
 
 **Actual config** (read from `huggingface.co/Qwen/Qwen3.8-27B/raw/main/config.json`):
 ```

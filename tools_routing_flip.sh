@@ -10,15 +10,19 @@
 # Correzione: si cattura `ffn_moe_probs` — le probabilita' del router, F32,
 # presenti in ENTRAMBE le configurazioni — e la scelta si ricalcola in numpy.
 # In piu' si ottiene il MARGINE: quanto sono al pelo le scelte che cambiano.
-/home/angelo/odino-lab/odino/spazio_per.sh 12 gpu || exit 1
-B=/home/angelo/build-llamacpp-tq1/build
+$HOME/odino-lab/odino/spazio_per.sh 12 gpu || exit 1
+B=$HOME/build-llamacpp-tq1/build
 M=/mnt/models/gguf/tony-tern/Tony-tern-TQ1.gguf
-F=$(ls /home/angelo/odino-lab/guarigione/cal_blocchi/b*.txt | head -1)
+F=$(ls $HOME/odino-lab/guarigione/cal_blocchi/b*.txt | head -1)
 export LD_LIBRARY_PATH=$B/bin
+# Prefix of the activation-dump environment variables read by our instrumented
+# llama.cpp fork (<PREFIX>_DUMP_DIR / <PREFIX>_DUMP_FILTER). Override to match
+# your build: DUMP_PREFIX=MYFORK ./tools_routing_flip.sh
+DUMP_PREFIX=${DUMP_PREFIX:-FUCINA}
 for CFG in spento:ODINO_NO_P2=1 acceso:IGNORA=1; do
   N=${CFG%%:*}; V=${CFG#*:}
   D=/tmp/instrad2_$N; rm -rf $D; mkdir -p $D
-  env $V MOGAVIS_DUMP_DIR=$D MOGAVIS_DUMP_FILTER=ffn_moe_probs \
+  env $V ${DUMP_PREFIX}_DUMP_DIR=$D ${DUMP_PREFIX}_DUMP_FILTER=ffn_moe_probs \
     $B/bin/llama-eval-callback -m $M -ngl 999 -c 2048 -n 1 -f $F > /dev/null 2>&1
   echo "  $N: $(ls $D/*.f32 2>/dev/null | wc -l) file salvati"
 done

@@ -13,10 +13,10 @@
 #
 # Controllo incluso: la stessa scomposizione su uno strato SANO (30). Se li'
 # tutte e tre le proiezioni sono innocue, la differenza e' dello strato.
-/home/angelo/odino-lab/odino/spazio_per.sh 12 gpu || exit 1
-B=/home/angelo/build-llamacpp-tq1/build
+$HOME/odino-lab/odino/spazio_per.sh 12 gpu || exit 1
+B=$HOME/build-llamacpp-tq1/build
 M=/mnt/models/gguf/tony-tern/Tony-tern-TQ1.gguf
-W=/home/angelo/odino-lab/collaudo/corpus/wiki.test.raw
+W=$HOME/odino-lab/collaudo/corpus/wiki.test.raw
 export LD_LIBRARY_PATH=$B/bin
 m() {
   local ETICHETTA="$1"; shift

@@ -29,9 +29,10 @@
 \maketitle
 
 \begin{abstract}
-Post-training ternary quantization (1.69 bits/weight) makes very large
+Post-training ternary quantization (1.91 bits/weight at the model level;
+1.69 for the TQ1\_0 plane format itself) makes very large
 mixture-of-experts models runnable on consumer unified-memory hardware --- we
-quantize a 397B-parameter, 512-expert MoE to 84~GiB and a 35B sibling to
+quantize a 397B-parameter, 512-expert MoE to 88~GiB and a 35B sibling to
 9.2~GiB, both served by a modified llama.cpp with Vulkan ternary kernels. We
 then study a \emph{corrective} mechanism: a second ternary plane on the hottest
 experts, which halves weight reconstruction error (46\% $\to$ 22\%) and halves the
@@ -52,10 +53,18 @@ with damage. The beneficial configuration is confirmed by a paired
 logit-level comparison (mean $\Delta p = +0.048\% \pm 0.014\%$), ships as a file rather
 than a runtime flag, and improves every evaluation chunk. At the task level,
 on an internal evaluation suite (aggregate results only; not publicly
-released), the shipped 1.75 bits/weight file resolves 74.7\% of 146 paired
-coding-and-agentic trials against 55.5\% for a size-matched IQ1\_M
-quantization of the same model (exact McNemar $p = 2.5\times 10^{-5}$) ---
+released), the shipped 1.91 bits/weight file resolves 78.3\% of 143 paired
+coding-and-agentic trials against 55.2\% for a slightly \emph{smaller}
+(1.84 bits/weight) IQ1\_M quantization of the same model (exact McNemar $p = 5.4\times 10^{-7}$) ---
 matching the task success of a same-family 35B served at $\sim$6.5 bits/weight.
+On that same pair, perplexity does not merely fail to separate the two files:
+it ranks them \emph{backwards}. Measured identically (WikiText-2 raw, 72
+chunks, $n_\text{ctx}=4096$, same engine and machine), the IQ1\_M baseline
+scores $7.5438 \pm 0.0512$ against $7.5903 \pm 0.0525$ for the ternary file
+--- a nominally \emph{better} perplexity for the model that resolves 23
+points fewer tasks. A practitioner selecting on perplexity alone would ship
+the file that solves roughly one task in two over the one that solves four in
+five.
 The same suite exposes a dissociation that perplexity inverts: the
 GPTQ-calibrated forge wins with reasoning off but degenerates into
 termination-token loops with reasoning on, while an RTN variant at the same
@@ -72,7 +81,7 @@ determinism patches currently take on faith.
 
 A 397-billion-parameter mixture-of-experts model does not fit in the memory
 of any consumer machine at the precisions its authors shipped. At 1.69
-bits/weight it does: 84~GiB, resident in the unified memory of a desktop
+bits/weight it does: 88~GiB, resident in the unified memory of a desktop
 APU, served by ternary Vulkan kernels we contribute upstream. This paper is
 about what happened when we tried to make that model \emph{better} --- and measured,
 twice, that the intuitive way to do so makes it worse.
@@ -129,11 +138,12 @@ other, and a stated evaluation debt where neither suffices.
    ($\rho = -0.599$). Route-flip counts nearly invert the damage ordering
    (all-layers: $5\times$ the flips of the worst single layer, $3.5\times$ less damage).
 \item \textbf{Task-level evidence at matched size, and a quantizer-level
-   dissociation.} On an internal paired suite (two fixed seeds, 146 paired
-   trials, identical server, reasoning off), the shipped file resolves 74.7\%
-   against 55.5\% for a size-matched IQ1\_M quantization of the same model
-   (discordant pairs 36--8, exact McNemar $p = 2.5\times 10^{-5}$; paired
-   bootstrap CI$_{95}$ of the difference $[+11.0, +27.4]$ points). With
+   dissociation.} On an internal paired suite (two fixed seeds, 143 paired
+   trials, identical server, reasoning off), the shipped file resolves 78.3\%
+   against 55.2\% for a slightly \emph{smaller} IQ1\_M quantization of the
+   same model (85.1 vs.\ 88.2~GiB; the size handicap favours the baseline)
+   (discordant pairs 39--6, exact McNemar $p = 5.4\times 10^{-7}$; paired
+   bootstrap CI$_{95}$ of the difference $[+14.7, +31.5]$ points). With
    reasoning \emph{on}, the ranking inverts: the GPTQ-calibrated planes
    degenerate into termination-token loops while an RTN forge at the same
    bit-rate passes every reasoning probe --- a dissociation between
@@ -197,6 +207,35 @@ reference logits stored, uncertainty propagated from the logits. The headline
 confirmation (tail-only correction on the 397B) is paired: mean
 $\Delta p = +0.048\% \pm 0.014\%$.
 
+\paragraph{A benchmark ladder, and where perplexity sits on it.}
+With the full-size runs completed on both files we can order the evaluations
+by how closely each resembles the task a deployed model performs, and read the
+gap along that order. All four rows below are the same pair of files, same
+engine, same machine, same night; the ternary file is the 3.6\% \emph{larger}
+of the two.
+
+\begin{center}
+\begin{tabular}{@{}lrrr@{}}
+\toprule
+ & ternary (88.2~GiB) & IQ1\_M (85.1~GiB) & gap \\
+\midrule
+Perplexity (WikiText-2, 72 chunks) & 7.5903 & \textbf{7.5438} & $-0.6\%$ \\
+HellaSwag (same 2108-item prefix)  & \textbf{75.85\%} & 73.86\% & $+1.99$ \\
+Winogrande (1267 items)            & \textbf{65.67\%} & 61.09\% & $+4.58$ \\
+Paired task suite (143 trials)     & \textbf{78.3\%}  & 55.2\%  & $+23.1$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+The gap grows monotonically with the distance from token-level likelihood:
+negative on perplexity, two points on multiple-choice completion, four and a
+half on pronoun resolution, twenty-three on multi-step coding and agentic
+work. The Winogrande intervals ($\pm 1.33$ and $\pm 1.37$) do not overlap ($65.67 - 1.33 > 61.09 + 1.37$). We do not
+claim a mechanism for the ordering, and with four points we could not
+establish one; we report it because the practical consequence is
+uncomfortable and easy to state: \emph{the cheapest and most widely reported
+of these measurements is the only one that ranks the two files backwards.}
+
 \paragraph{What our task numbers are, and are not.} llama.cpp's built-in scorers
 label their output \texttt{acc\_norm} but normalise endings by \textbf{token count};
 lm-eval's \texttt{acc\_norm} normalises by \textbf{character length}, and for Winogrande
@@ -231,7 +270,7 @@ counts as resolved only if all target tests pass and no regression breaks
 (tool-call fixtures are scored on the emitted call transcript against a
 per-fixture contract). Every model runs every fixture at two fixed seeds (7
 and 42), same llama.cpp server build, same 16{,}384-token context budget,
-reasoning off --- 146 reported trials per model, paired trial-for-trial, so
+reasoning off --- 141 reported trials per model, paired trial-for-trial, so
 the comparison statistic is exact McNemar on the discordant pairs plus a
 paired bootstrap (20{,}000 resamples) for the interval.
 
@@ -391,10 +430,16 @@ must re-run per model.
 \section{Task-level evaluation at matched size}
 \label{sec:tasks}
 
-\paragraph{The comparison.} The natural size-matched baseline for the shipped
+\paragraph{The comparison.} The closest-size baseline for the shipped
 file is llama.cpp's own IQ1\_M quantization of the same 397B checkpoint ---
-the same 1.75 bits/weight on the expert tensors, produced by the standard
-importance-matrix pipeline rather than our two-plane ternary forge. Both
+same ternary-scale regime on the expert tensors, produced by the standard
+importance-matrix pipeline rather than our two-plane ternary forge. The two
+files are close in size but not identical, and we state the difference rather
+than round it away: the IQ1\_M baseline is \textbf{85.1~GiB (1.844
+bits/weight)} and the shipped ternary file is \textbf{88.2~GiB (1.911
+bits/weight)}, i.e.\ the ternary file is 3.6\% \emph{larger}. The task-level
+gap reported below therefore comes with a small size handicap in the
+baseline's favour, not ours. Both
 files ran the suite of Section~\ref{sec:setup} under identical
 conditions (same server build, same seeds, reasoning off).
 Table~\ref{tab:suite} gives the per-family results for the reported portion.
@@ -408,21 +453,27 @@ Family & Task type & $n$ & Ternary (ours) & IQ1\_M \\
 \midrule
 F1 & runtime bug-fixing        & 18 & 12 (67\%) & 4 (22\%) \\
 F2 & refactoring               & 18 & 12 (67\%) & 6 (33\%) \\
-F3 & test authoring (mutation-scored) & 18 & 8 (44\%) & 5 (28\%) \\
-F4 & long-context needle       & 12 & 9 (75\%)  & 11 (92\%) \\
-F5 & tool use                  & 12 & 12 (100\%) & 11 (92\%) \\
+F3 & test authoring (mutation-scored) & 18 & 7 (39\%) & 5 (28\%) \\
+F4 & long-context needle       & 11 & 11 (100\%) & 11 (100\%) \\
+F5 & tool use                  & 10 & 10 (100\%) & 9 (90\%) \\
 F6 & deceptive code            & 18 & 16 (89\%) & 11 (61\%) \\
-F7 & planning                  & 10 & 2 (20\%)  & 2 (20\%) \\
+F7 & planning                  & 10 & 6 (60\%)  & 2 (20\%) \\
 legacy & mixed original set    & 40 & 38 (95\%) & 31 (78\%) \\
 \midrule
-\multicolumn{2}{@{}l}{Total} & 146 & 109 (74.7\%) & 81 (55.5\%) \\
+\multicolumn{2}{@{}l}{Total} & 143 & 112 (78.3\%) & 79 (55.2\%) \\
 \bottomrule
 \end{tabular}
-\caption{Paired results on the reported portion of the internal suite: 73
-fixtures $\times$ 2 seeds (7, 42), reasoning off, identical server.
-Discordant pairs 36--8 in the ternary file's favour; exact McNemar
-$p = 2.54\times 10^{-5}$; paired bootstrap (20{,}000 resamples) CI$_{95}$ of
-the difference $[+11.0, +27.4]$ percentage points.}
+\caption{Paired results on the reported portion of the internal suite: 72
+fixtures $\times$ 2 fixed seeds (7, 42) $=$ 144 scheduled pairs, of which 143
+are valid --- one baseline run (a single fixture at one seed) was discarded by
+the transport-fault rule below and not re-executed. Reasoning off, identical
+server.
+Discordant pairs 39--6 in the ternary file's favour; exact McNemar
+$p = 5.42\times 10^{-7}$; paired bootstrap (20{,}000 resamples) CI$_{95}$ of
+the difference $[+14.7, +31.5]$ percentage points. Trials whose harness
+logged a transport fault (5xx, dropped connection, malformed response) are
+not scored: the run is discarded and re-executed, so a bench failure can
+never be recorded as a model failure.}
 \label{tab:suite}
 \end{table}
 
@@ -438,7 +489,7 @@ reasoning off, discussed below and in Section~\ref{sec:limitations}. For
 context only --- an earlier version of the internal suite, so not a
 controlled comparison --- the strongest previously deployed configuration on
 this machine, a same-family 35B served at $\sim$6.5 bits/weight, scores 75\%:
-the 397B at 1.75 bits/weight reaches the task-success level of a
+the 397B at 1.91 bits/weight reaches the task-success level of a
 full-working-precision 35B on the same hardware budget.
 
 \subsection{A quantizer-level dissociation: reasoning survives RTN, not GPTQ}

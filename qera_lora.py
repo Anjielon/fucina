@@ -12,6 +12,7 @@ unscale. Served with `llama-server --lora out.gguf`: zero engine changes.
 
 Scope here: the dense forge's ternary parts (gate/up). `down` is verbatim
 from the donor (error zero, skipped). alpha is set equal to the rank so the
+import os
 engine's alpha/rank scaling is exactly 1.
 
 Usage:
@@ -22,7 +23,7 @@ from __future__ import annotations
 import argparse, sys, time
 from pathlib import Path
 import numpy as np
-sys.path.insert(0, "/home/angelo/build-llamacpp-tq1/gguf-py")
+sys.path.insert(0, os.environ.get("GGUF_PY", os.path.expanduser("~/build-llamacpp-tq1/gguf-py")))
 from gguf import GGUFReader, GGUFWriter, quants as GQ
 
 def log(*a): print(f"[{time.strftime('%H:%M:%S')}]", *a, flush=True)

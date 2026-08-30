@@ -20,9 +20,10 @@ by the converter. If scale and value histogram match but point-wise error is
 huge, you are comparing a permutation, not a defect (see docs section 38.1).
 """
 import sys, json
+import os
 from pathlib import Path
 import numpy as np, torch
-sys.path.insert(0, "/home/angelo/build-llamacpp/gguf-py"); sys.path.insert(0, ".")
+sys.path.insert(0, os.environ.get("GGUF_PY", os.path.expanduser("~/build-llamacpp/gguf-py"))); sys.path.insert(0, ".")
 from gguf import GGUFReader
 from gguf import quants as GQ
 from safetensors import safe_open
@@ -33,7 +34,7 @@ MAPPA, dequant_strato = ns["MAPPA"], ns["dequant_strato"]
 
 from transformers import AutoConfig, Qwen3_5MoeForConditionalGeneration
 from accelerate import init_empty_weights
-NAS = Path("/mnt/nas/CACHEDEV1_DATA/modelli-fp/Ornith-1.5-397B")
+NAS = Path(os.environ.get("FP_CHECKPOINT_DIR", "/mnt/checkpoints/Ornith-1.5-397B"))
 cfg = AutoConfig.from_pretrained(str(NAS))
 with init_empty_weights(): m = Qwen3_5MoeForConditionalGeneration(cfg)
 lm = m.model.language_model

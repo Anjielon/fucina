@@ -1344,3 +1344,150 @@ the design doc's call that the forge needs the torch-vectorized
 parallelism (~2 weeks CPU worst case) rather than this reference encoder.
 Seed 0 throughout; rerun: `python3 experiments/tcq_encode_real.py
 --blocks 4096 --batch 512 --gauss-control 1024`.
+
+## TCQ1_7 encoder vettorizzato (29/8)
+
+`experiments/tcq_plane.py` — the batched exact Viterbi the pre-test called
+for. Same trellis, same bits, same numbers as `tcq_encode_real.py`, but the
+step is a handful of large fused tensor ops over (blocks × 4096 states)
+instead of a pile of numpy temporaries. torch backend, `device` parametric
+(cpu / cuda-HIP), numpy fallback with the same broadcast trick.
+
+**Measured entirely on CPU** — the GPU was at 100% with a collaudo (81 GiB
+VRAM in use) and several llama-server processes were on the cores, so every
+CPU number below is a *contended floor*, not a best case.
+
+### Correctness: bit-exact, not merely equivalent
+
+Requirement was rel_err within 1e-6 of the reference. Measured delta is
+**exactly zero** — same trellis states, same payload bytes:
+
+| check (blk.29.attn_gate, 397B, seed 0) | reference | vectorised | delta |
+|---|---|---|---|
+| 512 blocks, rel_err | 0.3478801495 | 0.3478801495 | **0.000e+00** |
+| 512 blocks, decoded-from-payload rel_err | 0.3479847260 | 0.3479847260 | **0.000e+00** |
+| 64 blocks, rel_err | 0.3483299078 | 0.3483299078 | **0.000e+00** |
+| 32 blocks, numpy backend | 0.3479312990 | 0.3479312990 | **0.000e+00** |
+| blocks with differing states | — | — | **0 / 512** |
+| max abs scale difference | — | — | **0.000e+00** |
+| packed 56 B payload byte-identical | — | — | **True** |
+
+This is stronger than the tolerance asked for: the arithmetic order inside a
+step is preserved (`(w_t − d·C)²` in float32, survivor add, strict-comparison
+tournament that reproduces numpy's *first*-minimum tie rule), so the emitted
+bitstream is identical rather than statistically equal.
+
+Whole-tensor run (all 131,072 blocks = 33.5 M weights, not a subset):
+rel_err **0.3472**, decoded 0.3472, 107 blocks (0.08%) not at the tail-biting
+fixed point. The pre-test's 4096-block subset published 0.3473 — the subset
+was representative to 4 decimals, as claimed.
+
+### Throughput
+
+| | ms/block | blocks/s | whole blk.29.attn_gate |
+|---|---|---|---|
+| `tcq_encode_real.py` (published 28/8) | 26.5 | 38 | ~58 min |
+| same, re-measured today under load | 36.8–39.7 | 25–27 | ~87 min |
+| **`tcq_plane.py`, 16 threads, batch 512** | **0.629** | **1,590** | **82.4 s** |
+
+**42×** against the published reference, 58–63× against the reference
+re-measured in the same session. Sustained, not peak: the 82.4 s is the whole
+33.5 M-weight tensor end to end, and it matches the 16,384-block bench
+(0.630 ms/block) to three digits.
+
+### Why it is bandwidth-bound, and where the cliff is
+
+The batch sweep is not monotonic — it falls off a cliff:
+
+| batch | ms/block | blocks/s | working set (5 × B × 16 KiB) |
+|---|---|---|---|
+| 256 | 1.022 | 979 | 21 MiB |
+| **512** | **0.630** | **1,586** | **42 MiB — fits 64 MiB L3** |
+| 1024 | 1.026 | 975 | 84 MiB — spills |
+| 2048 | 2.448 | 408 | 168 MiB — spills |
+
+And adding processes makes it monotonically *worse* (8,192 blocks, aggregate):
+
+| procs × threads | 1×16 | 2×8 | 4×4 | 8×2 | 16×1 | 2×16 |
+|---|---|---|---|---|---|---|
+| blocks/s | **1,517** | 1,492 | 979 | 646 | 441 | 656 |
+
+Both facts say the same thing: this encoder is **cache-bandwidth bound, not
+core bound**. It goes fast only while the live trellis (V, V', d·C, err,
+survivor-repeat) sits in the 64 MiB L3; more processes multiply the working
+set and push it to DRAM, which measures only **41 GB/s** here (torch add,
+3 × 128 MB, 16 threads). This is the single most important number for the
+kernel design — see the projection below.
+
+Thread count matters as much as batch: torch's default is `os.cpu_count()`
+= 32, i.e. the SMT siblings, and that is **3.2× slower** than the 16 physical
+cores (0.485 vs 1.565 ms/block/pass at B=1024). `default_threads()` now
+overrides it. The `--device` default was also changed from `auto` to `cpu`:
+`auto` resolves to `cuda` on this ROCm build and would have silently grabbed
+the busy GPU.
+
+### Optimisations kept and rejected (all measured, B=512)
+
+| change | before | after | kept |
+|---|---|---|---|
+| `torch.where(hi,s23,s01)` on bool → `s01 ^ (hi & (s01 ^ s23))` | 204 µs | **20.8 µs** | ✅ 10×, bit-identical |
+| broadcast add over innermost axis → materialise repeat + flat add | 178 µs | **123 µs** | ✅ 1.45×, bit-identical |
+| torch threads 32 → 16 physical | — | — | ✅ 3.2× |
+| `torch.compile` / inductor fusion of the whole step | 969 µs | 1,870 µs | ❌ **0.52× — slower** |
+| `E.pow_(2)` → `E.mul_(E)` | 39.4 µs | 41.4 µs | ❌ noise |
+
+`torch.where` on bool was the single most expensive op in the trellis step
+(~1.5 GB/s, unvectorised); the xor identity removed a third of the step cost
+on its own. Inductor was tried and rejected on measurement, not on principle:
+it fuses correctly (verified bit-identical) but its CPU codegen for this
+bool/float mix is half the speed of the hand-written op chain, after 37 s of
+compile time.
+
+### Projection to the forge — and the verdict
+
+Per expert tensor (4.05 M weights = 15,820 blocks): **~10 s**.
+
+| target | blocks | CPU (measured 1,590 blk/s) | gate |
+|---|---|---|---|
+| F1(c) Tony full-TCQ, ~35 G weights | 137 M | **23.9 h** | budget 1–3 h ❌ |
+| F4 forge 397B, 92,160 expert tensors, ~384 G weights | 1.50 G | **262 h = 10.9 days** | abort >36 h ❌ |
+| one layer pilot (1,536 tensors) | 24 M | **4.3 h** | ✅ fits a night |
+| what a 10 h night buys | 57 M | 14.7 G weights = **3.8%** of the expert complement | — |
+
+To pass F4's own 36 h abort threshold we need **7.3×** over today's CPU; to
+burn the 397B inside one 10 h night, **26×**.
+
+**GPU projection [ESTIMATE — not measured, the GPU was busy]**: this same
+torch code on gfx1151 does *not* get there. The workload is bandwidth-bound,
+gfx1151 shares the same UMA pool, and its MALL (32 MiB) is *smaller* than the
+CPU's 64 MiB L3 — so the optimal batch there is ~256, not 512. Expect within
+**2–4× of CPU → 66–131 h** for the 397B: better than CPU, still 2–4× past the
+abort gate.
+
+The structural fix is not a bigger batch, it is **stopping the streaming**.
+A fused kernel (Vulkan/HIP) that keeps one block's V in LDS — 4096 states ×
+f32 = 16 KiB, against 64 KiB of LDS per workgroup — never writes the trellis
+to memory at all: global traffic per block per pass drops from ~45 MB to the
+~64 KiB of backpointers, ~500×, and the encode becomes compute-bound at order
+**1–5 h for the whole 397B [ESTIMATE]**. That is the same F2 kernel work the
+build order already schedules for the *decode* shader, and it is what the
+forge actually blocks on.
+
+### Verdict
+
+**The v5 forge is NOT feasible tonight.** Not on CPU (262 h), and not on GPU
+with a torch-level encoder (66–131 h estimated) — both fail F4's own >36 h
+abort rule, by 7× and 2–4× respectively. Even the F1(c) Tony gate, budgeted
+at 1–3 h, is a 24 h job at this speed.
+
+What the vectorised encoder *does* unblock tonight, on CPU, with the GPU left
+alone:
+- **F1(a) and F1(b) are done**: the reference 397B tensor encodes whole in
+  82 s at rel_err 0.3472, and the 56 B pack→unpack roundtrip is bit-exact
+  (B160 discipline satisfied). The 33% raw target of the design note is met;
+  the ~21.5% H-wrapped figure still needs the GPTQ wrapper (F1 remainder).
+- **The one-layer timing pilot F4 asks for** (1,536 tensors, 4.3 h) fits in a
+  night and would replace the ×9 uncertainty in risk #1 with a measurement.
+
+Rerun: `python3 experiments/tcq_plane.py --verify --blocks 512 --device cpu`
+and `--bench --blocks 131072 --batch 512 --device cpu`. Seed 0 throughout.

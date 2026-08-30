@@ -110,7 +110,7 @@ determinism patches currently take on faith.
 5. The depth rule and the recipe-in-the-file; paired confirmation.
 5b. Task-level evaluation at matched size (internal paired suite vs IQ1_M;
    aggregate only, suite not released) + the RTN/GPTQ reasoning
-   dissociation. [data/bench_v2.csv, 2026-08-28]
+   dissociation. [internal paired results table, 2026-08-28]
 6. The routing margin distribution. [RESULTS §The distribution]
 7. Related work — positioned against Tied Trit-Planes (arXiv 2608.08910,
    same primitive, no per-layer analysis by design), PTQTP, EvoPress,
@@ -213,21 +213,21 @@ must re-run per model.
 
 ## Section 5b draft — Task-level evaluation at matched size (added 2026-08-28)
 
-*Provenance: every number below traces to `data/bench_v2.csv` in the MOGAVIS
-repo, models `odino_v33` (ODINO-v3.3, TQ1_0 plane-1 GPTQ + tail plane-2,
-1.75 bpw) and `odino_iq1m` (Ornith-1.5-397B-IQ1_M, size-matched), runs of
-2026-08-28 evening. Verified against the CSV before writing (totals, McNemar
-discordants, per-family splits all reproduce). ⛔ PRIVACY (ordine Angelo
-28/8): le famiglie F8/F9 sono fixture della casa e NON entrano nel paper,
-nemmeno in aggregato — tutti i numeri qui sotto sono ricalcolati sul CSV
-escludendo F8/F9 (146 coppie). Nel paper la suite si descrive come "internal
-private evaluation suite; aggregate results only; not publicly released",
-zero claim di riproducibilità su di essa (riproducibilità solo sui benchmark
-standard).*
+*Provenance: every number below traces to the paired results table of our
+internal evaluation harness, models `odino_v33` (ODINO-v3.3, TQ1_0 plane-1
+GPTQ + tail plane-2, 1.75 bpw) and `odino_iq1m` (Ornith-1.5-397B-IQ1_M,
+size-matched), runs of 2026-08-28 evening. Verified against the raw table
+before writing (totals, McNemar discordants, per-family splits all reproduce).
+Two of the nine task families are tied to a private deployment environment and
+are excluded here entirely, aggregate included; every figure below is
+recomputed on the remaining 146 pairs. In the paper the suite is described as
+an "internal private evaluation suite; aggregate results only; not publicly
+released", and no reproducibility claim is made on it — reproducibility claims
+attach only to the standard benchmarks.*
 
-**Protocol.** Suite interna da 91 task; se ne riportano 73 (7 famiglie +
-legacy, quelle non legate all'ambiente di deploy) × 2 seed (7, 42) = 146
-trial appaiati per modello. Same llama.cpp server build, same 16,384-token
+**Protocol.** Internal suite of 91 tasks; 73 are reported (7 families +
+legacy — those not tied to the deployment environment) × 2 seeds (7, 42) = 146
+paired trials per model. Same llama.cpp server build, same 16,384-token
 context budget, reasoning off for both. A trial is resolved only if all
 target tests pass and no regression breaks; tool-call fixtures scored on the
 emitted call transcript.
@@ -255,7 +255,7 @@ scored* (75% vs 92%): the 3 ODINO misses are infrastructure failures
 completion — but the scored number stands, no re-scoring. F7/planning is a
 shared 20% floor for both no-think giants. Context (NOT a controlled
 comparison — earlier version of the internal suite): the production 35B
-titolare (Ornith-1.5-35B APEX, Q6-class) scores 75% there — the ternary 397B
+incumbent (Ornith-1.5-35B APEX, Q6-class) scores 75% there — the ternary 397B
 at 1.75 bpw reaches the task level of a full-working-precision same-family
 35B on the same hardware budget.
 
@@ -576,4 +576,4 @@ rank and delivered error all fail to track the damage).
   `</think>` loops disappear at unchanged no-think task rate.
 - ~~Functional evaluation at matched size~~ — **PAID 2026-08-28**: internal
   paired suite vs IQ1_M, 146 reported paired trials (Section 5b), source
-  `data/bench_v2.csv`.
+  the internal paired results table.

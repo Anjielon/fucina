@@ -22,6 +22,7 @@ When a repair touches only a few small tensors, prefer `selective_rollback`:
 it undoes the change in seconds without copying the model at all.
 """
 from __future__ import annotations
+import os
 import argparse, shutil, subprocess, time
 from pathlib import Path
 
@@ -86,7 +87,7 @@ if __name__ == "__main__":
     ap = argparse.ArgumentParser(description="measure a GGUF's perplexity (the real outcome)")
     ap.add_argument("gguf")
     ap.add_argument("--corpus", required=True)
-    ap.add_argument("--engine", default="/home/angelo/build-llamacpp-tq1/build")
+    ap.add_argument("--engine", default=os.path.expanduser("~/build-llamacpp-tq1/build"))
     ap.add_argument("--chunks", type=int, default=30)
     a = ap.parse_args()
     ppl, sigma = perplexity(a.gguf, a.corpus, a.engine, a.chunks)

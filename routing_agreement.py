@@ -21,10 +21,11 @@ from __future__ import annotations
 import glob
 import re
 import sys
+import os
 
 import numpy as np
 
-sys.path.insert(0, "/home/angelo/build-llamacpp-tq1/gguf-py")
+sys.path.insert(0, os.environ.get("GGUF_PY", os.path.expanduser("~/build-llamacpp-tq1/gguf-py")))
 from gguf import GGUFReader, quants as GQ  # noqa: E402
 
 TONY = "/mnt/models/gguf/tony-tern/Tony-tern-TQ1.gguf"

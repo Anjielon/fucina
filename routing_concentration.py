@@ -20,10 +20,11 @@ Nessuna GPU, nessun modello caricato: legge solo l'imatrix.
 from __future__ import annotations
 
 import sys
+import os
 
 import numpy as np
 
-sys.path.insert(0, "/home/angelo/build-llamacpp-tq1/gguf-py")
+sys.path.insert(0, os.environ.get("GGUF_PY", os.path.expanduser("~/build-llamacpp-tq1/gguf-py")))
 from gguf import GGUFReader  # noqa: E402
 
 IMATRIX = "/mnt/models/gguf/tony-tern/tony-imatrix.gguf"

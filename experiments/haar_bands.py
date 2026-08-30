@@ -48,9 +48,10 @@ Varianti a confronto:
 Vincoli: sola lettura, pochi esperti, < 4 GB di RAM, pochi minuti.
 
 Uso:
-    /home/angelo/venv-catq/bin/python haar_bands.py [--esperti 4] [--strato 10]
+    ~/venv-catq/bin/python haar_bands.py [--esperti 4] [--strato 10]
 """
 from __future__ import annotations
+import os
 
 import argparse
 import json
@@ -70,7 +71,7 @@ BLOCCO = G.BLOCCO  # 256
 # I pesi originali in bf16. Il GGUF odino-v31 e' gia' TQ1_0: ri-quantizzare
 # un tensore gia' ternario e' circolare (3 livelli per blocco -> errore finto
 # vicino a zero), quindi la sorgente onesta e' il bf16 di partenza.
-FP_DIR = Path("/mnt/nas/CACHEDEV1_DATA/modelli-fp/Ornith-1.5-397B")
+FP_DIR = Path(os.environ.get("FP_CHECKPOINT_DIR", "/mnt/checkpoints/Ornith-1.5-397B"))
 GGUF_TQ1 = Path("/mnt/models/gguf/odino-v31/ODINO-397B-v31.gguf")
 
 

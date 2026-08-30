@@ -28,10 +28,11 @@ writes ones over one F32 tensor, verifies, restores, and verifies again.
 """
 from __future__ import annotations
 import sys
+import os
 from pathlib import Path
 import numpy as np
 
-sys.path.insert(0, "/home/angelo/build-llamacpp/gguf-py")
+sys.path.insert(0, os.environ.get("GGUF_PY", os.path.expanduser("~/build-llamacpp/gguf-py")))
 from gguf import GGUFReader
 
 

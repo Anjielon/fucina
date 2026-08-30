@@ -28,7 +28,7 @@ from __future__ import annotations
 import json, os, sys, time
 from pathlib import Path
 import numpy as np, torch
-sys.path.insert(0, "/home/angelo/build-llamacpp/gguf-py")
+sys.path.insert(0, os.environ.get("GGUF_PY", os.path.expanduser("~/build-llamacpp/gguf-py")))
 sys.path.insert(0, str(Path(__file__).parent))
 import gguf
 from gguf import GGUFReader, GGUFWriter, GGMLQuantizationType as T
@@ -36,10 +36,10 @@ from safetensors import safe_open
 from concurrent.futures import ThreadPoolExecutor
 import ternary_gpu as G, two_planes as D
 
-NAS = Path("/mnt/nas/CACHEDEV1_DATA/modelli-fp/Ornith-1.5-397B")
+NAS = Path(os.environ.get("FP_CHECKPOINT_DIR", "/mnt/checkpoints/Ornith-1.5-397B"))
 BASE = "/mnt/lavoro/ODINO-IQ1_M/Ornith-1.5-397B-IQ1_M-00001-of-00003.gguf"
 HESS = Path("/mnt/models/gguf/odino-hessiane")
-IMATRIX = Path("/home/angelo/odino-lab/imatrix/Ornith-1.5-397B-imatrix.gguf")
+IMATRIX = Path(os.path.expanduser("~/odino-lab/imatrix/Ornith-1.5-397B-imatrix.gguf"))
 K_HOT = int(os.getenv("FORGE_HOT", "16"))   # experts col 2° plan (su 512)
 OUTPUT = os.getenv("FORGE_OUT", "/mnt/lavoro/ODINO-v31/ODINO-397B-v31.gguf")
 GPTQ = os.getenv("FORGE_GPTQ", "1") == "1"

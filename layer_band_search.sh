@@ -15,10 +15,10 @@
 # deve dare il guadagno di fedelta' senza il danno. Prova secca: le bande
 # sane, misurate una per una. Se ognuna e' <= riferimento, il caso e' fatto e
 # vale la pena aggiungere al motore un interruttore di ESCLUSIONE.
-/home/angelo/odino-lab/odino/spazio_per.sh 12 gpu || exit 1
-B=/home/angelo/build-llamacpp-tq1/build
+$HOME/odino-lab/odino/spazio_per.sh 12 gpu || exit 1
+B=$HOME/build-llamacpp-tq1/build
 M=/mnt/models/gguf/tony-tern/Tony-tern-TQ1.gguf
-W=/home/angelo/odino-lab/collaudo/corpus/wiki.test.raw
+W=$HOME/odino-lab/collaudo/corpus/wiki.test.raw
 export LD_LIBRARY_PATH=$B/bin
 m() {
   local ETICHETTA="$1"; shift

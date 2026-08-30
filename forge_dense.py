@@ -34,13 +34,14 @@ from __future__ import annotations
 import argparse
 import re
 import sys
+import os
 import time
 from pathlib import Path
 
 import numpy as np
 import torch
 
-sys.path.insert(0, "/home/angelo/build-llamacpp-tq1/gguf-py")
+sys.path.insert(0, os.environ.get("GGUF_PY", os.path.expanduser("~/build-llamacpp-tq1/gguf-py")))
 sys.path.insert(0, str(Path(__file__).parent))
 from gguf import GGUFReader, GGUFWriter, GGMLQuantizationType as T  # noqa: E402
 from gguf import quants as GQ  # noqa: E402
