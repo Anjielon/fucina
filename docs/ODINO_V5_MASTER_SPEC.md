@@ -1,9 +1,5 @@
 <!-- Internal planning doc (Italian); English pass pending. 2026-08-28. -->
 
-Ho letto i tre documenti (TCQ1_7_DESIGN, RESULTS 28/8, QAT_PILOT_PLAN) più LEVERS.md per i numeri di contorno. Ecco la sintesi.
-
----
-
 # ODINO v5 — MASTER SPEC (397B, TCQ1_7, budget ≤86 GiB)
 
 Base di partenza: v3.2 = 84.00 GiB, ppl 6.1845±0.087; v3.3 = v3.2 + piano-2 su 44-59 (85.11 GiB, 6.1591, Δp +0.048%±0.014% a 3.4σ). HellaSwag 74.67 (±5, 300 task).
