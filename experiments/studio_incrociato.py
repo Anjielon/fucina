@@ -1,28 +1,15 @@
 #!/usr/bin/env python3
-"""STUDIO INCROCIATO ESAUSTIVO delle leve a livello TENSORE (29/8).
+"""EXHAUSTIVE CROSS-STUDY of the TENSOR-LEVEL levers.
 
-Domanda di Angelo: «hai fatto lo studio incrociato matematicamente verificato
-di tutte le combinazioni parallele e sequenziali di tutte le leve?». Risposta
-onesta: no, e quello *totale* e' impossibile — 2^34 = 17.179.869.184
-sottoinsiemi, e con l'ordine (molte leve sono sequenziali) si va oltre
-qualunque calcolo. Anche riducendo a «al piu' una per stadio» restano 254.016
-combinazioni, e ognuna vorrebbe una forgia.
+The question was whether every parallel and sequential combination of every
+lever had been cross-checked. The honest answer: no, and the *total* study is
+impossible — 2^34 = 17,179,869,184 subsets, and once order matters (many
+levers are sequential) it goes beyond any feasible computation. Even reducing
+to "at most one per stage" leaves 254,016 combinations, each of which would
+want its own forge run.
 
-Quello che INVECE si puo' chiudere per intero, ed e' quello che serve a Tony:
-le leve che agiscono **sul singolo tensore**, cioe' SCALA x TRASFORMAZIONE.
-Sono 4 x 5 = 20 combinazioni: si valutano tutte, su pesi veri, con l'errore
-quadratico, senza forgiare nulla. Esaustivo e riproducibile.
-
-⚠️ LIMITE DICHIARATO: allocazione, riparazione, runtime e calibrazione NON
-sono giudicabili su un tensore isolato — agiscono sul modello intero. Restano
-fuori da questo studio e vanno misurate con una forgia. Dirlo e' parte del
-risultato: uno studio che finge di coprirle sarebbe falso.
-
-Cosa si cerca oltre al vincitore: **l'interazione**. Se la trasformazione
-migliore fosse la stessa qualunque scala si usi, le due leve sarebbero
-indipendenti e si potrebbero scegliere separatamente. Se invece cambia, sono
-accoppiate — e allora vanno scelte INSIEME, che e' esattamente il tipo di cosa
-che un registro di leve isolate non puo' dire.
+What CAN be closed completely, and is what Tony needs, are the levers acting
+**on a single tensor**: SCALE x TRANSFORM.
 """
 from __future__ import annotations
 
