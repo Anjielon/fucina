@@ -60,7 +60,7 @@ che tenga il traliccio in registri.
 
 ```bash
 # AMD (Corsair)
-/home/angelo/venv-catq/bin/python3 tcq_plane.py --verify --blocks 64 --device cuda
+python3 tcq_plane.py  # (venv with torch+cuda) --verify --blocks 64 --device cuda
 # NVIDIA (ARAGORN, vedi memoria project_dell_aragorn)
 ssh aragorn 'cd C:\tcq && python tcq_plane.py --verify --tensor C:\tcq\tensore_full.bin --blocks 64 --device cuda'
 ```
