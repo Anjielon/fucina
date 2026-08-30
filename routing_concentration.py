@@ -29,7 +29,7 @@ from gguf import GGUFReader  # noqa: E402
 
 IMATRIX = "/mnt/models/gguf/tony-tern/tony-imatrix.gguf"
 K = 28
-# danno misurato col secondo piano acceso su un solo strato (12 blocchi,
+# damage measured with the second plane enabled on a single layer (12 chunks,
 # riferimento a piano spento 8.7204)
 DANNO = {0: 10.9524, 5: 8.7277, 10: 8.8125, 15: 20.1161, 20: 37.8030,
          25: 22.5109, 30: 8.6860, 35: 8.7743, 39: 8.7370}

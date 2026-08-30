@@ -1,15 +1,15 @@
 #!/usr/bin/env python3
-"""HAAR + RAGGRUPPAMENTO PER BANDE — ri-processo di una leva bocciata male.
+"""HAAR + BAND GROUPING — a retrial of a lever that was rejected badly.
 
-CONTESTO
---------
-`levers.py` registra `local_haar` come "0.1% — nothing" (fonte HBLLM,
-arXiv 2512.00862). Il riesame ha trovato DUE errori in quella misura:
+CONTEXT
+-------
+`levers.py` records `local_haar` as "0.1% — nothing" (source HBLLM,
+arXiv 2512.00862). The review found TWO errors in that measurement:
 
-  1. la trasformata era applicata alla dimensione 4096 (il flusso residuo,
-     CONDIVISA fra tutti gli esperti) invece che alla dimensione PRIVATA
-     dell'esperto (1024, l'asse su cui corrono davvero i blocchi da 256);
-  2. mancava il raggruppamento per bande: la Haar multi-livello in ordine di
+  1. the transform was applied to the 4096 dimension (the residual stream,
+     SHARED across all experts) instead of the expert's PRIVATE dimension
+     (1024, the axis the 256-weight blocks actually run along);
+  2. band grouping was missing: multi-level Haar in natural order
      Mallat mette le bande piccole tutte all'inizio, quindi il PRIMO blocco
      da 256 ne mescola 7-9 di magnitudine diversissima. Una sola scala f16
      per blocco non puo' servirle tutte, e il beneficio si annulla.
@@ -68,9 +68,9 @@ import ternary_gpu as G  # noqa: E402  (solo lettura, non lo modifichiamo)
 
 BLOCCO = G.BLOCCO  # 256
 
-# I pesi originali in bf16. Il GGUF odino-v31 e' gia' TQ1_0: ri-quantizzare
-# un tensore gia' ternario e' circolare (3 livelli per blocco -> errore finto
-# vicino a zero), quindi la sorgente onesta e' il bf16 di partenza.
+# The original bf16 weights. The odino-v31 GGUF is already TQ1_0:
+# re-quantizing an already-ternary tensor is circular (3 levels per block ->
+# a fake near-zero error), so the honest source is the starting bf16.
 FP_DIR = Path(os.environ.get("FP_CHECKPOINT_DIR", "/mnt/checkpoints/Ornith-1.5-397B"))
 GGUF_TQ1 = Path("/mnt/models/gguf/odino-v31/ODINO-397B-v31.gguf")
 
@@ -80,7 +80,7 @@ def log(*a):
 
 
 # ─────────────────────────────────────────────────────────────────────────
-# Lettura: solo la fetta di byte degli esperti richiesti (niente shard intera)
+# Read only the byte slice of the requested experts (not the whole shard)
 # ─────────────────────────────────────────────────────────────────────────
 def carica_down_exps(strato: int, n_esperti: int) -> torch.Tensor:
     """(n_esperti, 4096, 1024) float32 dal bf16, leggendo solo i byte serviti."""
@@ -157,11 +157,11 @@ def bande_per_blocco(n: int, livelli: int) -> list[int]:
 
 
 # ─────────────────────────────────────────────────────────────────────────
-# Quantizzazione ternaria — la NOSTRA, importata, non riscritta
+# Ternary quantization — OURS, imported, not reimplemented
 # ─────────────────────────────────────────────────────────────────────────
 @torch.no_grad()
 def errore_un_piano(W: torch.Tensor) -> float:
-    """UN piano ternario, scala ai minimi quadrati per blocco di 256."""
+    """ONE ternary plane, least-squares scale per 256-weight block."""
     n_in = W.shape[-1]
     assert n_in % BLOCCO == 0
     B = W.reshape(-1, BLOCCO)
@@ -172,7 +172,7 @@ def errore_un_piano(W: torch.Tensor) -> float:
 
 @torch.no_grad()
 def errore_due_piani(W: torch.Tensor, device: str) -> float:
-    """DUE piani congiunti (la strada dei 28 esperti caldi), senza Hessiana."""
+    """TWO joint planes (the hot-28-experts path), without the Hessian."""
     n_righe = int(np.prod(W.shape[:-1]))
     n_in = W.shape[-1]
     Wc = W.reshape(n_righe, n_in).cpu()
@@ -186,13 +186,13 @@ def errore_due_piani(W: torch.Tensor, device: str) -> float:
 
 @torch.no_grad()
 def diagnosi(W: torch.Tensor, livelli: tuple = (1, 2, 9)) -> dict:
-    """PERCHE' la leva funziona o no — le tre grandezze che la decidono.
+    """WHY the lever works or not — the three quantities that decide it.
 
-    Haar paga solo se i pesi sono CORRELATI lungo l'asse trasformato: e' un
-    filtro passa-basso locale, presuppone regolarita' spaziale. Se i pesi
-    adiacenti sono scorrelati, la trasformata non concentra nulla e in piu'
-    somma variabili indipendenti -> GAUSSIANIZZA, che al ternario fa male
-    (il ternario vuole code pesanti/sparsita', non una gaussiana).
+    Haar only pays if the weights are CORRELATED along the transformed axis:
+    it is a local low-pass filter and assumes spatial regularity. If adjacent
+    weights are uncorrelated, the transform concentrates nothing and on top of
+    that sums independent variables -> it GAUSSIANISES, which hurts ternary
+    (ternary wants heavy tails / sparsity, not a gaussian).
     """
     def curtosi(x):
         x = x.flatten().float()
@@ -250,7 +250,7 @@ def main():
     log(f"device={dev} · asse di quantizzazione = {n_in} (dimensione PRIVATA "
         f"dell'esperto) · blocchi da {BLOCCO}")
 
-    # sanita': la Haar e' davvero ortonormale e invertibile?
+    # sanity: is the Haar transform really orthonormal and invertible?
     for L in (1, 2, 5, 10):
         c = haar_avanti(W[:1, :8], L)
         r = haar_indietro(c, L)
@@ -286,7 +286,7 @@ def main():
     Wt = W.transpose(-1, -2).contiguous()          # (E, 1024, 4096)
     e_wd = errore_un_piano_nei_pesi(
         Wt, lambda X: haar_avanti(X, 2), lambda X: haar_indietro(X, 2))
-    # attenzione: qui i blocchi corrono sull'asse 4096 -> non e' il nostro
+    # careful: here the blocks run along the 4096 axis -> not our layout
     # formato. La misura utile e': trasformo su 4096, quantizzo su 1024.
     C = haar_avanti(W.transpose(-1, -2), 2).transpose(-1, -2).contiguous()
     e_wd2 = errore_un_piano(C)
@@ -301,7 +301,7 @@ def main():
     log(f"sola permutazione per |w| medio (GRATIS, ripiegabile): "
         f"{e_perm*100:.2f}%  ({(e_perm/b1-1)*100:+.2f}% vs baseline)")
 
-    # ── due piani congiunti: baseline vs la migliore Haar ───────────────
+    # ── two joint planes: baseline vs the best Haar ─────────────────────
     migliore_L = min((L for L in range(1, A.livelli_max + 1) if f"haar_L{L}" in ris),
                      key=lambda L: ris[f"haar_L{L}"])
     log(f"— due piani congiunti (esperti caldi), baseline vs haar L={migliore_L} —")

@@ -1,15 +1,15 @@
 #!/bin/bash
-# QUANTE SCELTE DI ESPERTO CAMBIANO col secondo piano acceso? — versione corretta
+# HOW MANY EXPERT CHOICES CHANGE with the second plane enabled? — fixed version
 #
-# ⛔ La prima versione non misurava NULLA: catturava `ffn_moe_topk`, che e' di
-#    INTERI, e il dump scrive solo F32 (common/debug.cpp). Col piano acceso
-#    finiva nel filtro un nodo di conversione che il mio stesso codice crea e
-#    che col piano spento NON ESISTE → "0 su 0". Un confronto contro il nulla
-#    che si presentava come un risultato.
+# ⛔ The first version measured NOTHING: it captured `ffn_moe_topk`, which is
+#    INTEGER, while the dump only writes F32 (common/debug.cpp). With the plane
+#    enabled, the filter caught a conversion node that our own code creates and
+#    that does NOT EXIST with the plane disabled → "0 out of 0". A comparison
+#    against nothing, presenting itself as a result.
 #
-# Correzione: si cattura `ffn_moe_probs` — le probabilita' del router, F32,
-# presenti in ENTRAMBE le configurazioni — e la scelta si ricalcola in numpy.
-# In piu' si ottiene il MARGINE: quanto sono al pelo le scelte che cambiano.
+# Fix: capture `ffn_moe_probs` — the router probabilities, F32, present in BOTH
+# configurations — and recompute the choice in numpy. As a bonus this also
+# yields the MARGIN: how close the choices that flip actually were.
 $HOME/odino-lab/odino/spazio_per.sh 12 gpu || exit 1
 B=$HOME/build-llamacpp-tq1/build
 M=/mnt/models/gguf/tony-tern/Tony-tern-TQ1.gguf

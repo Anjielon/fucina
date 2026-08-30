@@ -64,7 +64,7 @@ for nome, (mod, imat, strati) in CASI.items():
         if t is None or L not in freq:
             continue
         E = int(t.shape[2])
-        # norme di TUTTI gli esperti (serve la classifica completa per impatto)
+        # norms of ALL experts (the full ranking is needed for impact)
         n2 = norme_per_esperto(t, E, E)
         f = freq[L][:E]
         impatto = f * n2

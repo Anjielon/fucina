@@ -44,10 +44,10 @@ K_HOT = int(os.getenv("FORGE_HOT", "16"))   # experts col 2° plan (su 512)
 OUTPUT = os.getenv("FORGE_OUT", "/mnt/lavoro/ODINO-v31/ODINO-397B-v31.gguf")
 GPTQ = os.getenv("FORGE_GPTQ", "1") == "1"
 ONLY_LAYERS = int(os.getenv("FORGE_ONLY_LAYERS", "0"))
-# ⛔ TWO_PLANE_LAYERS (57,58,59) era un residuo MAI USATO: la v3.1 ha forgiato
-# il 2° piano su TUTTI gli strati e la ricetta l'ha strippato dopo. Ora la
-# profondita' e' un PREDICATO UNICO che alimenta tutti i siti accoppiati
-# (piano nel plan, coppia congiunta, permutazione router) — la stessa
+# ⛔ TWO_PLANE_LAYERS (57,58,59) was a residue NEVER USED: v3.1 forged the
+# 2nd plane on ALL layers and the recipe stripped it afterwards. Depth is now
+# a SINGLE PREDICATE feeding every coupled site (plane in the plan, joint
+# pair, router permutation) — the same
 # disciplina di forge_gguf.has_p2.
 P2_LAYERS = os.getenv("FORGE_P2_LAYERS", "")        # es. "44-59"; vuoto = tutti
 FOEM_BETA = float(os.getenv("FORGE_FOEM_BETA", "0"))
@@ -413,7 +413,7 @@ def main():
             W = lettore.prendi(orig, prossimo)             # (E, out, in) float16
             E, o, ind = W.shape
             # ⛔ GPTQ applies only to gate and up, whose input is the
-            #    residuo (4096) di cui abbiamo misurato l'Hessiana. `down`
+            #    residual (4096) whose Hessian we measured. `down`
             #    prende in ingresso l'INTERMEDIO dell'esperto (1024): H diversa,
             #    which attn_post_norm cannot capture. There we use the two
             #    joint planes without propagation.
@@ -432,7 +432,7 @@ def main():
             Wt = torch.from_numpy(W.reshape(-1, ind)).float()
             d1, q1 = G.quantize_one_plane(Wt, Hc, chunk=pz, foem_beta=FOEM_BETA) if Hc is not None \
                      else (lambda r: (r[0], r[1]))(G.quantize(Wt, None, rounds=2, chunk=pz))
-            # ⚡ Il 2° plan serve ONLY_LAYERS ai 28 experts hot su 512: quantizzare
+            # ⚡ The 2nd plan serves ONLY_LAYERS to the 28 hot experts of 512:
             #    all 512 with two planes would be 18x the necessary work.
             righe_esp0 = W.reshape(-1, ind).shape[0] // E
             caldi0 = hot_experts(L, K_HOT) if has_p2(L) else np.array([], int)

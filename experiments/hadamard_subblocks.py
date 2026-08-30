@@ -46,7 +46,7 @@ def H(n: int) -> np.ndarray:
 
 
 def ruota_sottoblocchi(w: np.ndarray, k: int) -> np.ndarray:
-    """Ruota dentro sotto-blocchi da k, lasciando il blocco da 256 intatto."""
+    """Rotate within sub-blocks of k, leaving the 256-weight block intact."""
     if k <= 1:
         return w
     B = w.shape[0]

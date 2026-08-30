@@ -1,19 +1,20 @@
 #!/bin/bash
-# IL DANNO E' DIFFUSO O ESPLOSIVO?
+# IS THE DAMAGE DIFFUSE OR EXPLOSIVE?
 #
-# Una perplessita' di 37.80 contro 8.72 puo' nascere in due modi opposti:
-#   (a) DIFFUSO — ogni blocco peggiora un po'. Il modello e' complessivamente
-#       piu' incerto: danno vero, spalmato.
-#   (b) ESPLOSIVO — quasi tutti i blocchi restano normali e uno o due vanno a
-#       fuoco. La media e' dominata da pochi token, e la cura e' tutt'altra:
-#       non "il modello e' peggiorato" ma "in certi punti si rompe".
+# A perplexity of 37.80 against 8.72 can arise in two opposite ways:
+#   (a) DIFFUSE — every chunk gets a little worse. The model is uniformly
+#       more uncertain: real damage, spread out.
+#   (b) EXPLOSIVE — nearly every chunk stays normal and one or two catch
+#       fire. The mean is dominated by a handful of tokens, and the remedy is
+#       entirely different: not "the model got worse" but "it breaks in
+#       specific places".
 #
-# La distinzione conta anche per la non-additivita': se lo strato 20 da solo
-# esplode su pochi blocchi e tutti gli strati insieme degradano in modo
-# diffuso, allora non c'e' nessuna "cancellazione" — sono due fenomeni
-# diversi che la media confonde in un numero solo.
+# The distinction also matters for non-additivity: if layer 20 alone explodes
+# on a few chunks while all layers together degrade diffusely, then there is
+# no "cancellation" — they are two different phenomena that the mean collapses
+# into a single number.
 #
-# llama-perplexity stampa il valore progressivo blocco per blocco: basta
+# llama-perplexity prints the running value chunk by chunk: it is enough
 # tenerlo invece di buttarlo.
 $HOME/odino-lab/odino/spazio_per.sh 12 gpu || exit 1
 B=$HOME/build-llamacpp-tq1/build

@@ -1,7 +1,7 @@
 #!/bin/bash
 # SI PUO' AGGIRARE LA MONTAGNA?
 #
-# Misurato (un solo strato acceso per volta, 12 blocchi, modello 35B):
+# Measured (one layer enabled at a time, 12 chunks, 35B model):
 #   spento 8.7204 · str.0 10.9524 · str.5 8.7277 · str.10 8.8125
 #   str.15 20.1161 · str.20 37.8030 · str.25 22.5109
 #   str.30 8.6860 · str.35 8.7743 · str.39 8.7370

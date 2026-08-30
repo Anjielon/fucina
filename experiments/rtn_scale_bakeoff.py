@@ -1,25 +1,24 @@
 #!/usr/bin/env python3
-"""GARA DELLE REGOLE DI SCALA per il ternario RTN (29/8, ordine di Angelo:
-«ogni leva meno costosa e valida è tempo di debito scontato»).
+"""SCALE-RULE BAKE-OFF for ternary RTN.
 
-Perche' proprio la scala: Tony V4-A e' **RTN puro** — il GPTQ gli rompe il
-ragionamento (dissociazione misurata, vedi il paper), quindi tutte le leve di
-compensazione sono fuori gioco per lui. Per un quantizzatore RTN resta UNA
-leva: come si sceglie la scala e la soglia di ogni blocco. Nel registro
-`levers.py` e' anche la piu' economica di tutte (`signed_scale_grid`, costo
-0 GiB, fatica 0.1) e l'unica con evidenza SOLO degli autori — mai provata da
-noi. Per confronto, `optimal_scale` da sola porto' l'errore del 397B
-dall'81% al 43.5%: la scala e' la leva che paga.
+Why the scale specifically: Tony V4-A is **pure RTN** — GPTQ breaks its
+reasoning (a measured dissociation, see the paper), so every compensation
+lever is off the table for it. For an RTN quantizer ONE lever remains: how
+the per-block scale and threshold are chosen. In the `levers.py` registry it
+is also the cheapest of all (`signed_scale_grid`, 0 GiB cost, effort 0.1) and
+the only one whose evidence comes from its authors alone — never reproduced
+here. For comparison, `optimal_scale` on its own took the 397B error from 81%
+down to 43.5%: the scale is the lever that pays.
 
-Regole in gara, tutte a **costo zero di bit** (stesso formato, stessi 1.69 bpw):
+Rules in the bake-off, all at **zero bit cost** (same format, same 1.69 bpw):
 
-  absmax      s = max|w| / 1        soglia 0.5s      — il piu' ingenuo
-  twn         soglia 0.7*mean|w|, s = media di |w| sopra soglia  (TWN 1605.04711)
-  ls_iter     TWN + due giri di raffinamento ai minimi quadrati
-  grid        ricerca sulla griglia (fattore-soglia x fattore-scala) — BOF4-S
+  absmax      s = max|w| / 1        threshold 0.5s   — the naive one
+  twn         threshold 0.7*mean|w|, s = mean of |w| above it  (TWN 1605.04711)
+  ls_iter     TWN plus two least-squares refinement rounds
+  grid        grid search (threshold factor x scale factor) — BOF4-S
 
-Si misura l'errore relativo ||w - s*q|| / ||w|| per blocco da 256 pesi, su
-tensori VERI, e si guarda quante volte ogni regola vince.
+We measure the relative error ||w - s*q|| / ||w|| per 256-weight block on real
+tensors, and count how often each rule wins.
 """
 from __future__ import annotations
 
@@ -48,7 +47,7 @@ def carica_blocchi(bin_path: Path, n: int, seed: int = 0) -> np.ndarray:
 
 
 def _err(w: np.ndarray, s: np.ndarray, thr: np.ndarray) -> np.ndarray:
-    """Errore relativo per blocco con soglia `thr` e scala `s`."""
+    """Per-block relative error with threshold `thr` and scale `s`."""
     q = np.sign(w) * (np.abs(w) > thr[:, None])
     d = w - s[:, None] * q
     return np.sqrt((d * d).sum(1) / np.maximum((w * w).sum(1), 1e-30))
@@ -60,7 +59,7 @@ def absmax(w):
 
 
 def twn(w):
-    """Ternary Weight Networks: soglia 0.7*mean|w|, scala = media sopra soglia."""
+    """Ternary Weight Networks: threshold 0.7*mean|w|, scale = mean above it."""
     a = np.abs(w)
     thr = 0.7 * a.mean(1)
     m = a > thr[:, None]
@@ -126,7 +125,7 @@ def main() -> int:
         err = {k: f(w) for k, f in REGOLE.items()}
         for k, v in err.items():
             somma[k].append(float(v.mean()))
-        # vittoria per blocco: quale regola sbaglia meno su quel blocco
+        # per-block win: which rule errs least on that block
         pila = np.stack([err[k] for k in REGOLE])
         vinc = np.argmin(pila, axis=0)
         for i, k in enumerate(REGOLE):

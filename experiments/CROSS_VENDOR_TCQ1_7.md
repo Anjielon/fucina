@@ -30,7 +30,7 @@ quasi uguale. Non succede: l'ordine aritmetico interno al passo è fissato
 (`(w_t - d*C)^2` in float32, somma del sopravvissuto, `argmin` al primo
 indice) e tanto basta a renderlo deterministico ovunque.
 
-## I 5 blocchi non convergenti NON sono un difetto di AMD
+## The 5 non-converging blocks are NOT an AMD defect
 
 Sul batch da 2048 blocchi entrambe le GPU riportano `unconverged 5/2048`, con
 lo **stesso conteggio**. Lo avevo annotato come possibile stranezza numerica
@@ -39,13 +39,13 @@ alcuni blocchi il vincolo sui 10 bit di chiusura non converge entro il numero
 di passaggi concesso (`tb_passes = 3`) e si accetta l'ultimo stato. Va
 dichiarato nel paper come caratteristica dell'algoritmo, non nascosto.
 
-## Velocità: la portabilità non è prestazione
+## Speed: portability is not performance
 
 | | AMD Radeon 8060S | NVIDIA RTX 4060 Laptop |
 |---|---|---|
-| un passaggio Viterbi | 0.251 ms/blocco | **0.205 ms/blocco** |
-| forgia completa | **0.530 ms/blocco** | 1.150 ms/blocco |
-| proiezione 397B | 9.3 giorni | 20 giorni |
+| one Viterbi pass | 0.251 ms/block | **0.205 ms/block** |
+| full forge | **0.530 ms/block** | 1.150 ms/block |
+| 397B projection | 9.3 days | 20 days |
 
 ⚠️ **Il numero di velocità si misura solo con `torch.cuda.synchronize()`.**
 Senza, si cronometrano code asincrone: un primo giro senza sincronizzazione
