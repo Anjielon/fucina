@@ -693,20 +693,6 @@ rank and delivered error all fail to track the damage).
   makes precise --- the depth rule, is exactly what remains untested.
 \end{itemize}
 
-% TODO (from draft "Evaluation debt (must clear before submission)"):
-% - lm-eval via llama-cpp-python server (llama-server's `echo` gap documented),
-%   version pinned, `acc` and `acc_norm` both, full task sets.
-% - KL-divergence + top-token agreement against a Q8 proxy reference on the
-%   35B (fp16-reference validation of the method at 35B scale).
-% - The dense-model experiment: does the 73% rule survive without experts?
-% - The reasoning-trace recalibration (Section \ref{sec:dissociation}): reforge
-%   GPTQ planes against self-generated traces; falsifiable prediction is that
-%   the </think> loops disappear at unchanged no-think task rate.
-% (Paid on 2026-08-28: the paired 91-fixture functional suite vs size-matched
-%  IQ1_M, now Section \ref{sec:tasks}.)
-
-% TODO: the draft does not cite the Super Weight paper in prose yet; entry kept
-% visible in the bibliography per the reference list. Remove \nocite once cited.
 \nocite{yu2024superweight}
 
 \bibliography{references}
