@@ -1,5 +1,18 @@
 # Depth, Not Fidelity: What Decides Whether a Ternary Correction Helps a Mixture-of-Experts
 
+> ⚠️ **Superseded by [`paper/main.tex`](../paper/main.tex) (TMLR revision,
+> 2026-09-20).** This file is the August draft and is kept as history. Where
+> it disagrees with the paper, the paper is right; in particular: the shipped
+> 397B file is v3.4a (88.17 GiB, 1.91 bits/weight at the model level), not the
+> 84 GiB / 1.75 bpw build; the task-suite result is 112/143 = 78.3% vs
+> 79/143 = 55.2% (p = 5.42e-7) against an IQ1_M rival that is 3.5% *smaller*,
+> not "size-matched"; the "same 73%" flip point is now stated as overlapping
+> brackets (35B 0.63–0.73, 397B 0.50–0.73) with the *shipped bands* beginning
+> at 73% on both; HellaSwag/Winogrande are measured on the whole corpora
+> (paper §6), not on 300 or 2,108 tasks; the Vulkan TQ1_0 kernels were merged
+> upstream on 2026-09-07 (llama.cpp #27765); and the v3.4a file carries
+> second-plane tensors on all 60 layers (paper §6.2).
+
 *Draft for TMLR. Working title. Every number in this draft traces to
 [RESULTS](RESULTS.md); every claim of novelty traces to a deliberate
 literature sweep recorded in [LESSONS](LESSONS.md).*

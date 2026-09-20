@@ -6,9 +6,10 @@ examples come from an actual 397B run.
 
 ## Requirements
 
-- a llama.cpp build with TQ1_0 support. CPU kernels are upstream; GPU (Vulkan)
-  kernels are proposed in ggml-org/llama.cpp#27765 and available meanwhile
-  from the fork linked in the README.
+- a llama.cpp build with TQ1_0 support. CPU kernels are upstream; the GPU
+  (Vulkan) kernels are upstream too since ggml-org/llama.cpp#27765 (merged
+  2026-09-07, commit `8fe90e1f`). The two-plane extension (`*_exps2`) is
+  still fork-only: see "Deploying a two-plane model" below.
 - PyTorch with a working GPU backend (CUDA or ROCm)
 - the model in GGUF form, plus an importance matrix (`llama-imatrix`) that
   includes per-expert routing counts
@@ -173,8 +174,9 @@ is otherwise healthy; a test harness using it will fail a working model.
 A two-plane ternary model needs an engine that knows about **both** extensions,
 and this is the step most likely to be forgotten after a successful forge:
 
-1. **TQ1_0 kernels** for your backend. On Vulkan these are not in mainline yet
-   (llama.cpp PR #27765); without them the model does not load at all.
+1. **TQ1_0 kernels** for your backend. On Vulkan these are in mainline since
+   llama.cpp PR #27765 (merged 2026-09-07); a single-plane TQ1_0 file loads
+   and runs on an unmodified upstream build from that commit on.
 2. **The two-plane summation** in `build_moe_ffn`: optional `*_exps2` tensors
    added to `up`, `gate` (before the activation) and `down` (before the routing
    weights are applied), gated by the `<arch>.expert_count2` metadata key.

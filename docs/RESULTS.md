@@ -10,8 +10,8 @@ to fool yourself, and we did it once.
 |---|---|---|
 | architecture | 512 experts × 60 layers, hybrid GatedDeltaNet attention | 256 experts × 41 layers |
 | source | bf16 checkpoint (740 GiB), non-expert tensors from an existing quantization | an existing high-quality GGUF |
-| output | 88.16 GiB with the second plane, **84.00 GiB** without | 9.19 GiB |
-| second plane | 28 hot experts, all 60 layers | 28 hot experts, all 41 layers |
+| output | 88.17 GiB with the second plane (v3.4a, 94,666,975,872 bytes; 1.91 bpw at the model level), **84.00 GiB** without | 9.19 GiB |
+| second plane | 28 hot experts, all 60 layers — the published v3.4a still carries the `_exps2` tensors on all 60 layers (never stripped); the engine applies them everywhere unless `ODINO_P2_LAYERS`/`ODINO_NO_P2` restricts it | 28 hot experts, all 41 layers |
 | Hessians at forge time | yes (16,640 samples/layer, mean anisotropy α = 1.17) | no |
 
 ## Perplexity — 30 chunks of wikitext-2, ctx 2048
@@ -708,6 +708,10 @@ covariance has rank at most n−1.
 
 ## Standardised benchmarks
 
+> ⚠️ (2026-09-20) The two 300-task figures below are superseded as
+> measurements by the whole-corpus runs of the next section; they stay here as
+> the "not broken" evidence they were declared to be.
+
 Run on the stripped 84.00 GiB build with llama.cpp's built-in scorer.
 
 | benchmark | score | interval | tasks | chance |
@@ -793,6 +797,78 @@ size.** This is new data rather than a comparison against an existing point.
 ⚠️ Read as an indication, not a fine measurement: ±5 points at 300 tasks means
 only differences of ten points or more are safely interpretable, and HellaSwag
 has documented validity problems of its own (arXiv 2504.07825).
+
+## Whole-corpus public benchmarks (cloud, 2026-09-19)
+
+Four files, ten public corpora, every item scored (PIQA: a declared
+1,000-item subset of the 1,838-item validation split — the Parquet mirror
+used serves 1,000 rows, verified to be a proper subset, not a prefix).
+`llama-perplexity` from the fork, Vulkan, on NVIDIA RTX PRO 6000 Blackwell
+(96 GiB; driver 595.91.07; Ubuntu 22.04), one model per GPU, `-ngl 999`.
+HellaSwag: `-c 4096 --hellaswag --hellaswag-tasks 100000` (the scorer draws
+every task, random order, seed 1), run as 21 sequential 500-task pieces;
+multiple choice: `-c 8192 -np 8 --multiple-choice --multiple-choice-tasks
+100000` on files converted by `converti_multiple_choice.py` (zero-shot;
+`-np 8` is required because ARC has five-option items and the default `-np 4`
+stops at the first one while still reporting a result); Winogrande:
+`-c 4096 --winogrande --winogrande-tasks 100000`; perplexity: `-c 4096 -b 2048`
+on `wiki.test.raw`, 72 chunks. Corpus figure = Σ round(p·n)/Σ n over pieces,
+Wilson 95% interval on the corpus total; per-piece logs (38 per file) are
+released with the paper's supplementary material. No fork environment variable
+was set, so the ternary 397B file ran with its second plane applied on **all
+60 layers**. Metric: llama.cpp's per-token-normalised log-likelihood —
+comparable between these four files, **not** with leaderboards.
+
+### 397B: ODINO v3.4a (88.17 GiB) vs `bartowski/Ornith-1.5-397B-GGUF` IQ1_M (85.09 GiB, 3.5% smaller)
+
+| benchmark | n | ODINO v3.4a | IQ1_M | Δ |
+|---|---:|---|---|---:|
+| HellaSwag | 10,042 | **76.40** [75.56, 77.22] | 74.07 [73.20, 74.92] | +2.33 |
+| — items 1–3,500 (ActivityNet + 257 WikiHow) | 3,500 | 68.97 [67.42, 70.48] | 65.80 [64.21, 67.35] | +3.17 |
+| — items 3,501–10,042 (WikiHow) | 6,542 | 80.37 [79.39, 81.32] | 78.49 [77.48, 79.47] | +1.88 |
+| MMLU | 14,042 | **82.71** [82.07, 83.33] | 80.58 [79.92, 81.23] | +2.13 |
+| BoolQ | 3,270 | **89.27** [88.16, 90.28] | 81.28 [79.91, 82.58] | +7.99 |
+| ARC-Easy | 2,376 | 79.00 [77.31, 80.59] | 76.52 [74.77, 78.18] | +2.48 |
+| ARC-Challenge | 1,172 | 57.85 [55.00, 60.65] | 55.63 [52.77, 58.45] | +2.22 |
+| PIQA (subset) | 1,000 | 80.90 [78.35, 83.22] | 80.90 [78.35, 83.22] | 0.00 |
+| OpenBookQA | 500 | 44.40 [40.10, 48.78] | 43.60 [39.32, 47.98] | +0.80 |
+| Winogrande | 1,267 | 66.22 [63.57, 68.77] | 61.64 [58.93, 64.28] | +4.58 |
+| TruthfulQA MC1 | 817 | 38.43 [35.16, 41.82] | 36.72 [33.48, 40.08] | +1.71 |
+| Perplexity, WikiText-2, 72 chunks, ctx 4096 | 295k tok | 7.5180 ± 0.0519 | 7.5173 ± 0.0510 | +0.0007 |
+
+Bold: disjoint 95% intervals (BoolQ, HellaSwag, MMLU). Under the paired
+per-item exact McNemar test at the Bonferroni-corrected level (0.05/10) ARC-Easy
+separates too (p = 0.002); Winogrande is nominally significant (p = 0.006). No
+corpus shows a negative difference beyond its interval; perplexity is
+indistinguishable (paired per-chunk difference 0.01 standard errors). The
+paired tests, the per-item discordant counts and the cross-check between the
+AMD home machine and the NVIDIA cloud GPUs (same file, same items) are in the
+paper, §6.3–6.5.
+
+### 35B: Tony-v4-B (15.47 GiB, 240 TQ1_0 tensors, single plane, MTP head kept) vs `mudler/…APEX-MTP-GGUF` APEX-MTP-I-Compact (16.24 GiB, 5.0% larger)
+
+| benchmark | n | Tony-v4-B | APEX-MTP-I-Compact | Δ |
+|---|---:|---|---|---:|
+| HellaSwag | 10,042 | 80.08 [79.29, 80.85] | 80.27 [79.48, 81.04] | −0.19 |
+| MMLU | 14,042 | 78.98 [78.30, 79.64] | 78.79 [78.11, 79.46] | +0.19 |
+| BoolQ | 3,270 | 86.02 [84.79, 87.17] | 86.76 [85.55, 87.88] | −0.74 |
+| ARC-Easy | 2,376 | 68.52 [66.62, 70.35] | 68.48 [66.58, 70.31] | +0.04 |
+| ARC-Challenge | 1,172 | 51.88 [49.02, 54.73] | 52.47 [49.61, 55.32] | −0.59 |
+| PIQA (subset) | 1,000 | 80.90 [78.35, 83.22] | 82.30 [79.81, 84.54] | −1.40 |
+| OpenBookQA | 500 | 44.20 [39.91, 48.58] | 44.00 [39.71, 48.38] | +0.20 |
+| Winogrande | 1,267 | 70.96 [68.39, 73.39] | 71.43 [68.88, 73.85] | −0.47 |
+| TruthfulQA MC1 | 817 | 39.66 [36.36, 43.05] | 40.39 [37.08, 43.79] | −0.73 |
+| Perplexity, WikiText-2, 72 chunks, ctx 4096 | 295k tok | **7.6275** ± 0.0539 | 8.1023 ± 0.0587 | −0.4748 |
+
+Δ here is the difference of the printed corpus figures; the paper's Table 4
+reports the paired per-item difference from the logs, which can differ in the
+last digit (BoolQ −0.73, ARC-Challenge −0.60). No multiple-choice corpus
+separates the pair; perplexity does, in the ternary file's favour (about six
+combined standard errors). This is a null result at
+5% fewer bytes for the single-plane forge at ~3.8 bits/weight; it does not
+test the depth rule (the file carries no second plane), and the 35B file is
+not yet published. Source of every cell: the cloud log matrix of 2026-09-19
+(`RISULTATI_CLOUD_2026-09-19.md`, generated from the raw logs).
 
 ## Behaviour
 
@@ -921,10 +997,15 @@ still damages the model. The +0.788 correlation was confounded with depth —
 the 397B's head is both badly selected *and* shallow, and the experiment that
 separates the two has spoken.
 
-**What survives on both models is depth alone: only the final quarter
-tolerates the correction.** 35B: layers 30-39 of 41 — from 73% of depth. 397B:
-layers 44-59 of 60 — from 73% of depth. The same fraction, at a 10× size
-difference. Selection quality remains a real, measured property of the forge
+**What survives on both models is depth alone: only the tail tolerates the
+correction.** 35B: layers 30-39 of 41 — the shipped band begins at 73% of
+depth, and the sign flips between layers 26 and 30 (0.63–0.73 of depth). 397B:
+layers 44-59 of 60 — the shipped band begins at 73% of depth, and the flip
+lies between layers 30 and 44 (0.50–0.73), the band search resolving it no
+finer than about ±5% of depth. Overlapping brackets in the final third at a
+10× size difference; the two-decimal agreement of the band edges (73.2% and
+73.3%) is a property of the bands we chose to ship, not a measured
+coincidence. Selection quality remains a real, measured property of the forge
 (and choosing by frequency at 512 experts does waste 42.6% of the impact in
 the head) — but it does not decide the sign.
 
@@ -1283,7 +1364,8 @@ stores 3.17 bpw; IQ1_M is not ternary.
 
 Two findings. (1) The per-projection recipe that wins on the 35B (up+gate
 everywhere: −0.47 there) LOSES on the 397B (+0.17): the depth rule
-transfers across scale (73% on both), the per-projection asymmetry does
+transfers across scale (the shipped bands begin at 73% on both; the flip
+brackets overlap), the per-projection asymmetry does
 NOT — recipes are model-specific above the depth rule. (2) B and C agree
 to four decimals: with up+gate corrected everywhere, the tail-band down
 correction contributes nothing measurable — evidence that the projections'

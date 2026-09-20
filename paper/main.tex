@@ -12,6 +12,7 @@
 \usepackage{hyperref}
 \usepackage{url}
 \usepackage{booktabs}
+\usepackage{array}
 
 \title{Depth, Not Fidelity: What Decides Whether a Ternary Correction Helps a Mixture-of-Experts}
 
@@ -30,59 +31,56 @@
 
 \begin{abstract}
 Post-training ternary quantization (1.91 bits/weight at the model level;
-1.69 for the TQ1\_0 plane format itself) makes very large
-mixture-of-experts models runnable on consumer unified-memory hardware --- we
+1.69 for the TQ1\_0 plane format itself \citep{compilade2024tq1}) makes very large
+mixture-of-experts models runnable on consumer unified-memory hardware: we
 quantize a 397B-parameter, 512-expert MoE to 88~GiB and a 35B sibling to
 9.2~GiB, both served by a modified llama.cpp with Vulkan ternary kernels. We
-then study a \emph{corrective} mechanism: a second ternary plane on the hottest
-experts, which halves weight reconstruction error (46\% $\to$ 22\%) and halves the
-single-expert output error under real activations. \textbf{Applied uniformly, the
-correction makes both models worse.} We localise the damage with
-per-layer, per-projection switches and find that everything is decided by
-\emph{where} the correction lands, not by \emph{how faithful} it is: the identical
-perturbation, delivered at identical relative magnitude to every layer's
-output, improves the model in the final quarter of the depth and is
-catastrophic near the middle (a single layer moves perplexity from 8.72 to
-37.8; the same correction at the last layers \emph{improves} it). The fraction of
-depth at which the sign flips is the same --- 73\% --- on both models, at a $10\times$
-size difference. We refute eight candidate explanations with pre-registered
-predictions --- correction magnitude, routing concentration, expert-selection
-quality, input kurtosis, effective rank, permutation errors, delivered
-output error, and route-flip counts, the last of which \emph{anti-correlates}
-with damage. The beneficial configuration is confirmed by a paired
-logit-level comparison (mean $\Delta p = +0.048\% \pm 0.014\%$), ships as a file rather
-than a runtime flag, and improves every evaluation chunk. At the task level,
-on an internal evaluation suite (aggregate results only; not publicly
-released), the shipped 1.91 bits/weight file resolves 78.3\% of 143 paired
-coding-and-agentic trials against 55.2\% for a slightly \emph{smaller}
-(1.84 bits/weight) IQ1\_M quantization of the same model (exact McNemar $p = 5.4\times 10^{-7}$) ---
-matching the task success of a same-family 35B served at $\sim$6.5 bits/weight.
-On that same pair, perplexity does not merely fail to separate the two files:
-it ranks them \emph{backwards}. Measured identically (WikiText-2 raw, 72
-chunks, $n_\text{ctx}=4096$, same engine and machine), the IQ1\_M baseline
-scores $7.5438 \pm 0.0512$ against $7.5903 \pm 0.0525$ for the ternary file
---- a nominally \emph{better} perplexity for the model that resolves 23
-points fewer tasks. A practitioner selecting on perplexity alone would ship
-the file that solves roughly one task in two over the one that solves four in
-five.
-The same suite exposes a dissociation that perplexity inverts: the
-GPTQ-calibrated forge wins with reasoning off but degenerates into
-termination-token loops with reasoning on, while an RTN variant at the same
-bit-rate reasons correctly. Alongside, we
-report the first measured \emph{distribution} of the MoE top-$k$ routing margin:
-on 256 experts, the median gap between the 8th and 9th expert is $10\times$ narrower
-than a uniform share, and 2.95\% of tokens sit within one bf16 ULP of a
-routing flip --- quantifying an assumption that stability lemmas and
-determinism patches currently take on faith.
+then study a \emph{corrective} mechanism --- a second ternary plane on the
+hottest experts --- that halves weight reconstruction error (46\% $\to$ 22\%)
+and halves the single-expert output error under real activations.
+\textbf{Applied uniformly, the correction makes both models worse.} Per-layer,
+per-projection engine switches localise the damage and show that everything
+is decided by \emph{where} the correction lands, not by \emph{how faithful} it
+is: the identical perturbation, delivered at identical relative magnitude to
+every layer's output, improves the model in the final third of the depth and
+is catastrophic near the middle (a single layer moves perplexity from 8.72 to
+37.8; the same correction at the last layers \emph{improves} it). The sign
+flips in the final third on both models --- between 0.63 and 0.73 of depth on
+the 35B and between 0.50 and 0.73 on the 397B, at the resolution of the band
+search --- across a $10\times$ size difference. Eight candidate explanations,
+each pre-registered as a falsifiable prediction, are refuted, among them
+correction magnitude, routing concentration and the delivered output error
+itself; route-flip counts \emph{anti-correlate} with damage. The beneficial
+configuration is confirmed by a paired logit-level comparison (mean
+$\Delta p = +0.048\% \pm 0.014\%$) and ships as a file rather than a runtime
+flag. We then evaluate the shipped 397B file against the closest-size public
+quantization of the same checkpoint (IQ1\_M, 1.84 bits/weight, 3.5\% smaller)
+on nine complete public benchmark corpora and a declared subset of a tenth,
+with the exact commands: the ternary file wins BoolQ ($+7.99$ points),
+HellaSwag ($+2.33$) and MMLU ($+2.13$) with disjoint 95\% intervals, shows no
+negative difference beyond its interval on any corpus, and is
+\emph{indistinguishable} on WikiText-2 perplexity ($7.5180$ against
+$7.5173$) --- the cheapest and most widely reported of these measurements is
+the only one that cannot tell the two files apart. On an internal paired
+suite of 143 coding-and-agentic trials (aggregate results only) the same file
+resolves 78.3\% against 55.2\% (exact McNemar $p = 5.42\times 10^{-7}$). Two
+further measurements accompany the main result: a GPTQ-calibrated forge that
+wins with reasoning off but degenerates into termination-token loops with
+reasoning on, where an RTN variant at the same bit-rate reasons correctly;
+and the measured \emph{distribution} of the MoE top-$k$ routing margin, which
+to our knowledge prior work gives only as a definition or a token-averaged
+mean (median $10\times$ narrower than a uniform share; 2.95\% of tokens within
+one bf16 ULP of a routing flip).
 \end{abstract}
 
 \section{Introduction}
 \label{sec:intro}
 
 A 397-billion-parameter mixture-of-experts model does not fit in the memory
-of any consumer machine at the precisions its authors shipped. At 1.69
-bits/weight it does: 88~GiB, resident in the unified memory of a desktop
-APU, served by ternary Vulkan kernels we contribute upstream. This paper is
+of any consumer machine at the precisions its authors shipped. At 1.91
+bits/weight (1.69 for the ternary planes themselves) it does: 88~GiB, resident
+in the unified memory of a desktop APU, served by ternary Vulkan kernels
+that are now part of upstream llama.cpp. This paper is
 about what happened when we tried to make that model \emph{better} --- and measured,
 twice, that the intuitive way to do so makes it worse.
 
@@ -93,18 +91,20 @@ under the layer's own captured activations. Every local metric of fidelity
 improves. Applied uniformly across the network, perplexity degrades --- on
 both a 35B and a 397B model of the same family. This is the correction
 paradox, and it is not a bug: we verified the file layout, the expert
-permutations (28/28 correct on all 40 layers), the scales, and the delivered
+permutations (28/28 correct on all 40 MoE layers), the scales, and the delivered
 error, and then spent the balance of the work localising \emph{where} the paradox
 lives.
 
 The answer is depth. Per-layer engine switches (enabling the correction for
 arbitrary layer ranges at load time, without re-forging) show that the same
 perturbation, delivered at the same relative magnitude to every layer's
-output, improves the model in the final quarter of the network and is
+output, improves the model in the final third of the network and is
 catastrophic near the middle: one single mid-depth layer moves perplexity
 from 8.72 to 37.8, while the correction restricted to the tail improves on
-the uncorrected baseline. The fraction of depth at which the sign flips is
-the same on both models --- 73\% --- at a $10\times$ parameter difference. Eight
+the uncorrected baseline. On both models the sign flips in the final third of
+the depth (35B: between 0.63 and 0.73; 397B: between 0.50 and 0.73, at the
+resolution of the band search), at a $10\times$ parameter difference, and the
+shipped bands begin at 73\% of depth on both. Eight
 candidate explanations, each pre-registered as a falsifiable prediction
 before its measurement ran, are refuted in Section~\ref{sec:refutations}; what
 survives is a statement about position, not fidelity.
@@ -115,18 +115,29 @@ top-$k$ routing margin, whose skew explains why the one published mean curve
 misleads.
 
 We write from a deployment setting the quantization literature rarely
-occupies --- one machine, no cluster, no fp16 reference for the largest model
---- and we are explicit throughout about what that setting does to
+occupies --- one consumer machine for the forge and the per-layer anatomy, no
+cluster, no fp16 reference for the largest model; cloud GPUs only for the
+complete public benchmarks of Section~\ref{sec:benchmarks} --- and we are
+explicit throughout about what that setting does to
 measurement: paired estimators where absolute error bars would drown the
-effect, functional probes where benchmark harnesses disagree with each
-other, and a stated evaluation debt where neither suffices.
+effect, and functional probes where benchmark harnesses disagree with each
+other. Section~\ref{sec:benchmarks} reports nine public benchmark
+corpora run in their entirety and a declared subset of a tenth, on the shipped
+397B file and its closest-size public rival, and on a 35B sibling and its
+rival, with sources, item counts, commands and hardware; the 397B numbers are
+regenerable from public files, the 35B file is not yet public
+(Section~\ref{sec:limitations}). This is a revised version of a previously
+submitted manuscript; the changes, and the corrections they carry, are listed
+in Section~\ref{sec:changes}.
 
 \subsection{Contributions}
 
 \begin{enumerate}
 \item \textbf{A depth rule, measured twice.} A partial ternary correction helps only
-   in the final $\sim$quarter of the network, with the sign flipping at the same
-   relative depth (73\%) on two MoE models $10\times$ apart in size. The recipe that
+   in the final third of the network, with the sign flipping in overlapping
+   depth brackets (35B: 0.63--0.73; 397B: 0.50--0.73) on two MoE models
+   $10\times$ apart in size, and the shipped bands beginning at 73\% of depth
+   on both. The recipe that
    follows --- correction baked into the file for the tail only --- improves the
    35B by 5.4\% and the 397B measurably (paired, $3.4\sigma$), with no functional
    regression on verifiable-answer probes.
@@ -137,6 +148,22 @@ other, and a stated evaluation debt where neither suffices.
    weight-space figure) and slightly \emph{smaller} where damage is greatest
    ($\rho = -0.599$). Route-flip counts nearly invert the damage ordering
    (all-layers: $5\times$ the flips of the worst single layer, $3.5\times$ less damage).
+\item \textbf{Complete public benchmarks at matched size.} On nine public
+   benchmark corpora run whole and a declared 1,000-item PIQA subset
+   (Section~\ref{sec:benchmarks}), the shipped
+   397B file beats a 3.5\% smaller IQ1\_M quantization of the same checkpoint
+   on BoolQ ($+7.99$ points), HellaSwag ($+2.33$) and MMLU ($+2.13$) with
+   disjoint 95\% intervals --- and, under the paired per-item test, also on
+   ARC-Easy ($+2.48$, $p = 0.002$) at the Bonferroni-corrected level --- shows
+   no negative difference beyond its interval on any corpus, and is
+   indistinguishable on WikiText-2 perplexity (7.5180 against 7.5173). The 397B
+   numbers are regenerable from public files, the printed commands and the
+   released converter (Section~\ref{sec:protocol}); the engine source is
+   archived as stated in Section~\ref{sec:limitations}. Perplexity and
+   Winogrande of the 397B pair and HellaSwag of the 35B file were re-measured
+   on a second GPU vendor and agree within one combined standard error
+   (Section~\ref{sec:crosscheck}, which also declares one paired backend
+   shift); the three headline separations have no second-vendor measurement.
 \item \textbf{Task-level evidence at matched size, and a quantizer-level
    dissociation.} On an internal paired suite (two fixed seeds, 143 paired
    trials, identical server, reasoning off), the shipped file resolves 78.3\%
@@ -149,113 +176,152 @@ other, and a stated evaluation debt where neither suffices.
    bit-rate passes every reasoning probe --- a dissociation between
    quantization algorithms that neither perplexity nor no-think task rate
    detects (Section~\ref{sec:tasks}).
-\item \textbf{The routing-margin distribution.} Defined twice in prior work (ReMoE's
+\item \textbf{The routing-margin distribution.} Defined in prior work (ReMoE's
    $\gamma$ in probability space; a logit-space ``router margin'' reduced to one AUC)
-   and never measured: we give percentiles. Median $10.1\times$ narrower than the
+   and, to our knowledge, reported only as a token-averaged mean
+   \citep{chen2026certainhead}: we give percentiles. Median $10.1\times$ narrower than the
    uniform expert share; 1st percentile $806\times$ narrower; 2.95\% of tokens
    within one bf16 ULP. The distribution is skewed (mean/median 1.76), which
    is precisely why the published token-averaged mean misleads.
-\item \textbf{An engineering result.} TQ1\_0 ternary kernels for Vulkan (upstream PR),
-   a forge that produces two-plane ternary MoE files from bf16 on one
-   consumer GPU (7.6~h for 397B), a strip tool that bakes measured layer
-   profiles into files, and --- new with this paper --- a dense-model forge
-   whose first target tests whether the depth rule needs experts at all.
+\item \textbf{An engineering result.} A forge that produces two-plane
+   ternary MoE files from bf16 on one consumer GPU (7.6~h for 397B), a strip
+   tool that bakes measured layer profiles into files, and a two-plane loader
+   with per-layer switches on top of the TQ1\_0 Vulkan kernels that are now
+   part of upstream llama.cpp (the loader is released as a diff against
+   identified upstream commits in the supplementary material,
+   Section~\ref{sec:protocol}).
 \end{enumerate}
 
 \subsection{What we explicitly do not claim}
 
 \begin{itemize}
 \item Not ``more bits hurt'': the claim is \emph{heterogeneous} fidelity hurts, and the
-  literature contains the same phenomenon unremarked (GEMQ Table~1: expert-level
-  mixed precision losing to uniform at matched bits \citep{gemq}; HiFloat4:
+  literature contains the same phenomenon unremarked (Table~1 of GEMQ \citep{gemq}: expert-level
+  mixed precision losing to uniform at matched bits; HiFloat4:
   restoring one component to high precision scoring below uniform FP4 \citep{mak2026hifloat4}).
 \item Not the concept of the routing margin (ReMoE \citep{zhu2026remoe} defines
   it), nor the down-projection bottleneck (D$^2$Quant \citep{yan2026d2quant} calls it ``well-known''),
   nor non-additivity of compression error (EvoPress \citep{sieberling2025evopress} opens on
   it). Our claims are the measurements, the localisation, and the rule.
 \item Not a mechanism. Eleven hypotheses died; the depth rule and the
-  representational-transition literature (five methods placing a boundary at
-  0.47--0.53 of depth; our worst layer sits at 0.488) are consistent, but
-  consistency is not identification. We state the open problem as narrowly
-  as the measurements allow.
+  observation that intermediate layers host a shared semantic representation
+  \citep{wu2025semantichub} are consistent (our worst layer sits at 0.488 of
+  depth), but consistency is not identification. We state the open problem as
+  narrowly as the measurements allow.
 \end{itemize}
 
 \section{Setup and measurement honesty}
 \label{sec:setup}
 
-\paragraph{Hardware.} Everything runs on one consumer machine: Ryzen AI Max+ 395,
-128~GB unified memory ($\sim$96~GiB exposed as Vulkan VRAM), Fedora, our llama.cpp
-fork with TQ1\_0 Vulkan kernels (scalar, coopmat1 and coopmat2 paths; the
-coopmat2 decode functions were later validated on an RTX~4060, the first
-hardware to exercise them). A second consumer laptop (RTX~4060 Laptop 8~GB)
-serves as an auxiliary bench for the 35B model.
+\paragraph{Hardware.} Everything except the whole-corpus benchmark runs of
+Section~\ref{sec:benchmarks} runs on one consumer machine: Ryzen AI Max+ 395,
+128~GB unified memory ($\sim$96~GiB exposed as Vulkan VRAM), Fedora 43 (Linux
+7.0.8, Mesa 25.3.6 RADV), our llama.cpp
+fork with TQ1\_0 Vulkan kernels (scalar, coopmat1 and coopmat2 paths). A
+second consumer laptop (RTX~4060 Laptop 8~GB)
+serves as an auxiliary bench for the 35B model; no number in this paper comes
+from it. The benchmark runs of Section~\ref{sec:benchmarks} were made on cloud
+GPUs (Section~\ref{sec:protocol}).
 
 \paragraph{Models and forge.} The 397B (512 experts $\times$ 60 layers, hybrid GatedDeltaNet
 attention) is forged from the bf16 checkpoint: expert tensors ternarized with
-a two-level optimal-scale search plus true GPTQ \citep{gptq} against per-layer input
+a two-level optimal-scale search, either round-to-nearest (RTN) or with true
+GPTQ \citep{gptq} against per-layer input
 Hessians (16{,}640 samples each); non-expert tensors from an existing shelf
 quantization. 7.6~h end-to-end. The 35B sibling is forged the same way from
 a shelf GGUF. Engine switches allow enabling the second plane per layer range
 and per projection at load time, which is what makes the per-layer anatomy
-measurable without re-forging.
+measurable without re-forging. The provenance of each benchmarked file is
+stated in Section~\ref{sec:rival}.
 
 \paragraph{What our perplexity numbers are, and are not.} All perplexity is
-llama.cpp's, wikitext-2, ctx 2048, chunk counts stated per table. Absolute
-error bars at 30 chunks are $\pm 0.087$, so any comparison inside that band is
-resolved with the \emph{paired} estimator (\texttt{--kl-divergence-base}): same chunks,
+llama.cpp's on WikiText-2 raw; context length and chunk count are stated per
+table. The per-layer and paired measurements of
+Sections~\ref{sec:paradox}--\ref{sec:depthrule} use ctx 2048 and 30 chunks;
+the full-corpus runs of Section~\ref{sec:benchmarks} and of the ladder below
+use ctx 4096 and all 72 chunks. Absolute error bars at 30 chunks are
+$\pm 0.087$, so any comparison inside that band is resolved with the
+\emph{paired} estimator (\texttt{--kl-divergence-base}): same chunks,
 reference logits stored, uncertainty propagated from the logits. The headline
 confirmation (tail-only correction on the 397B) is paired: mean
 $\Delta p = +0.048\% \pm 0.014\%$.
 
 \paragraph{A benchmark ladder, and where perplexity sits on it.}
-With the full-size runs completed on both files we can order the evaluations
-by how closely each resembles the task a deployed model performs, and read the
-gap along that order. All four rows below are the same pair of files, same
-engine, same machine, same night; the ternary file is the 3.6\% \emph{larger}
-of the two.
+With complete runs on both files we can order the evaluations by how closely
+each resembles the task a deployed model performs, and read the gap along that
+order. The rows below are the same pair of files and the same engine; the
+public benchmarks (Section~\ref{sec:benchmarks}) were run whole on one GPU
+type with the ternary file's second plane applied on all layers, the task
+suite (Section~\ref{sec:tasks}) on another with it disabled
+(Section~\ref{sec:rival}), and the ternary
+file is the 3.6\% \emph{larger} of the two. Multiple-choice figures are
+llama.cpp's per-token-normalised accuracy on the complete corpus with Wilson
+95\% intervals; perplexity is WikiText-2 raw, ctx 4096, all 72 chunks. Gap
+$=$ ours $-$ rival in points; for perplexity lower is better, and the
+paired per-item exact McNemar $p$ is given where the logs allow it.
 
 \begin{center}
+\small
 \begin{tabular}{@{}lrrr@{}}
 \toprule
  & ternary (88.2~GiB) & IQ1\_M (85.1~GiB) & gap \\
 \midrule
-Perplexity (WikiText-2, 72 chunks) & 7.5903 & \textbf{7.5438} & $-0.6\%$ \\
-HellaSwag (same 2108-item prefix)  & \textbf{75.85\%} & 73.86\% & $+1.99$ \\
-Winogrande (1267 items)            & \textbf{65.67\%} & 61.09\% & $+4.58$ \\
-Paired task suite (143 trials)     & \textbf{78.3\%}  & 55.2\%  & $+23.1$ \\
+Perplexity (WikiText-2, 72 chunks, ctx 4096) & $7.5180 \pm 0.0519$ & $7.5173 \pm 0.0510$ & $+0.0007$ (paired $0.01\sigma$) \\
+HellaSwag (all 10,042 items)   & \textbf{76.40\%} & 74.07\% & $+2.33$ ($p = 3\times10^{-13}$) \\
+MMLU (all 14,042 items)        & \textbf{82.71\%} & 80.58\% & $+2.13$ ($p = 7\times10^{-11}$) \\
+Winogrande (all 1,267 items)   & \textbf{66.22\%} & 61.64\% & $+4.58$ ($p = 0.006$) \\
+BoolQ (all 3,270 items)        & \textbf{89.27\%} & 81.28\% & $+7.99$ ($p = 10^{-31}$) \\
+Paired task suite (143 trials) & \textbf{78.3\%}  & 55.2\%  & $+23.1$ ($p = 5\times10^{-7}$) \\
 \bottomrule
 \end{tabular}
 \end{center}
 
-The gap grows monotonically with the distance from token-level likelihood:
-negative on perplexity, two points on multiple-choice completion, four and a
-half on pronoun resolution, twenty-three on multi-step coding and agentic
-work. The Winogrande intervals ($\pm 1.33$ and $\pm 1.37$) do not overlap ($65.67 - 1.33 > 61.09 + 1.37$). We do not
-claim a mechanism for the ordering, and with four points we could not
-establish one; we report it because the practical consequence is
-uncomfortable and easy to state: \emph{the cheapest and most widely reported
-of these measurements is the only one that ranks the two files backwards.}
+The gap is zero at token-level likelihood, between two and eight points on
+multiple-choice completion (with disjoint 95\% intervals on HellaSwag, MMLU
+and BoolQ; Winogrande's intervals overlap, and its four and a half points are
+separated by the paired test at $p = 0.006$ --- nominally significant, just
+above the Bonferroni-corrected threshold of $0.005$ over the ten corpora),
+and twenty-three on multi-step coding and
+agentic work. We do not claim a mechanism for the ordering; we report it
+because the practical consequence is uncomfortable and easy to state:
+\emph{the cheapest and most widely reported of these measurements is the only
+one that cannot tell the two files apart.} The previous version of this paper
+put the same sentence more strongly --- that perplexity ranks the pair
+\emph{backwards}, on the strength of a home measurement of 7.5903 against
+7.5438 whose Winogrande companions were $65.67\%$ against $61.09\%$
+(one standard error $\pm 1.33$ and $\pm 1.37$; the same items give
+$66.22\%$ against $61.64\%$ on the second GPU, with overlapping 95\%
+intervals). That perplexity gap was inside its own
+error bars and does not reproduce on the second GPU
+(Section~\ref{sec:crosscheck}); the weaker statement is the one the data
+support.
 
-\paragraph{What our task numbers are, and are not.} llama.cpp's built-in scorers
-label their output \texttt{acc\_norm} but normalise endings by \textbf{token count};
-lm-eval's \texttt{acc\_norm} normalises by \textbf{character length}, and for Winogrande
-and MMLU lm-eval has no \texttt{acc\_norm} at all. Our HellaSwag/Winogrande figures
-are therefore a third quantity, comparable only within this paper. At $n=300$
-their resolvable difference between two builds is 6.9~pp against typical
-quantization effects of 1--4~pp: we use them solely as ``the model is not
-broken'' evidence and never as a measurement of quantization damage. The
-final evaluation (pinned lm-eval via a server that implements prompt-token
-logprobs; \texttt{acc} and \texttt{acc\_norm} both; full task sets) is listed in the debt
-section, and we explicitly do not use IRT-subsampled minibenchmarks: the
-published gp-IRT weights put only 12--30\% of the reported figure on responses
-actually observed, calibrated on a 2024 pool of full-precision models that
-excludes the near-chance region a sub-2-bit model can occupy --- a simulation
-on the published parameters shrinks true damage in the flattering direction.
+\paragraph{What our benchmark numbers are, and are not.} llama.cpp's built-in
+scorers label their output \texttt{acc\_norm} but normalise endings by
+\textbf{token count}; lm-eval's \texttt{acc\_norm} normalises by
+\textbf{character length}, and for Winogrande and MMLU lm-eval has no
+\texttt{acc\_norm} at all. Our multiple-choice figures are therefore a third
+quantity, comparable between the four files of this paper and not with
+published leaderboards; Section~\ref{sec:protocol} states the metric exactly.
+What has changed since the previous version is the sample size: on complete
+corpora the Wilson 95\% half-width is about 0.8 points on HellaSwag
+($n = 10{,}042$) and 0.6 on MMLU ($n = 14{,}042$), so quantization-sized
+effects of 1--4 points are resolvable, and we use these benchmarks as
+measurements rather than as ``the model is not broken'' evidence. Generative
+benchmarks (which require a harness against a server rather than
+log-likelihood scoring of the served file) are stated as future work in
+Section~\ref{sec:limitations}, and we explicitly do not use IRT-subsampled
+minibenchmarks: the published gp-IRT weights put only 12--30\% of the reported
+figure on responses actually observed, calibrated on a 2024 pool of
+full-precision models that excludes the near-chance region a sub-2-bit model
+can occupy --- a simulation on the published parameters shrinks true damage in
+the flattering direction.
 
-\paragraph{The task suite.} Because the standardised benchmarks above cannot
-resolve quantization-sized effects at the sample sizes we can afford, our
-task-level evidence comes from an internal private evaluation suite (91
-tasks in total; suite not publicly released). We report the 73 tasks in the
+\paragraph{The task suite.} The public benchmarks above score log-likelihoods
+of given choices; they do not measure multi-step, generative, tool-using work.
+Task-level evidence on that construct comes from an internal private
+evaluation suite (91
+tasks in total; suite not publicly released). We report the 72 fixtures in the
 seven families and legacy set that are unrelated to the deployment
 environment --- runtime bug-fixing, refactoring, test authoring
 (mutation-scored), long-context needle retrieval, tool use, deliberately
@@ -264,13 +330,15 @@ tied to the deploying household and withheld together with the suite itself.
 Aggregate results only: the suite supports the \emph{paired} comparison
 between two files run under identical conditions, and we make no
 reproducibility claim on it --- reproducibility is promised only on the
-standard benchmarks of the preceding paragraph. Each reported fixture is a
+public benchmarks of Section~\ref{sec:benchmarks}, where the published files
+and the printed commands suffice. Each reported fixture is a
 self-contained repository with target tests and regression tests; a trial
 counts as resolved only if all target tests pass and no regression breaks
 (tool-call fixtures are scored on the emitted call transcript against a
 per-fixture contract). Every model runs every fixture at two fixed seeds (7
 and 42), same llama.cpp server build, same 16{,}384-token context budget,
-reasoning off --- 141 reported trials per model, paired trial-for-trial, so
+reasoning off --- 144 scheduled trials per model, of which 143 are valid
+pairs, paired trial-for-trial, so
 the comparison statistic is exact McNemar on the discordant pairs plus a
 paired bootstrap (20{,}000 resamples) for the interval.
 
@@ -301,7 +369,7 @@ harm.
 address: below the mountain (1--12) nearly harmless (9.02), above it (28--39)
 neutral-to-helpful (8.71, and 8.36 for 30--39), the middle catastrophic ---
 13--27 gives 25.34, and bisection lands on a single layer: \textbf{layer 20, alone,
-8.72 $\to$ 37.80.} One layer of forty, corrected --- by a mechanism that
+8.72 $\to$ 37.80.} One of the 40 MoE layers, corrected --- by a mechanism that
 demonstrably improves that layer's own reconstruction --- multiplies
 perplexity by 4.3. Neighbouring layers step down smoothly (25: 22.5; 30:
 8.69), so this is a region, not a defect in one tensor; the boundary-check
@@ -309,9 +377,11 @@ asserts and the permutation audit (Section~\ref{sec:refutations}, \#6) close the
 explanations.
 
 \paragraph{The same anatomy at $10\times$.} The 397B repeats the shape with its own
-geometry: the head is catastrophic, the middle harmful, and from layer 44 of
-60 --- 73\% of depth, the same fraction as the 35B's 30 of 41 --- the correction
-turns beneficial. The magnitude scales down with model size (the 397B's
+geometry: the head is catastrophic, the middle harmful, and in the tail the
+correction turns beneficial --- the band we ship begins at layer 44 of 60,
+73\% of depth, as the 35B's begins at layer 30 of 41; the flip itself is
+bracketed, not pinned, by the bands tested (Section~\ref{sec:depthrule}).
+The magnitude scales down with model size (the 397B's
 worst bands cost points, not multiples), which is itself consistent with the
 redundancy argument the MoE-robustness literature makes; the \emph{sign
 structure} is what transfers exactly.
@@ -343,7 +413,7 @@ mechanism is precisely what this section is about.
 3 & Scale mismatch (expert level) & cold-expert compensation helps wherever plane-2 is on & helps \texttt{down}-only ($-0.14$), harms all-three ($+0.70$) & refuted \\
 4 & Scale mismatch (layer level) & compensation helps a lot on the single worst layer, little on all layers & 37.80 $\to$ 37.67 (0.5\% of the damage); \emph{harms} the uniform case & refuted \\
 5 & Input pathology (kurtosis / effective rank of the \texttt{down} input) & statistic peaks at the damaged layers & kurtosis $\rho = -0.19$; effective rank $\rho = +0.28$; layers 10 and 15 nearly identical rank, $2.3\times$ different damage & refuted \\
-6 & Hot-first permutation error & wrong expert order at damaged layers & 28/28 correct on all 40 layers, no exceptions & refuted \\
+6 & Hot-first permutation error & wrong expert order at damaged layers & 28/28 correct on all 40 MoE layers, no exceptions & refuted \\
 7 & Delivered output error & $\|\Delta W \cdot X\|/\|W X\|$ larger where damage is larger & ratio to weight-space error 1.000--1.002 at every layer; $\rho = -0.599$ & refuted --- the decisive one \\
 8 & Expert-selection quality (frequency vs impact) & bands with near-perfect selection must benefit from the correction & 397B band 30--45: overlap 25--27/28, best in the model --- and it \emph{harms} (6.3002 vs 6.1845) & refuted in causal form \\
 \bottomrule
@@ -371,10 +441,11 @@ Two cautionary subplots, reported rather than smoothed away:
 
 What survives all eight is a statement about \emph{position}: an identical
 perturbation, delivered identically, has consequences that depend only on the
-depth at which it lands --- beneficial in the final quarter (from 73\% of depth
-on both models), catastrophic near the middle of the 35B (its worst layer sits
-at 0.488 of depth, on the representational boundary that five independent
-methods place at 0.47--0.53), and progressively less harmful with depth on the
+depth at which it lands --- beneficial in the final third (the shipped bands
+begin at 73\% of depth on both models), catastrophic near the middle of the
+35B (its worst layer sits at 0.488 of depth, in the intermediate region where
+the representational literature locates a shared semantic hub
+\citep{wu2025semantichub}), and progressively less harmful with depth on the
 397B. Route-flip \emph{counts} do not order the damage (they nearly invert it), so
 if routing mediates the effect it does so through \emph{which} routes change, not
 how many --- consistent with the one published attempt to classify flips, which
@@ -384,16 +455,30 @@ achieves chance (AUC 0.490) at telling harmful from benign \citep{gu2026routefli
 \label{sec:depthrule}
 
 \paragraph{The rule.} On both models, the second plane helps if and only if it is
-restricted to the final $\sim$quarter of the depth. On the 35B (41 layers,
-counted 0--40) the beneficial band is 30--39: 73.2\% of depth. On the 397B (60
-MoE layers with routed experts, band 44--59): 73.3\%. Between the bands and
+restricted to the final third of the depth. On the 35B\footnote{The 35B has
+41 layers counted 0--40; layer 40 is the multi-token-prediction layer and the
+40 MoE layers are 0--39. Depth fractions in this paper use the denominator 41
+for the 35B and 60 for the 397B.} the bands tested on \texttt{down} are 1--12
+(9.02), 13--27 (25.34), 16--24 (19.06), 19--21 (10.08), 28--39 (8.71, against
+8.72 uncorrected), 30--39 (8.36; 8.25 as the shipped recipe) and, in the sweep
+with \texttt{up}+\texttt{gate} on everywhere (reference 8.35), 26--39 (9.80): bands starting at 28 are neutral and at 30 beneficial, a band
+starting at 26 harms, so the sign flips between layers 26 and 30 --- between
+0.63 and 0.73 of depth --- and the shipped band 30--39 begins at 73.2\%. On the
+397B the bands tested are 0--19, 20--39 and 40--59 (a 12-chunk sweep in which
+damage decreases monotonically with depth), 30--45 (harmful: 6.3002 against
+6.1845 uncorrected at 30 chunks) and 44--59 (beneficial, paired, below): the
+flip lies between layers 30 and 44 --- between 0.50 and 0.73 of depth --- and
+the shipped band 44--59 begins at 73.3\%. Between the bands and
 the mountains sits no gradual transition on the 35B --- layer 20 (0.488 of
 depth) alone accounts for most of the uniform-application damage --- while
 the 397B decays monotonically from the head (catastrophic, 2/28 selection
-overlap) through the middle (harmful) to the tail (beneficial). The
-coincidence of the two flip points at 73\% of depth, across a $10\times$
-size difference and two different routing topologies, is the paper's
-central empirical fact. We claim the measurement, not a law: two models,
+overlap) through the middle (harmful) to the tail (beneficial). That both flip
+points fall in the final third of the depth, in overlapping brackets, across a
+$10\times$ size difference and two different routing topologies, is the
+paper's central empirical fact; the two-decimal agreement of the shipped
+band edges (73.2\% and 73.3\%) is a property of the bands we chose to ship,
+not a measured coincidence, and the band search resolves the flip no finer
+than about $\pm 5\%$ of depth. We claim the measurement, not a law: two models,
 one family (Section~\ref{sec:limitations}).
 
 \paragraph{The recipe.} Because the engine switches that made the anatomy measurable
@@ -421,17 +506,501 @@ small and real; the point is its \emph{sign}, which uniform application gets
 wrong at $10\times$ the magnitude.
 
 \paragraph{Cost.} The tail-only file is strictly smaller than the uniform one (the
-correction exists on 16/60 rather than 40/60 layer-equivalents), loads
+correction exists on 16 of the 60 layers rather than on all 60), loads
 nothing extra at the head where it would do harm, and the depth rule
 transfers across the two models tested at zero search cost --- against
 EvoPress-style whole-model search \citep{sieberling2025evopress}, which subsumes the selection problem but
 must re-run per model.
 
+\section{Complete public benchmarks at matched size}
+\label{sec:benchmarks}
+
+The previous version of this paper reported HellaSwag on a 2,108-item random
+subset and declared a complete standardised evaluation as a debt. This section
+pays it: nine public benchmark corpora run in their entirety and a declared
+1,000-item subset of a tenth (PIQA), on four files
+--- the two 397B files compared in Section~\ref{sec:tasks} and a 35B sibling
+with its own closest-size public rival --- with the exact sources, commands,
+prompt templates and hardware. Every number in Table~\ref{tab:bench397} can be
+regenerated from public files; Table~\ref{tab:bench35} cannot until the 35B
+file is published (Section~\ref{sec:limitations}).
+
+\subsection{Protocol}
+\label{sec:protocol}
+
+\paragraph{Engine.} All runs use \texttt{llama-perplexity} from our llama.cpp
+fork with the Vulkan backend. The single-plane TQ1\_0 Vulkan path is in
+upstream llama.cpp (merged 2026-09-07); the second plane (the
+\texttt{\_exps2} tensors and their application) lives only in the fork. A
+two-plane file does \emph{not} load on upstream llama.cpp: we verified on an
+unmodified upstream checkout (2026-09-06) that the loader rejects the 397B
+file at load time (\texttt{done\_getting\_tensors: wrong number of tensors;
+expected 1278, got 1098} --- the 180 unrecognised \texttt{\_exps2} tensors),
+before any tensor data is read and independently of the backend. The fork is
+therefore required to run the 397B file at all; only the single-plane
+\emph{format} is upstream. No fork-specific environment variable is set in the
+benchmark runs, and the fork applies a second plane on every layer whose
+\texttt{\_exps2} tensors exist unless \texttt{ODINO\_P2\_LAYERS} or
+\texttt{ODINO\_NO\_P2} restricts it; what that means for the shipped file is
+stated in Section~\ref{sec:rival}. The fork's git history was not preserved
+--- the working copies were made without it and the binary reports
+\texttt{commit unknown} --- and the two-plane loader is not yet in a public
+repository. The upstream commit the fork was branched from was identified
+after the fact by matching every file the fork does not modify against the
+upstream history (all of them are blob-identical to the tree of one commit of
+2026-08-20, and a file changed by the next upstream commit is at its
+pre-change state); relative to that commit the fork changes 19 files. The
+engine used for every run is released with the supplementary material as two
+diffs with their SHA-256: against that base commit, and against the upstream
+merge commit of the TQ1\_0 Vulkan path (Section~\ref{sec:limitations}).
+
+\paragraph{Hardware.} The benchmark runs were executed on cloud NVIDIA RTX PRO
+6000 Blackwell Server Edition GPUs (96~GiB; driver 595.91.07; Ubuntu 22.04;
+Vulkan 1.4 through the NVIDIA ICD under a virtual X display, without which the
+Vulkan loader silently falls back to a software rasteriser), one whole model per
+GPU (\texttt{-ngl 999}), no CPU offload. The per-layer measurements of
+Sections~\ref{sec:paradox}--\ref{sec:depthrule}, the previous version's
+benchmark figures and the 35B HellaSwag home run were taken on the AMD desktop
+APU (gfx1151, Mesa 25.3.6 RADV, Linux 7.0.8, Fedora 43) with the same fork
+built from the same source tree; the RTX~4060 laptop of Section~\ref{sec:setup}
+contributed no number.
+Section~\ref{sec:crosscheck} checks the two GPU vendors against each other on
+identical files and identical items.
+
+\paragraph{Corpora.} Table~\ref{tab:corpora} lists every corpus with its
+source, Hugging Face revision, split and item count. Where a benchmark's test
+split is unlabelled we use the validation split, as lm-eval does. HellaSwag is
+scored from the plain text file that llama.cpp's own helper script downloads;
+the multiple-choice benchmarks are converted from their public releases
+(\texttt{datasets} 5.0.0) into llama.cpp's binary multiple-choice format by a
+small converter written against the engine's parser (\texttt{uint32} task
+count, a table of absolute byte offsets, and per task the question string, the
+answer strings, one \texttt{int32} label per answer and an empty \texttt{mc2}
+block); a converted file is accepted only if the engine loads every task
+without a read error. The converter (\texttt{converti\_multiple\_choice.py}, SHA-256
+\texttt{16c903ffe7e6a6d493920853a2197874c51e88568345734cf71b8268771f529b}) and
+the SHA-256 of every converted file are released with the supplementary
+material.
+
+\paragraph{PIQA is a declared subset.} The official PIQA validation split has
+1,838 items. The Parquet mirror we used (\texttt{gimmaru/piqa}, the only
+loader-free copy available to \texttt{datasets} 5.x) serves a 1,000-row
+validation split; we verified after the runs, against the official
+\texttt{dev.jsonl}, that all 1,000 rows and labels are present in the
+official split with no duplicates, so the file is a proper subset of the
+validation set (54\%), of unknown selection rule, and not a prefix. We report
+PIQA as a 1,000-item subset, exclude it from every ``run whole'' count, and
+note that it is a tie in both comparisons.
+
+\paragraph{Prompt templates.} The template decides the number, so we state it
+per benchmark, zero-shot throughout except TruthfulQA MC1 (lm-eval's MMLU default is 5-shot).
+MMLU: ``\texttt{The following are multiple choice questions (with answers)
+about \{subject\}.\textbackslash n\textbackslash n\{question\}\textbackslash nA.
+\{a\}\textbackslash nB. \{b\}\textbackslash nC. \{c\}\textbackslash nD.
+\{d\}\textbackslash nAnswer:}'', scored over the four answer strings
+\texttt{A}, \texttt{B}, \texttt{C}, \texttt{D} (one token each, so per-token
+normalisation is a no-op on MMLU). ARC-Easy, ARC-Challenge and PIQA:
+``\texttt{Question: \{question\}\textbackslash nAnswer:}'' over the option
+texts. OpenBookQA: the bare question stem over the option texts. BoolQ:
+``\texttt{\{passage\}\textbackslash nQuestion: \{question\}?\textbackslash
+nAnswer:}'' over \texttt{no}/\texttt{yes}. An earlier BoolQ template without
+the \texttt{Question:}/\texttt{Answer:} scaffold put the 397B ternary file
+below chance (47.19\%); those runs are among the discarded logs. HellaSwag and
+Winogrande use the engine's own scorers on the files its helper scripts
+download. TruthfulQA MC1: lm-eval's fixed six-example QA preamble
+(\texttt{tasks/truthfulqa/truthfulqa\_mc1.yaml}), copied verbatim and
+prepended to every question, scored over the \texttt{mc1\_targets} option
+strings (4 to 13 per question); it is the one corpus in this paper that is
+not zero-shot, because it has no zero-shot form in the literature we could
+point to instead.
+
+\begin{table}[t]
+\centering
+\small
+\begin{tabular}{@{}l >{\raggedright\arraybackslash}p{6.4cm} l r@{}}
+\toprule
+Benchmark & Source (Hugging Face revision) & Split & $n$ \\
+\midrule
+HellaSwag & \texttt{klosax/hellaswag\_text\_data}, \texttt{hellaswag\_val\_full.txt} (llama.cpp \texttt{get-hellaswag.sh}) & validation & 10{,}042 \\
+MMLU & \texttt{cais/mmlu}, config \texttt{all} (57 subjects), rev.\ \texttt{c30699e8} & test & 14{,}042 \\
+ARC-Easy & \texttt{allenai/ai2\_arc}, \texttt{ARC-Easy}, rev.\ \texttt{210d026f} & test & 2{,}376 \\
+ARC-Challenge & \texttt{allenai/ai2\_arc}, \texttt{ARC-Challenge}, rev.\ \texttt{210d026f} & test & 1{,}172 \\
+PIQA (subset) & \texttt{gimmaru/piqa}, rev.\ \texttt{fc620656} --- 1,000 of the 1,838 items of the official \texttt{ybisk/piqa} validation split (verified subset, not a prefix) & validation & 1{,}000 \\
+OpenBookQA & \texttt{allenai/openbookqa}, \texttt{main}, rev.\ \texttt{388097ea} & test & 500 \\
+BoolQ & \texttt{google/boolq}, rev.\ \texttt{35b264d0} & validation & 3{,}270 \\
+Winogrande & \texttt{ikawrakow/winogrande-eval-for-} \texttt{llama.cpp}, \texttt{winogrande-debiased-eval.csv} (llama.cpp \texttt{get-winogrande.sh}) & debiased eval & 1{,}267 \\
+TruthfulQA MC1 & \texttt{truthfulqa/truthful\_qa}, config \texttt{multiple\_choice} & validation & 817 \\
+Perplexity & WikiText-2 raw, \texttt{wiki.test.raw} (llama.cpp \texttt{get-wikitext-2.sh}) & test & 72 chunks $\times$ 4096 \\
+\bottomrule
+\end{tabular}
+\caption{The ten public corpora: nine run whole, PIQA as a declared
+1,000-item subset. Item counts are the number of
+scored tasks; for perplexity, the number of 4096-token chunks (about 295k
+tokens). Revisions are the Hugging Face dataset commits in our cache.}
+\label{tab:corpora}
+\end{table}
+
+\paragraph{Commands.} Every figure in this section comes from one of the five
+invocations below, with \texttt{MODEL} the GGUF file and no other flag.
+{\small
+\begin{verbatim}
+# HellaSwag: every task of the file (random order, seed 1, without replacement)
+llama-perplexity -m MODEL -ngl 999 -c 4096 --hellaswag \
+    --hellaswag-tasks 100000 -f hellaswag_val_full.txt
+# Multiple choice: every task of the file, in order
+llama-perplexity -m MODEL -ngl 999 -c 8192 -np 8 --multiple-choice \
+    --multiple-choice-tasks 100000 -f FILE.bin
+# TruthfulQA MC1: up to 13 options per question (six-shot preamble baked
+# into FILE.bin); batch reduced to fit the 397B file's compute buffers
+llama-perplexity -m MODEL -ngl 999 -c 3328 -np 13 -b 256 -ub 256 \
+    --multiple-choice --multiple-choice-tasks 100000 -f FILE.bin
+# Winogrande: all 1267 items
+llama-perplexity -m MODEL -ngl 999 -c 4096 --winogrande \
+    --winogrande-tasks 100000 -f winogrande-debiased-eval.csv
+# Perplexity, as in the previous version
+llama-perplexity -m MODEL -ngl 999 -c 4096 -b 2048 -f wiki.test.raw
+\end{verbatim}}
+Two flags are not details. llama.cpp's HellaSwag scorer always draws tasks at
+random without replacement (fixed seed 1) until the requested count or the
+file is exhausted; asking for at least as many tasks as the file holds
+therefore scores every item, in random order. For queueing we ran HellaSwag
+on 21 sequential pieces of the same file (500 tasks $=$ 3,000 lines each, the
+last of 42 tasks, cut at task boundaries; \texttt{--hellaswag-tasks 500 -f
+PIECE.txt}); each task is scored independently, so the per-item outcomes and
+the corpus total are those of the single command above, and the piece files
+and the cutting script are released with the supplementary material. The multiple-choice scorer
+assigns one sequence per answer option, and ARC contains five-option items:
+with the default \texttt{-np 4} the run stops at the first such item while
+reporting a result, so \texttt{-np 8} is required, and \texttt{-c 8192} with
+\texttt{-np 8} gives the same 1024 tokens per sequence as \texttt{-c 4096}
+with \texttt{-np 4}. TruthfulQA MC1 has up to 13 options per question (mode
+5, over the standard 817-item \texttt{multiple\_choice} split), so it was run
+with \texttt{-np 13} and, to leave headroom for the 397B file's compute
+buffers alongside its resident weights, \texttt{-c 3328} and \texttt{-b}/\texttt{-ub}
+reduced to 256; the discarded logs include one attempt each at a wider batch
+and at \texttt{-np 16}. A multiple-choice log is accepted only if its last scored
+task number equals the task count in its header.
+
+\paragraph{Metric.} From the engine's source: HellaSwag scores each ending by
+its total log-probability divided by its token count and picks the maximum;
+the multiple-choice scorer applies the same per-token-normalised
+log-probability to each answer (for MMLU, whose answers are single letters,
+this reduces to the raw log-probability); Winogrande scores the sentence
+completed with either candidate. This is per-token normalisation, not
+lm-eval's per-character \texttt{acc\_norm}, zero-shot with the templates
+above --- except TruthfulQA MC1's fixed six-shot preamble, which has no
+established zero-shot form --- rather than lm-eval's 5-shot MMLU, and the numbers are comparable
+between the four files of this paper, not with external leaderboards.
+
+\paragraph{Execution and aggregation.} HellaSwag, MMLU, BoolQ and ARC-Easy
+were split into sequential chunks of the corpus (HellaSwag in 21 chunks of 500
+tasks, the last of 42) and scored through a shared queue,
+one worker per GPU; a failed job returns to the queue and every raw log is
+kept, including the discarded ones (the raw logs of the cloud run, 38 per
+file, are released with the supplementary material). A chunk counts only if
+its log is complete.
+The corpus figure is $\sum_c \mathrm{round}(p_c n_c) / \sum_c n_c$ over
+chunks, with a Wilson 95\% interval on the corpus total; perplexity is the
+engine's own estimate with its standard error. In the HellaSwag validation
+file the ActivityNet items are tasks 1--3,243 and the WikiHow items tasks
+3,244--10,042; the chunk boundary nearest to that split is at task 3,500, so
+the two source halves we report are items 1--3,500 (all 3,243 ActivityNet
+plus the first 257 WikiHow) and items 3,501--10,042 (WikiHow only). That
+split is descriptive and post hoc, not a tested hypothesis.
+
+\paragraph{Decision rule and multiplicity.} The four files were scored on
+identical items in identical order (the multiple-choice scorer runs in file
+order; the HellaSwag scorer's seed is fixed; Winogrande logs the choice per
+item), and every raw log yields the per-item outcome (directly for
+Winogrande, as the difference of consecutive cumulative-accuracy rows for the
+others), so the design is paired and we test it as such: for every benchmark
+we report the discordant counts, the exact two-sided McNemar $p$ and a paired
+Wald 95\% interval on the difference, exactly as Table~\ref{tab:suite} does.
+There are twenty primary comparisons (ten corpora $\times$ two pairs); a
+Bonferroni correction over the ten corpora of one pair sets
+$\alpha = 0.05/10 = 0.005$, and we call a benchmark \emph{separated} when its
+paired $p$ is below that. We keep the previous version's rule --- two files
+whose Wilson 95\% intervals do not overlap --- as a conservative descriptor
+(it corresponds to roughly $z > 2.77$ on an unpaired test, comparable to the
+corrected threshold), and no longer call an unseparated benchmark a ``tie'':
+we say what the paired interval excludes.
+
+\subsection{The closest-size rival rule}
+\label{sec:rival}
+
+Each of our files is compared with a \emph{public} quantization of the same
+base checkpoint --- the file of closest size among the files of the
+quantizer's public repository that carry the same tensor set
+\citep{bartowski2026ornith397,mudler2026ornith35} --- and the size difference
+is stated rather than rounded away.
+When the rival is larger, the comparison runs against us by construction.
+
+\begin{center}
+\small
+\begin{tabular}{@{}>{\raggedright\arraybackslash}p{3.6cm} r >{\raggedright\arraybackslash}p{5.2cm} r >{\raggedright\arraybackslash}p{1.9cm}@{}}
+\toprule
+Ours & GiB & Rival (public) & GiB & Size $\Delta$ \\
+\midrule
+ODINO-397B v3.4a (TQ1\_0, two planes) & 88.17 & \texttt{bartowski/Ornith-1.5-397B-GGUF}, folder IQ1\_M & 85.09 & rival 3.5\% smaller \\
+Tony-v4-B (35B-A3B, 240 TQ1\_0 tensors, MTP head kept) & 15.47 & \texttt{mudler/Ornith-1.5-35B-A3B-} \texttt{APEX-MTP-GGUF}, \texttt{APEX-MTP-I-Compact} & 16.24 & rival 5.0\% larger \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\paragraph{What each of our files is.} The 397B pair is the one of
+Section~\ref{sec:tasks}: the IQ1\_M file is llama.cpp's standard
+importance-matrix quantization \citep{ikawrakow2024iq1m,ikawrakow2024imatrix}
+of the same checkpoint. ODINO v3.4a is \emph{not} the stripped tail-only file
+of Section~\ref{sec:depthrule} (v3.3, 85.1~GiB). It is the 88.17~GiB two-plane
+build assembled on the night the task suite ran: the RTN-first-plane build
+(v3.1) with, on layers 44--59, the first and second planes transplanted from
+the GPTQ build (v3.3) --- so its first plane is RTN on layers 0--43 and GPTQ on
+44--59 (this provenance is taken from the forge record of that night; the
+forge log itself was not preserved and the file does not record it). Reading
+the file's tensor table for this revision, we found that it carries non-zero
+second-plane tensors on \emph{all} 60 layers (180 \texttt{\_exps2} tensors; the
+4.1~GiB the strip tool reclaims were never stripped), and the fork applies a
+second plane wherever its tensors exist unless an environment variable
+restricts it. Two consequences follow, both stated here rather than repaired:
+(i) the public-benchmark runs of this section, which set no environment
+variable, applied the second plane on all 60 layers; (ii) the task-suite runs
+of Section~\ref{sec:tasks} were served by the launcher script named in our
+benchmark harness's model registry, and that script sets
+\texttt{ODINO\_NO\_P2=1}, i.e.\ no second plane at all --- the per-run
+environment was not recorded in the frozen record, so we state what the
+launcher sets rather than a logged fact. On that reading the two evaluations
+measure the same bytes under two different second-plane
+configurations, and neither is the tail-only configuration whose paired
+confirmation Section~\ref{sec:depthrule} reports. The file-level results
+stand as measurements of the file as served in each setting; the depth-rule
+evidence stands on the engine-switch measurements of
+Sections~\ref{sec:paradox}--\ref{sec:depthrule}; what this paper does not
+contain is a whole-corpus evaluation of the tail-only configuration, or of the
+same file with the second plane off (Section~\ref{sec:limitations}).
+
+The 35B file, Tony-v4-B,
+is a later forge of the 35B-A3B base at a different operating point from the
+9.2~GiB two-plane file of Sections~\ref{sec:paradox}--\ref{sec:depthrule}:
+240 tensors in TQ1\_0 (a single ternary plane, no second plane, no
+correction of any kind), the remaining 633 tensors --- including the four
+multi-token-prediction tensors of the donor's extra layer --- kept at the
+donor's precision, 15.47~GiB, about 3.8 bits/weight. The donor of those
+tensors is \texttt{APEX-MTP-I-Quality} (22.09~GiB), from the same public
+repository as the rival. Table~\ref{tab:bench35} therefore tests the ternary
+forge at $\sim$3.8 bits/weight against a public quantizer, not the depth
+rule; the two-plane 35B file of Sections~\ref{sec:paradox}--\ref{sec:depthrule}
+was not run on these corpora. Tony's base was verified
+from the GGUF metadata (architecture, expert count, the \texttt{nextn}
+tensors), not from the file name, and its rival is the file of the same public
+repository whose tensor set matches (with the MTP head; the closest file
+without it, \texttt{APEX-I-Compact}, is 15.40~GiB and lacks a tensor, and was
+not run). We do not
+compare the 35B files with the 397B files: different sizes, different
+questions.
+
+\subsection{Results: the 397B pair}
+\label{sec:bench397}
+
+\begin{table}[t]
+\centering
+\small
+\setlength{\tabcolsep}{3pt}
+\footnotesize
+\begin{tabular}{@{}l r l l r r l@{}}
+\toprule
+Benchmark & $n$ & ODINO v3.4a (88.17) & IQ1\_M (85.09) & $\Delta$ & disc. & $p$ \\
+\midrule
+HellaSwag, whole & 10{,}042 & \textbf{76.40} [75.56, 77.22] & 74.07 [73.20, 74.92] & $+2.33$ & 634--400 & $3{\times}10^{-13}$ \\
+\quad items 1--3,500 & 3{,}500 & 68.97 [67.42, 70.48] & 65.80 [64.21, 67.35] & $+3.17$ & 314--203 & $1{\times}10^{-6}$ \\
+\quad items 3,501--10,042 & 6{,}542 & 80.37 [79.39, 81.32] & 78.49 [77.48, 79.47] & $+1.88$ & 320--197 & $7{\times}10^{-8}$ \\
+MMLU & 14{,}042 & \textbf{82.71} [82.07, 83.33] & 80.58 [79.92, 81.23] & $+2.13$ & 1199--900 & $7{\times}10^{-11}$ \\
+BoolQ & 3{,}270 & \textbf{89.27} [88.16, 90.28] & 81.28 [79.91, 82.58] & $+7.99$ & 388--127 & $1{\times}10^{-31}$ \\
+ARC-Easy & 2{,}376 & \textbf{79.00} [77.31, 80.59] & 76.52 [74.77, 78.18] & $+2.48$ & 207--148 & $0.002$ \\
+ARC-Challenge & 1{,}172 & 57.85 [55.00, 60.65] & 55.63 [52.77, 58.45] & $+2.22$ & 130--104 & $0.10$ \\
+PIQA (subset) & 1{,}000 & 80.90 [78.35, 83.22] & 80.90 [78.35, 83.22] & $0.00$ & 47--47 & $1.00$ \\
+OpenBookQA & 500 & 44.40 [40.10, 48.78] & 43.60 [39.32, 47.98] & $+0.80$ & 46--42 & $0.75$ \\
+Winogrande & 1{,}267 & 66.22 [63.57, 68.77] & 61.64 [58.93, 64.28] & $+4.58$ & 247--189 & $0.006$ \\
+TruthfulQA MC1 & 817 & 38.43 [35.16, 41.82] & 36.72 [33.48, 40.08] & $+1.71$ & 63--49 & $0.22$ \\
+Perplexity (WikiText-2, 72 ch.) & 295k tok & $7.5180 \pm 0.0519$ & $7.5173 \pm 0.0510$ & $+0.0007$ & --- & $0.01\sigma$ \\
+\bottomrule
+\end{tabular}
+\caption{The 397B pair on nine complete public corpora and the declared PIQA
+subset (file sizes in
+GiB; accuracy in percent with Wilson 95\% intervals; perplexity with its
+standard error; $\Delta =$ ours $-$ rival in points, and for perplexity lower
+is better, so a positive $\Delta$ there favours the rival; the ternary file is
+3.6\% larger). ``disc.'' is the number of items ours wins against the number
+the rival wins, from the per-item outcomes in the raw logs, and $p$ is the
+exact two-sided McNemar probability on them; bold marks the four benchmarks
+whose paired $p$ is below the Bonferroni-corrected $0.0056$ (the same three
+that also have disjoint Wilson intervals, plus ARC-Easy). NVIDIA RTX PRO 6000,
+our fork, commands of
+Section~\ref{sec:protocol}; the second plane of the ternary file was applied on
+all 60 layers (Section~\ref{sec:rival}).}
+\label{tab:bench397}
+\end{table}
+
+Four benchmarks separate the two files at the corrected level, all in
+the ternary file's favour: BoolQ by 7.99 points, HellaSwag by 2.33, MMLU
+by 2.13 and ARC-Easy by 2.48; the first three also have disjoint Wilson
+intervals. Winogrande's $+4.58$ is nominally significant ($p = 0.006$) and
+just misses the corrected threshold; ARC-Challenge ($+2.22$, $p = 0.10$),
+OpenBookQA ($+0.80$, $p = 0.75$) and the PIQA subset (an exact $0.00$) are not
+separated at these sample sizes --- on OpenBookQA the paired 95\% interval is
+$[-2.9, +4.5]$ points, so it excludes little. TruthfulQA MC1 ($+1.71$,
+$p = 0.22$) is not separated either. No corpus shows a negative
+difference: of the nine multiple-choice benchmarks, eight have a non-zero
+difference and all eight favour the ternary file. Restricted to the five
+benchmarks that the paired test does not separate, four have a non-zero sign
+and all four are positive, a one-sided probability of $2^{-4} = 6.25\%$
+(over the six that the disjoint-interval rule leaves unseparated, five of
+five, $3.125\%$): consistent in sign, not significant. (A sign test over all
+eight would double-count the separations, which the paired tests already
+establish.)
+Perplexity, on the same two
+files, is $7.5180$ against $7.5173$: a difference of $0.0007$ against a
+standard error of $0.05$, and a paired per-chunk difference of $0.01$ standard
+errors over the 72 chunks --- nominally in the rival's favour, which is why we
+do not say the ternary file is never worse, but say instead that no corpus
+shows a difference against it beyond its interval. The HellaSwag split by
+source shows the same sign on
+both halves ($+3.17$ on items 1--3,500, $+1.88$ on the WikiHow-only remainder),
+so the whole-corpus gap is not carried by one sub-domain. This is the
+quantitative form of the ladder of Section~\ref{sec:setup}: the largest
+separation is eight points, and the one measurement that cannot see any of
+them is perplexity.
+
+\subsection{Results: the 35B pair}
+\label{sec:bench35}
+
+\begin{table}[t]
+\centering
+\small
+\setlength{\tabcolsep}{3pt}
+\footnotesize
+\begin{tabular}{@{}l r l l r l@{}}
+\toprule
+Benchmark & $n$ & Tony-v4-B (15.47) & APEX-MTP-I-Compact (16.24) & $\Delta$ [95\% CI] & $p$ \\
+\midrule
+HellaSwag, whole & 10{,}042 & 80.08 [79.29, 80.85] & 80.27 [79.48, 81.04] & $-0.19$ $[-0.60, +0.23]$ & $0.40$ \\
+\quad items 1--3,500 & 3{,}500 & 69.71 [68.17, 71.21] & 71.11 [69.59, 72.59] & $-1.40$ $[-2.24, -0.56]$ & $0.001$ \\
+\quad items 3,501--10,042 & 6{,}542 & 85.63 [84.76, 86.46] & 85.17 [84.29, 86.01] & $+0.46$ $[+0.01, +0.91]$ & $0.06$ \\
+MMLU & 14{,}042 & 78.98 [78.30, 79.64] & 78.79 [78.11, 79.46] & $+0.19$ $[-0.37, +0.74]$ & $0.53$ \\
+BoolQ & 3{,}270 & 86.02 [84.79, 87.17] & 86.76 [85.55, 87.88] & $-0.73$ $[-1.83, +0.36]$ & $0.21$ \\
+ARC-Easy & 2{,}376 & 68.52 [66.62, 70.35] & 68.48 [66.58, 70.31] & $+0.04$ $[-1.27, +1.35]$ & $1.00$ \\
+ARC-Challenge & 1{,}172 & 51.88 [49.02, 54.73] & 52.47 [49.61, 55.32] & $-0.60$ $[-2.55, +1.36]$ & $0.61$ \\
+PIQA (subset) & 1{,}000 & 80.90 [78.35, 83.22] & 82.30 [79.81, 84.54] & $-1.40$ $[-3.13, +0.33]$ & $0.14$ \\
+OpenBookQA & 500 & 44.20 [39.91, 48.58] & 44.00 [39.71, 48.38] & $+0.20$ $[-2.25, +2.65]$ & $1.00$ \\
+Winogrande & 1{,}267 & 70.96 [68.39, 73.39] & 71.43 [68.88, 73.85] & $-0.47$ $[-2.69, +1.75]$ & $0.73$ \\
+TruthfulQA MC1 & 817 & 39.66 [36.36, 43.05] & 40.39 [37.08, 43.79] & $-0.73$ $[-2.77, +1.30]$ & $0.56$ \\
+Perplexity (WikiText-2, 72 ch.) & 295k tok & $\mathbf{7.6275} \pm 0.0539$ & $8.1023 \pm 0.0587$ & $-0.4748$ & $6.2\sigma$ \\
+\bottomrule
+\end{tabular}
+\caption{The 35B pair on the same corpora and protocol (file sizes
+in GiB). The public rival is 5.0\% larger. $\Delta =$ ours $-$ rival with its
+paired 95\% interval from the per-item outcomes, $p$ the exact two-sided
+McNemar probability; for perplexity lower is better and the figure quoted is
+the paired per-chunk $t$ over the 72 chunks. No multiple-choice benchmark is
+separated at the corrected level (the HellaSwag sub-split, a post-hoc
+descriptor, is the only row with $p < 0.05$); perplexity separates the pair in
+the ternary file's favour. Tony-v4-B carries a single ternary plane and no
+correction: this table tests the forge at $\sim$3.8 bits/weight, not the depth
+rule.}
+\label{tab:bench35}
+\end{table}
+
+At 15.47~GiB the mixed-precision 35B file (240 TQ1\_0 tensors, single plane) is
+statistically indistinguishable from its 5.0\% larger public rival on all
+nine multiple-choice benchmarks: six of the nine point differences are
+negative, none is resolvable by the paired test, and what the data exclude
+varies by an order of magnitude across rows --- $\pm 0.4$ points on HellaSwag
+($n = 10{,}042$) but $\pm 2.5$ on OpenBookQA ($n = 500$), so ``no difference
+detected'' means much less on the small corpora. It has the lower perplexity
+($7.6275$ against $8.1023$, about six combined standard errors apart, and
+$6.2\sigma$ paired per chunk) --- a metric this paper has just shown cannot
+separate the 397B pair, so we do not use it as a tie-break in our own favour.
+We read the row as a null result at 5\% fewer bytes: at this bit-rate the
+forge reaches, within the resolution of these corpora, the accuracy of the
+closest public quantization of the same base. We do not compare it with the
+397B tables.
+
+\subsection{Cross-checks between GPU vendors}
+\label{sec:crosscheck}
+
+Four of the previous version's numbers were complete-corpus measurements on
+the AMD APU (two perplexities, two Winogrande runs), and a fifth complete-corpus
+measurement --- HellaSwag on the 35B file, the same 21 sequential pieces --- was
+made on the same AMD machine. (The previous version attributed that run to a
+laptop RTX~4060; it did not come from there, and no number in this paper does.)
+Table~\ref{tab:crosscheck} sets each against the cloud
+run on the same file and the same items, and, because the items are the same,
+we also report the paired disagreement rather than only the aggregate gap.
+
+\begin{table}[t]
+\centering
+\small
+\setlength{\tabcolsep}{3pt}
+\footnotesize
+\begin{tabular}{@{}l l l l l >{\raggedright\arraybackslash}p{3.7cm}@{}}
+\toprule
+File & Measurement & Home & Cloud & Gap & Paired \\
+\midrule
+ODINO v3.4a & perplexity, 72 ch. & $7.5903 \pm 0.0525$ & $7.5180 \pm 0.0519$ & $-0.072$ ($1.0\sigma$) & paired per chunk: $+0.96\%$, $t = 3.9$, 46/72 chunks higher at home \\
+IQ1\_M & perplexity, 72 ch. & $7.5438 \pm 0.0512$ & $7.5173 \pm 0.0510$ & $-0.027$ ($0.4\sigma$) & paired per chunk: $+0.35\%$, $t = 0.8$ \\
+ODINO v3.4a & Winogrande, 1,267 & $65.67 \pm 1.33$ & 66.22 [63.57, 68.77] & $+0.55$ ($0.3\sigma$) & 185 items differ (14.6\%), 96--89, $p = 0.66$ \\
+IQ1\_M & Winogrande, 1,267 & $61.09 \pm 1.37$ & 61.64 [58.93, 64.28] & $+0.55$ ($0.3\sigma$) & 285 items differ (22.5\%), 146--139, $p = 0.72$ \\
+Tony-v4-B & HellaSwag, 10,042 & $80.19 \pm 0.40$ & 80.08 [79.29, 80.85] & $-0.11$ ($0.2\sigma$) & 143 items differ (1.4\%), 66--77, $p = 0.40$ \\
+ODINO v3.4a & HellaSwag, 2,108 random & 75.85 & --- & not comparable & --- \\
+IQ1\_M & HellaSwag, 2,108 random & 73.86 & --- & not comparable & --- \\
+\bottomrule
+\end{tabular}
+\caption{Same file, same items, different GPU vendor and driver stack: home
+is the AMD gfx1151 APU, cloud the
+RTX PRO 6000. Perplexity is WikiText-2 at ctx 4096; home accuracies are given with one
+standard error, cloud accuracies with Wilson 95\% intervals; the aggregate gap
+is stated in units of the combined standard error, which treats the two runs as
+independent samples and is therefore a conservative (loose) bound for runs on
+identical items. The last column is the paired quantity: for accuracy, how many
+items changed outcome between the two GPUs, with the discordant split and the
+exact McNemar probability; for perplexity, the mean per-chunk difference in
+log-perplexity over the 72 chunks with its $t$. The two
+2,108-item figures of the previous version are a random subset of the corpus
+and cannot be compared item-for-item with the whole-corpus runs; they are
+superseded by Table~\ref{tab:bench397}.}
+\label{tab:crosscheck}
+\end{table}
+
+All five comparable measurements agree within one combined standard error, and
+none of the three accuracy comparisons is separated by the paired test. The
+paired view is nevertheless the informative one, in two directions. First, the
+aggregates hide a large item-level disagreement: 14.6\% of Winogrande items
+change outcome between the two GPUs on the ternary file and 22.5\% on IQ1\_M,
+balanced in both directions --- the two backends do not compute the same
+answers item by item, they only compute the same totals. Second, on the
+ternary file the perplexity shift \emph{is} resolvable once the corpus
+variance is paired away: $+0.96\%$ at home against the cloud, $t = 3.9$ over
+72 chunks, against $+0.35\%$ ($t = 0.8$) for IQ1\_M. We declare it rather than
+round it away: it is a backend difference on the file with the second plane
+(the plane is the part of the engine that differs most between the two
+vendors' kernels), it is one tenth of the smallest gap this paper reports, and
+it changes no comparison here --- both 397B files are measured on the same GPU
+in Table~\ref{tab:bench397}. The previous version's nominal perplexity
+inversion between the two files
+($7.5903$ against $7.5438$) is not reproduced on the second vendor and was
+inside its error bars on the first. Our policy, stated so that it binds future
+versions and applied here: if a cross-check
+between backends fails, we publish the
+verifiable number we have and declare the discrepancy and the backend that
+diverges, rather than withhold the result pending an explanation. The three
+benchmarks that separate the 397B pair (BoolQ, HellaSwag, MMLU) have no
+second-vendor measurement at all (Section~\ref{sec:limitations}).
+
 \section{Task-level evaluation at matched size}
 \label{sec:tasks}
 
 \paragraph{The comparison.} The closest-size baseline for the shipped
-file is llama.cpp's own IQ1\_M quantization of the same 397B checkpoint ---
+file is llama.cpp's own IQ1\_M quantization
+\citep{ikawrakow2024iq1m,ikawrakow2024imatrix} of the same 397B checkpoint ---
 same ternary-scale regime on the expert tensors, produced by the standard
 importance-matrix pipeline rather than our two-plane ternary forge. The two
 files are close in size but not identical, and we state the difference rather
@@ -465,32 +1034,35 @@ legacy & mixed original set    & 40 & 38 (95\%) & 31 (78\%) \\
 \end{tabular}
 \caption{Paired results on the reported portion of the internal suite: 72
 fixtures $\times$ 2 fixed seeds (7, 42) $=$ 144 scheduled pairs, of which 143
-are valid --- one baseline run (a single fixture at one seed) was discarded by
-the transport-fault rule below and not re-executed. Reasoning off, identical
-server.
+are valid. One baseline run (a single fixture at one seed) logged a transport
+fault; in this frozen record it was dropped from both arms and not re-run,
+because the record was frozen before the fault was noticed. Re-execution is
+the standing policy for future runs, stated below. Reasoning off, identical
+server; the ternary file was served with its second plane disabled
+(Section~\ref{sec:rival}).
 Discordant pairs 39--6 in the ternary file's favour; exact McNemar
 $p = 5.42\times 10^{-7}$; paired bootstrap (20{,}000 resamples) CI$_{95}$ of
 the difference $[+14.7, +31.5]$ percentage points. Trials whose harness
 logged a transport fault (5xx, dropped connection, malformed response) are
-not scored: the run is discarded and re-executed, so a bench failure can
-never be recorded as a model failure.}
+not scored: the run is discarded and, as a rule, re-executed, so a bench
+failure can never be recorded as a model failure.}
 \label{tab:suite}
 \end{table}
 
-\paragraph{Reading the table honestly.} The aggregate difference (+19.2
+\paragraph{Reading the table honestly.} The aggregate difference (+23.1
 points) is carried by the code-understanding families --- bug-fixing,
-refactoring, deceptive code --- where the ternary file wins by 22--45 points.
-The one family the baseline wins as scored, long-context needle (75\% vs
-92\%), we report as scored: post-hoc inspection attributes all three ternary
-misses to infrastructure failures (context-window overflow and timeouts), and
-the ternary file is 9/9 on the trials that ran to completion, but the scored
-number stands. Planning (F7) is the shared floor: 20\% for both giants with
-reasoning off, discussed below and in Section~\ref{sec:limitations}. For
-context only --- an earlier version of the internal suite, so not a
+refactoring, deceptive code --- where the ternary file wins by 28--45 points.
+Long-context needle retrieval (F4) is a tie at 11/11 for both files, and tool
+use (F5) is within one trial. Planning (F7) is the weakest family for both
+files with reasoning off (6/10 against 2/10, too few trials to separate the
+two), discussed below and in Section~\ref{sec:limitations}. For
+context only, and not as a result of this paper --- an earlier version of the
+internal suite, no paired trials, no interval, so not a
 controlled comparison --- the strongest previously deployed configuration on
-this machine, a same-family 35B served at $\sim$6.5 bits/weight, scores 75\%:
-the 397B at 1.91 bits/weight reaches the task-success level of a
-full-working-precision 35B on the same hardware budget.
+this machine, a same-family 35B served at $\sim$6.5 bits/weight, scored 75\%
+on that earlier suite. We record the figure because it is what the deployment
+decision was taken on; we do not claim from it that the two configurations are
+equivalent.
 
 \subsection{A quantizer-level dissociation: reasoning survives RTN, not GPTQ}
 \label{sec:dissociation}
@@ -522,15 +1094,18 @@ calibrating on the model's \emph{own} generated reasoning traces recovers up
 to 25.5 points at 1.58 bits \citep{wang2026scaleq}; practitioner recipes for
 1.58-bit reasoning models likewise survive only by protecting the components
 that generic pipelines damage \citep{unsloth2025r1dynamic}. Our RTN/GPTQ pair
-isolates the same variable within a single forge: GPTQ minimises error
+isolates the same variable within a single forge (the shipped file's first
+plane is RTN on layers 0--43 and GPTQ on 44--59, Section~\ref{sec:rival}):
+GPTQ minimises error
 \emph{on the calibration distribution} and displaces it off-distribution ---
 and long self-generated reasoning traces are precisely off-distribution with
 respect to a generic text corpus, while RTN's error is
 distribution-agnostic. We state this as the consistent explanation, not a
 demonstrated mechanism; the discriminating experiment (re-forging the GPTQ
-planes against self-generated reasoning traces, ScaleQ-style) is scheduled
-and its outcome is falsifiable in the same way as Section~\ref{sec:refutations}'s
-hypotheses. Until it lands, the shipped file runs with reasoning disabled in
+planes against self-generated reasoning traces, ScaleQ-style) was not
+performed for this version, and its outcome would be falsifiable in the same
+way as Section~\ref{sec:refutations}'s
+hypotheses. Until it is done, the shipped file runs with reasoning disabled in
 production, and Table~\ref{tab:suite} is a no-think table by construction.
 
 \section{The routing-margin distribution}
@@ -541,7 +1116,8 @@ between the $k$-th and $(k+1)$-th router score --- the distance to the nearest
 routing flip. ReMoE \citep{zhu2026remoe} defines it in probability space as the premise of a
 stability lemma; \citet{gu2026routeflip} defines it in logit space and collapses it
 to a single AUC. Neither reports its distribution; \citet{chen2026certainhead} reports
-a token-averaged mean over depth. We measure the distribution on the 397B's
+a token-averaged mean over depth, which to our knowledge is the only measured
+summary of it in the literature. We measure the distribution on the 397B's
 captured router probabilities (16{,}640 tokens $\times$ 60 layers, the same capture
 that feeds the forge's Hessians).
 
@@ -567,7 +1143,26 @@ by count alone, the mechanism of the correction paradox.
 \section{Related work}
 \label{sec:related}
 
-\paragraph{Ternary post-training quantization.} PTQTP \citep{xiao2025ptqtp} introduces
+\paragraph{Extreme low-bit post-training quantization.} The methods that
+define the state of the art below two bits on dense models --- additive
+codebook quantization (AQLM, \citealp{egiazarian2024aqlm}), lattice codebooks
+with incoherence processing (QuIP\#, \citealp{tseng2024quipsharp}), trellis
+coding (QTIP, \citealp{tseng2024qtip}), and the fine-tuning framework that
+improves on all of them (PV-Tuning, \citealp{malinovskii2024pvtuning}) ---
+reach lower error per bit than the ternary primitive we use, and the rotation
+line (QuaRot, \citealp{ashkboos2024quarot}; SpinQuant,
+\citealp{liu2025spinquant}) removes outliers before quantizing at all. None of
+them is measured here, and the omission is a scope statement rather than a
+claim: none has a ternary MoE kernel in the engine that serves our files, and
+the rival rule of Section~\ref{sec:rival} restricts the comparison to public
+quantizations of the same checkpoint runnable by the same engine. Our
+positioning is that of a deployment format, not of a rate-distortion optimum;
+what transfers from this paper to those methods is the depth question, not the
+primitive.
+
+\paragraph{Ternary post-training quantization.} The TQ1\_0 packing we build on
+was contributed to llama.cpp for TriLM- and BitNet-style ternary models
+\citep{compilade2024tq1}. PTQTP \citep{xiao2025ptqtp} introduces
 the dual trit-plane decomposition we build on, applied uniformly, with no
 per-layer analysis. Tied Trit-Planes \citep{grella2026tiedtritplanes} is the closest work:
 two ternary planes on a disk-streamed MoE, same primitive, same deployment
@@ -578,6 +1173,27 @@ statement, ``localizes sensitivity to the final cumulative bundle, not to a
 single component''; per-layer localisation is precisely what we add. BitNet
 \citep{ma2024bitnet} trains ternary from scratch and keeps embeddings
 high-precision; our setting is post-hoc, on weights never meant for ternary.
+
+\paragraph{Native ternary models.} Ternary Bonsai 2 27B
+\citep{prismml2026bonsai2} is a dense 27B hybrid-attention model released in
+ternary form --- weights in $\{-1, 0, +1\}$ in a fixed blockwise Hadamard basis
+with FP16 group scales, 1.76 bits/weight as shipped --- that reports 98.2\% of
+its full-precision base's thinking-mode average (reasoning effort
+\texttt{xhigh}) over a 20-benchmark generative suite. It is
+a reference point for what ternary weights can retain when the ternary
+representation is produced by the model's own vendor with a dedicated
+pipeline, its own rotated basis and its own kernels; it is not a comparison
+target for this paper. Our files are post-hoc conversions of published MoE
+checkpoints by a third party, our evaluation is log-likelihood scoring of the
+served file, and our question is \emph{where} a correction may land rather
+than what a ternary model can reach. The two settings share the ternary
+alphabet but not the format --- Bonsai's group-wise packing with FP16 scales
+every 128 weights in a blockwise Hadamard basis against our unrotated
+256-weight TQ1\_0 block --- and bracket it from opposite ends. Its retention
+figure is a reference point for what the ternary alphabet can hold when the
+representation is chosen at training time; it is not a ceiling commensurable
+with our tables, which report log-likelihood scoring in no-think mode with no
+full-precision reference for the largest model.
 
 \paragraph{Non-additivity of compression error.} EvoPress \citep{sieberling2025evopress} opens on the observation that per-layer independence fails and
 that removing \emph{more} blocks can help; its search machinery (fitness = whole-model
@@ -590,29 +1206,32 @@ both --- which is the same shape as our cancellation, in a different regime.
 \paragraph{Mixed precision within MoE.} The expert-wise bit-allocation literature
 (MoPEQ \citep{chittyvenkata2025mopeq}, AlphaQ \citep{alphaq}, MC-MoE \citep{mcmoe}, GEMQ \citep{gemq}, BitsMoE \citep{bitsmoe}) is uniformly monotone in its
 assumptions: the only failure mode contemplated is mis-estimating importance.
-The phenomenon we isolate is visible, unremarked, in GEMQ's own Table~1
+The phenomenon we isolate is visible, unremarked, in Table~1 of GEMQ \citep{gemq}
 (expert-level mixed precision losing to uniform at matched bits on
 Qwen3-30B-A3B, $-9.89$ acc at 2.0 bpe) and named in HiFloat4 \citep{mak2026hifloat4}:
 restoring one component to higher precision scores \emph{below} uniform FP4.
-AWQ's Table~1 \citep{lin2024awq} shows the selection-criterion analogue: protecting the wrong 1\%
+Table~1 of AWQ \citep{lin2024awq} shows the selection-criterion analogue: protecting the wrong 1\%
 is worse than protecting nothing. Our framing --- heterogeneous fidelity, not
 insufficient fidelity --- is the synthesis these scattered rows point to.
 
-\paragraph{Routing fragility.} The margin at the top-$k$ boundary is defined twice and
-measured never: ReMoE \citep[App.~C.2]{zhu2026remoe} as the unmeasured premise
+\paragraph{Routing fragility.} The margin at the top-$k$ boundary is defined twice and,
+to our knowledge, never reported as a distribution: ReMoE
+\citep[App.~C.2]{zhu2026remoe} as the unmeasured premise
 of a stability lemma, in probability space; \citet{gu2026routeflip} in logit space,
 collapsed to one AUC (and its margin$\to$harmful classifier sits at chance,
 0.490 --- consistent with our flip-count anti-correlation). A token-averaged
-mean curve exists \citep{chen2026certainhead}; the distribution does not, and the
+mean curve exists \citep{chen2026certainhead}; percentiles do not, and the
 mean-vs-median gap ($1.76\times$) is exactly why it matters. sglang PR \#35916
 \citep{sglang35916} asserts the qualitative half --- adjacent scores within one bf16 ULP on this
 very topology --- on synthetic weights, its author lacking hardware for the
 real measurement; we supply it.
 
-\paragraph{Depth structure.} The representational-transition literature places a
-boundary at 0.47--0.53 of depth by five independent methods (semantic hub,
-activation patching --- concept written at exactly 0.500 --- probing centers of
-gravity, and their encoder controls); our worst layer sits at 0.488. The
+\paragraph{Depth structure.} The representational literature locates a shared,
+language- and modality-independent semantic space in the \emph{intermediate}
+layers \citep{wu2025semantichub}; our worst layer sits at 0.488 of depth, in
+that region. We state only what we can cite: we are aware of no quantitative
+prediction, in that literature, of a sign flip in corruption tolerance, and we
+do not claim one. The
 intervention literature, by contrast, is dominated by edge-sensitivity: GLU
 activation spikes at early \emph{and late} layers \citep{yang2024gluspikes},
 llama.cpp's own extra-bit heuristic on the first and last eighths, and layer-pruning work
@@ -638,44 +1257,112 @@ rank and delivered error all fail to track the damage).
 
 \begin{itemize}
 \item \textbf{Two models, one family.} Both are Qwen-lineage MoEs (35B and 397B) with
-  shared tokenizer and expert topology conventions. The 73\% coincidence is
+  shared tokenizer and expert topology conventions. The depth bracket is
   measured twice, not derived; a third family is the obvious next
-  falsification, and the dense-forge experiment (running as this draft is
-  written) asks whether the rule needs experts at all --- early evidence says
-  dense FFNs at this bit-rate fail globally before any depth structure can
-  be read, consistent with the MoE-robustness literature \citep{kim2023moqe}, which would
-  make the depth rule a property of \emph{corrections to survivable
-  quantizations} rather than of quantization per se.
-\item \textbf{Perplexity-first evaluation.} Our confirmations are paired logit-level
-  comparisons plus verifiable-answer functional probes; the standardised
-  benchmarks we can run at $n=300$ resolve 6.9~pp at best and are used only as
-  ``not broken'' evidence. The pinned lm-eval pass is stated as debt, not
-  waved at.
+  falsification. A dense-model forge exists as an artefact and was run on one
+  target; we do not report a result from it in this version, because the runs
+  we have do not reach a depth-resolved measurement --- at this bit-rate the
+  dense FFNs fail globally first --- and we prefer to state that than to
+  quote a number from an incomplete experiment. If it holds, it would make the
+  depth rule a property of \emph{corrections to survivable quantizations}
+  rather than of quantization per se, consistent with the MoE-robustness
+  literature \citep{kim2023moqe}.
+\item \textbf{Log-likelihood benchmarks only; generative benchmarks
+  deferred.} The depth-rule confirmations are paired logit-level comparisons
+  plus verifiable-answer functional probes, and the file-level evaluation of
+  Section~\ref{sec:benchmarks} scores log-likelihoods of given choices with
+  llama.cpp's own scorers, on complete corpora. Benchmarks that require
+  generation (GSM8K, HumanEval, MMLU-Pro, GPQA, generative TruthfulQA) need a
+  harness driving a server rather than this protocol; they appear in no table
+  of this paper and are deferred to a future version. TruthfulQA's other
+  format, MC1, has no generation step --- it scores log-likelihoods of given
+  choices exactly like the other corpora --- so it is not deferred and
+  appears in Tables~\ref{tab:bench397} and~\ref{tab:bench35} instead. The metric is
+  per-token-normalised (Section~\ref{sec:protocol}), so the figures compare
+  the four files of this paper with each other and not with external
+  leaderboards.
+\item \textbf{The engine is archived, not versioned.} The TQ1\_0 Vulkan
+  kernels are upstream and the forge scripts are public, but the two-plane
+  \emph{loader} is not in any public repository, and the fork's git history
+  was not kept: the working copies were made without it and the binary
+  reports no hash. The base commit was recovered afterwards by file matching
+  (Section~\ref{sec:protocol}), not from a record, and we state it as such.
+  Without the loader no number in Table~\ref{tab:bench397} can be
+  regenerated, so the engine used for every run is released with the
+  supplementary material as a diff against that base commit (19 files) and as
+  a diff against the upstream merge commit of the TQ1\_0 Vulkan path, each
+  with its SHA-256; one project-name string in comments and in three
+  debugging environment-variable names was replaced for anonymity, and the
+  replacement is declared there. The
+  kernels were written for AMD RDNA; on the NVIDIA GPUs of
+  Section~\ref{sec:benchmarks} they run correctly
+  (Table~\ref{tab:crosscheck}) --- with one declared paired perplexity offset
+  of $0.96\%$ on the two-plane file (Section~\ref{sec:crosscheck}) ---
+  but are not optimised (about 0.6~s per HellaSwag task on the 397B), and there
+  is no CUDA path for TQ1\_0.
+\item \textbf{What the benchmarked files are, and what was not run.} The
+  397B file carries second-plane tensors on all 60 layers, so
+  Table~\ref{tab:bench397} measures it with the correction applied everywhere,
+  while the task suite of Section~\ref{sec:tasks} was served with the second
+  plane disabled (Section~\ref{sec:rival}); we found this while preparing this
+  revision and state it rather than re-run either evaluation. No whole-corpus
+  evaluation of the tail-only configuration of Section~\ref{sec:depthrule}
+  exists in this paper: the depth rule rests on the per-layer engine-switch
+  measurements and the paired logit-level confirmation, not on
+  Section~\ref{sec:benchmarks}. The 35B file of Table~\ref{tab:bench35}
+  carries a single plane and no correction, and the two-plane 35B file of
+  Sections~\ref{sec:paradox}--\ref{sec:depthrule} was not run on these corpora.
+\item \textbf{The 35B file is not published.} Tony-v4-B (15.47~GiB) is not yet
+  in a public repository, so Table~\ref{tab:bench35} and the 35B cross-check
+  row cannot be regenerated by a reader; the regenerability claim of
+  Section~\ref{sec:benchmarks} covers the 397B pair, whose two files are both
+  public. We state this rather than weaken the table.
+\item \textbf{Cross-vendor coverage is partial.} The two GPU vendors were
+  compared on perplexity and Winogrande for the 397B pair and on HellaSwag for
+  the 35B file. The three benchmarks that separate the 397B pair (BoolQ,
+  HellaSwag, MMLU) were measured on NVIDIA only, and the item-level
+  disagreement between backends on the shared items is large even where the
+  totals agree (Table~\ref{tab:crosscheck}).
+\item \textbf{Context and scope of the benchmark runs.} Context is 4096 tokens
+  (8192 over eight sequences for multiple choice, i.e.\ 1024 tokens per
+  sequence). \texttt{llama-perplexity} aborts on any task whose tokens exceed
+  the per-sequence budget, and each of the two BoolQ pieces reached its header
+  task count (2,000 and 1,270; 3,270 in total) with no ``does not fit'' line,
+  so no passage was truncated or skipped; the longest BoolQ passage in the
+  converted file is 823 words. Reasoning is off in every measurement. The
+  smaller MTP-less sibling of the 35B rival (15.40~GiB, one tensor fewer) was
+  not run, so the rival rule was satisfied on tensor set rather than on size
+  alone. The internal
+  task suite remains private, as in the previous version.
 \item \textbf{The selection confound is quantified, not closed.} Frequency-selection
   wastes 42.6\% of plane-2 impact in the head and its correlational profile
   tracks damage at $+0.788$; the causal test refutes it as \emph{the} mechanism,
-  but a Hessian-impact-selected reforge (the artefact exists; the run is
-  scheduled) is required before selection can be fully dismissed as a
-  contributor to the magnitude, as opposed to the sign.
+  but a Hessian-impact-selected reforge (the artefact exists; the run was not
+  performed for this version) is required before selection can be fully
+  dismissed as a contributor to the magnitude, as opposed to the sign.
 \item \textbf{No mechanism.} We offer a rule and eight dead hypotheses. The
-  representational-transition literature is consistent with the boundary we
-  measure and predicts none of its consequences quantitatively. We consider
+  representational literature \citep{wu2025semantichub} is consistent with the
+  region in which we measure the worst layer and predicts none of its
+  consequences quantitatively. We consider
   naming this openly a feature of the paper, not a gap in it.
-\item \textbf{Planning is a shared floor, and reasoning is off.} The planning
-  family of the task suite sits at 20\% for \emph{both} 1.75-bit giants with
-  reasoning disabled --- the suite comparison says nothing about which file
-  plans better, only that neither does at this bit-rate without
-  chain-of-thought. And reasoning is disabled in the shipped configuration
+\item \textbf{Planning is the weakest family, and reasoning is off.} The
+  planning family of the task suite is the lowest-scoring for \emph{both}
+  397B files with reasoning disabled (6/10 against 2/10, $n = 10$) --- the
+  suite comparison says little about which file plans better, only that
+  neither does it well at this bit-rate without chain-of-thought. And
+  reasoning is disabled in the shipped configuration
   precisely because of the GPTQ dissociation of
   Section~\ref{sec:dissociation}: until the reasoning-trace recalibration
   closes that gap, the task-level claims of Table~\ref{tab:suite} are
   no-think claims and must not be read as more.
 \item \textbf{One quantization primitive.} Everything is TQ1\_0-shaped ternary with
-  two-level scale search and GPTQ; whether the depth rule survives a change
-  of primitive (say, trellis-coded or lattice quantization at matched bpw)
+  two-level scale search and RTN or GPTQ; whether the depth rule survives a change
+  of primitive (say, trellis-coded \citep{tseng2024qtip} or lattice
+  \citep{tseng2024quipsharp} quantization at matched bpw)
   is untested. A preliminary result on real weights says the change of
-  primitive is worth forging: an exact tail-biting Viterbi encoder over a
-  4096-state bitshift trellis (56~bytes per 256-weight block $=$ 1.75~bpw
+  primitive is worth forging: an exact tail-biting Viterbi encoder over
+  QTIP's 4096-state bitshift trellis \citep{tseng2024qtip} (56~bytes per
+  256-weight block $=$ 1.75~bpw
   exact), run on \texttt{blk.29.attn\_gate} of the 397B (dequantized from
   the Q8\_0 reference; 4096 blocks sampled uniformly at seed~0 --- a
   declared subset on which the RTN baseline matches its full-tensor value
@@ -686,12 +1373,62 @@ rank and delivered error all fail to track the damage).
   ${\sim}1\%$ excess that RTN shows over its Lloyd bound
   ($0.4362 \to 0.4420$); tail-biting converges on 4093/4096 blocks in at
   most three extra passes; the packed 56-byte payload decodes bit-exactly
-  to the same error; and the compute-based (1MAD) codebook costs
+  to the same error; and QTIP's compute-based (1MAD) codebook
+  \citep{tseng2024qtip} costs
   ${\sim}3\%$ MSE that an 8~KiB lookup table would recover. This is a
   pre-test on one tensor, not a forged model: whether the tensor-level
   $-38\%$ survives GPTQ, a full forge, and --- the question this paper
   makes precise --- the depth rule, is exactly what remains untested.
 \end{itemize}
+
+\section{Changes from the previous version}
+\label{sec:changes}
+
+
+This is a revision of a manuscript previously submitted to TMLR. The previous
+version reported a complete standardised evaluation as a debt and, in its
+benchmark ladder, described its HellaSwag figures as measured on the same
+2,108-item \emph{prefix} of the validation set. That description was wrong.
+llama.cpp's HellaSwag scorer always draws tasks at random without replacement
+from the whole file (a fixed-seed generator, seed 1), so the 2,108 items were a
+random subset in random order --- not a prefix --- and one of the two runs had
+been launched for 4,000 tasks and stopped at 2,108. Because the draw sequence
+does not depend on how many tasks are requested, both files were scored on the
+same 2,108 items and the comparison was paired, as claimed; but the sample was
+neither the one described nor one a reader could regenerate without the seed,
+the engine version and the interruption point. Winogrande (all 1,267 items) and
+perplexity (all 72 chunks) were complete in the previous version and are
+unchanged.
+
+This version replaces the partial figure with complete runs of nine public
+benchmark corpora, and a declared subset of a tenth, on four files, with sources, splits, item counts, exact
+commands and hardware (Section~\ref{sec:benchmarks}). Three further corrections
+follow from the new data. First, the previous version stated that perplexity
+ranks the two 397B files \emph{backwards} (7.5903 against 7.5438 on the AMD
+machine); on the NVIDIA runs the two files are indistinguishable (7.5180
+against 7.5173), and the earlier gap was inside its own error bars, so the
+claim is now the weaker and correct one --- perplexity does not separate two
+files that eight points on BoolQ and twenty-three on the task suite do
+separate. Second, the context length of the 72-chunk perplexity runs is 4096,
+not the 2048 of the paired 30-chunk measurements; Section~\ref{sec:setup} now
+states it per table. Third, the prose accompanying the task-suite table had
+drifted from the table (it described an aggregate gap of 19.2 points, a
+long-context family the baseline won, and a planning family tied at 20\%); the
+table is the frozen record and the prose now matches it (72 fixtures, 144
+scheduled pairs, 143 valid). We also declare limitations the previous version
+did not state: the git history of our llama.cpp fork was not preserved (its
+base commit has been recovered by file matching and the engine is released as
+a diff, Section~\ref{sec:protocol}) and the two-plane loader is not yet in a
+public repository;
+generative benchmarks are deferred to a future version; the 35B file of
+Section~\ref{sec:bench35} is not yet published; and --- found while preparing
+this revision by reading the shipped file's tensor table against the engine's
+default --- the 397B file carries second-plane tensors on all 60 layers, so
+the public-benchmark runs (no environment variable set) applied the second
+plane everywhere while the task-suite runs were served with it disabled
+(Sections~\ref{sec:rival} and~\ref{sec:limitations}). One cross-check of the
+previous version was misattributed: the 35B HellaSwag home run was made on the
+AMD desktop APU, not on a laptop RTX~4060 (Section~\ref{sec:crosscheck}).
 
 \nocite{yu2024superweight}
 

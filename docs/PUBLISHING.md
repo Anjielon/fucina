@@ -3,6 +3,17 @@
 Written from a deliberate survey rather than guesswork, and kept here so the
 next session does not have to re-derive it.
 
+> **Status, 2026-09-20.** The manuscript in [`paper/main.tex`](../paper/main.tex)
+> is the revised TMLR submission (the first version, submitted 2026-09-05,
+> was returned without review). The evaluation plan below was overtaken by
+> events: the whole-corpus benchmarks were run with `llama-perplexity`'s own
+> scorers (HellaSwag, `--multiple-choice`, Winogrande, perplexity) on cloud
+> GPUs, every item of nine public corpora, four files, with the exact commands
+> and prompt templates printed in the paper (§6.1) — not through lm-eval,
+> whose `llama-server` path still does not work. The Vulkan TQ1_0 kernels are
+> upstream since 2026-09-07 (llama.cpp #27765); the two-plane loader is
+> released as a diff with the supplementary material.
+
 ## The paper next to ours
 
 **Tied Trit-Planes** (arXiv 2608.08910, 9 Aug 2026) — a single unaffiliated

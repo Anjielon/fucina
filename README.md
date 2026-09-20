@@ -24,14 +24,21 @@
 runs on llama.cpp with Vulkan.
 
 > A **397B-parameter, 512-expert MoE** was quantized from a 740 GiB bf16
-> checkpoint down to **84.00 GiB** — **all expert weights ternary** — and
-> served end to end on **one consumer desktop** (Ryzen AI Max+ 395, 96 GiB
-> unified memory) at **~10 tok/s**. That build scores **74.67%** on HellaSwag
-> and **70.33%** on Winogrande. With the measured tail correction baked back
-> in (1.75 bits/weight, 85.1 GiB) it resolves **74.7%** of a 146-trial paired
-> coding-and-agentic suite against **55.5%** for a size-matched IQ1_M
-> quantization of the same model — exact McNemar *p* = 2.5·10⁻⁵.
-> The forge itself took **7.6 hours** on that same desktop.
+> checkpoint down to **84.00 GiB** (single plane) — **all expert weights
+> ternary** — and served end to end on **one consumer desktop** (Ryzen AI
+> Max+ 395, 96 GiB unified memory) at **~10 tok/s**. The forge itself took
+> **7.6 hours** on that same desktop.
+>
+> The **published two-plane file** (ODINO-397B-v3.4a, **88.17 GiB**, 1.91
+> bits/weight at the model level) resolves **78.3%** of a 143-trial paired
+> coding-and-agentic suite against **55.2%** for the closest-size public
+> IQ1_M quantization of the same checkpoint (85.09 GiB — the rival is 3.5%
+> *smaller*, not size-matched; exact McNemar *p* = 5.42·10⁻⁷), and on ten
+> public benchmark corpora run whole (cloud, 2026-09-19) it wins BoolQ by
+> **+7.99** points, HellaSwag by **+2.33** and MMLU by **+2.13** with
+> disjoint 95% intervals, loses none, and is **indistinguishable on
+> perplexity** (7.5180 vs 7.5173). Full tables, conditions and commands:
+> [paper/main.tex](paper/main.tex) §6 and [docs/RESULTS.md](docs/RESULTS.md).
 
 Every technique here carries its **measured** effect on real weights — not the
 paper's promise, our number — and credits the research it came from. The
@@ -51,7 +58,7 @@ All figures below are reproduced with their conditions in
 |---|---|---|
 | architecture | 512 experts × 60 layers, hybrid GatedDeltaNet attention | 256 experts × 41 layers |
 | source | bf16 checkpoint, 740 GiB | an existing high-quality GGUF |
-| **output** | **84.00 GiB** (1.69 bpw expert weights) | **9.19 GiB** |
+| **output** | **84.00 GiB** (1.69 bpw expert weights, single plane); published two-plane file v3.4a **88.17 GiB** (second-plane tensors present on all 60 layers) | **9.19 GiB** |
 | forge cost | 7.6 h, one consumer GPU, source streamed at ~50 MB/s | — |
 | decode | ~10 tok/s, fully resident in 96 GiB UMA | — |
 
@@ -69,36 +76,65 @@ All figures below are reproduced with their conditions in
 The 397B tail gain survives a paired logit comparison that the absolute error
 bar cannot resolve: **mean Δp = +0.048% ± 0.014%, 3.4σ**.
 
-### Task level, at matched size
+### Task level, at closest public size
 
 Same llama.cpp server build, same 16,384-token context budget, reasoning off
-for both, two fixed seeds, 146 paired trials. The suite is internal and not
-released; aggregate results only, and no reproducibility claim attaches to it.
+for both, two fixed seeds (7, 42), 72 fixtures → 144 scheduled pairs, 143
+valid (frozen record of 2026-08-29). The suite is internal and not released;
+aggregate results only, and no reproducibility claim attaches to it. The
+ternary file was served with its second plane *disabled* (`ODINO_NO_P2=1` in
+the launcher; see the paper, §6.2).
 
 | | resolved | |
 |---|---|---|
-| **ODINO, 1.75 bpw (this work)** | **109/146 = 74.7%** | |
-| Ornith-1.5-397B **IQ1_M**, size-matched | 81/146 = 55.5% | −19.2 points |
+| **ODINO v3.4a, 88.17 GiB, 1.91 bpw (this work)** | **112/143 = 78.3%** | |
+| Ornith-1.5-397B **IQ1_M**, 85.09 GiB (3.5% smaller) | 79/143 = 55.2% | +23.1 points |
 
-Discordant pairs 36 vs 8; **exact McNemar p = 2.54·10⁻⁵**; paired bootstrap
-(20k resamples) CI95 of the delta **[+11.0, +27.4] points**. For context — not
-a controlled comparison — a same-family 35B served at ~6.5 bits/weight scores
-75% on an earlier version of that suite.
+Discordant pairs 39 vs 6; **exact McNemar p = 5.42·10⁻⁷**; paired bootstrap
+(20k resamples) CI95 of the delta **[+14.7, +31.5] points**. The rival is not
+size-matched: the ternary file is 3.6% larger, so the size handicap favours
+the baseline. For context — not a controlled comparison — a same-family 35B
+served at ~6.5 bits/weight scores 75% on an earlier version of that suite.
+(An earlier version of this block reported 109/146 vs 81/146 for the 85.1 GiB
+v3.3 file on the pre-freeze CSV; it is superseded by the frozen record above.)
 
-### Standard benchmarks
+### Public benchmarks, whole corpora (cloud, 2026-09-19)
 
-| benchmark | score | interval | tasks | chance |
-|---|---|---|---|---|
-| HellaSwag | 74.67% | [69.45, 79.26] | 300 | 25% |
-| Winogrande | 70.33% | ± 2.64 | 300 | 50% |
+ODINO v3.4a (88.17 GiB) against the closest-size public quantization of the
+same checkpoint, `bartowski/Ornith-1.5-397B-GGUF` IQ1_M (85.09 GiB), scored
+with llama.cpp's own `llama-perplexity` on NVIDIA RTX PRO 6000 (Vulkan), every
+item of every corpus except PIQA (a declared 1,000-item subset of the 1,838
+validation items). Wilson 95% intervals; the second plane of the ternary file
+was applied on all 60 layers in these runs.
 
-⚠️ **Read these as "the model is not broken", not as a measurement of
-quantization damage.** They come from llama.cpp's built-in scorer, whose
-`acc_norm` normalises by token count where lm-eval normalises by characters —
-a third quantity under a familiar name, and not leaderboard-comparable. At
-n = 300 the smallest resolvable difference is 6.9 points, while quantization
-damage is typically 1–4. The full caveat, including why KL divergence is the
-metric to move to, is in [RESULTS](docs/RESULTS.md#standardised-benchmarks).
+| benchmark | n | ODINO v3.4a | IQ1_M | Δ |
+|---|---:|---|---|---:|
+| HellaSwag | 10,042 | **76.40** [75.56, 77.22] | 74.07 [73.20, 74.92] | +2.33 |
+| MMLU | 14,042 | **82.71** [82.07, 83.33] | 80.58 [79.92, 81.23] | +2.13 |
+| BoolQ | 3,270 | **89.27** [88.16, 90.28] | 81.28 [79.91, 82.58] | +7.99 |
+| ARC-Easy | 2,376 | 79.00 [77.31, 80.59] | 76.52 [74.77, 78.18] | +2.48 |
+| ARC-Challenge | 1,172 | 57.85 [55.00, 60.65] | 55.63 [52.77, 58.45] | +2.22 |
+| PIQA (1,000-item subset) | 1,000 | 80.90 [78.35, 83.22] | 80.90 [78.35, 83.22] | 0.00 |
+| OpenBookQA | 500 | 44.40 [40.10, 48.78] | 43.60 [39.32, 47.98] | +0.80 |
+| Winogrande | 1,267 | 66.22 [63.57, 68.77] | 61.64 [58.93, 64.28] | +4.58 |
+| TruthfulQA MC1 | 817 | 38.43 [35.16, 41.82] | 36.72 [33.48, 40.08] | +1.71 |
+| Perplexity, WikiText-2 (72 ch., ctx 4096) | 295k tok | 7.5180 ± 0.0519 | 7.5173 ± 0.0510 | +0.0007 |
+
+Bold: disjoint 95% intervals. No corpus shows a negative difference beyond its
+interval; perplexity cannot tell the two files apart. The 35B pair (a
+single-plane 15.47 GiB forge against its 16.24 GiB public rival) ties on all
+nine multiple-choice corpora and wins perplexity (7.6275 vs 8.1023). Exact
+commands, prompt templates, per-item paired tests and the cross-check between
+GPU vendors: [paper/main.tex](paper/main.tex) §6; per-piece logs in
+[docs/RESULTS.md](docs/RESULTS.md#whole-corpus-public-benchmarks-cloud-2026-09-19).
+
+⚠️ These are llama.cpp's per-token-normalised scores, zero-shot: comparable
+between files run with the same protocol, **not** with published leaderboards
+(lm-eval's `acc_norm` normalises by characters and its MMLU is 5-shot). The
+earlier 300-task figures (74.67% HellaSwag, 70.33% Winogrande, on the 84.00 GiB
+single-plane build) are superseded as measurements and kept in
+[RESULTS](docs/RESULTS.md#standardised-benchmarks) only as "not broken"
+evidence.
 
 ### Reconstruction fidelity, against the original checkpoint
 
@@ -146,9 +182,13 @@ are recorded in [LESSONS](docs/LESSONS.md) with the numbers that killed them.
 
 What decides the outcome is *where* the correction lands, not how faithful it
 is. The identical perturbation, delivered at identical relative magnitude to
-every layer's output, helps in the final quarter of the depth and is
-catastrophic near the middle. **The depth at which the sign flips is the same —
-73% — on both models, across a 10× size difference.** The surviving
+every layer's output, helps in the final third of the depth and is
+catastrophic near the middle. **On both models the sign flips in the final
+third of the depth — between 0.63 and 0.73 on the 35B and between 0.50 and
+0.73 on the 397B, at the resolution of the band search — across a 10× size
+difference, and the shipped bands begin at 73% of depth on both** (the
+two-decimal agreement of the band edges is a property of the bands we chose
+to ship, not a measured coincidence). The surviving
 explanation is that a mixture-of-experts is governed by expert *selection*
 more than by expert fidelity, so a correction that improves every expert can
 still move the model by moving the routing; three independent 2025–26 papers
@@ -273,7 +313,13 @@ python3 strip_tensors.py in.gguf out.gguf --match ffn_down_exps2 --keep-layers 3
 
 A llama.cpp build with **TQ1_0 Vulkan kernels** *and* the two-plane extension
 (optional `*_exps2` tensors summed inside `build_moe_ffn`; metadata key
-`<arch>.expert_count2`).
+`<arch>.expert_count2`). The single-plane TQ1_0 Vulkan kernels are in upstream
+llama.cpp since [ggml-org/llama.cpp#27765](https://github.com/ggml-org/llama.cpp/pull/27765)
+(merged 2026-09-07, commit `8fe90e1fbfc065f17a0b233c9df239423cd24a75`); the
+two-plane extension is fork-only and a two-plane file does **not** load on an
+unmodified upstream build (`wrong number of tensors; expected 1278, got 1098`).
+The engine used for every paper number is released with the paper's
+supplementary material as a diff against that upstream commit.
 
 Kernel checklist before trusting any output: `test-backend-ops` must pass
 `MUL_MAT` **and** `MUL_MAT_ID` for TQ1_0 with non-zero view offsets and n=1 —

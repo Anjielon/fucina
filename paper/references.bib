@@ -1,6 +1,6 @@
 % References for "Depth, Not Fidelity".
-% All author lists below were verified against the arXiv abs pages on 2026-08-28,
-% except where a TODO comment says otherwise.
+% Author lists were verified against the arXiv abstract pages: most on
+% 2026-08-28, the entries completed or added for the v2 revision on 2026-09-20.
 
 @article{xiao2025ptqtp,
   title   = {{PTQTP}: Post-Training Quantization to Trit-Planes for Large Language Models},
@@ -56,7 +56,7 @@
 
 @inproceedings{gemq,
   title     = {{GEMQ}: Global Expert-Level Mixed-Precision Quantization for {MoE} {LLMs}},
-  author    = {Deng and Wang and Wang and Liu and Chen and Yang and Hu},
+  author    = {Deng, Jianing and Wang, Song and Wang, Dongwei and Liu, Zijie and Chen, Tianlong and Yang, Huanrui and Hu, Jingtong},
   booktitle = {International Conference on Machine Learning (ICML)},
   year      = {2026},
   note      = {arXiv:2605.23078}
@@ -64,28 +64,29 @@
 
 @article{alphaq,
   title   = {{AlphaQ}: Calibration-Free Bit Allocation for Mixture-of-Experts Quantization},
-  author  = {Yang and Ma and Conzelmann and Zheng and Mahoney and Rusch and Liu},
+  author  = {Yang, Wanqi and Ma, Yuexiao and Conzelmann, Alexander and Zheng, Xiawu and Mahoney, Michael W. and Rusch, T. Konstantin and Liu, Shiwei},
   journal = {arXiv preprint arXiv:2606.04980},
   year    = {2026}
 }
 
-@article{mcmoe,
+@inproceedings{mcmoe,
   title   = {Mixture Compressor for Mixture-of-Experts {LLMs} Gains More},
-  author  = {Huang and Liao and Liu and He and Tan and Zhang and Li and Liu and Qi},
-  journal = {arXiv preprint arXiv:2410.06270},
-  year    = {2024}
+  author    = {Huang, Wei and Liao, Yue and Liu, Jianhui and He, Ruifei and Tan, Haoru and Zhang, Shiming and Li, Hongsheng and Liu, Si and Qi, Xiaojuan},
+  booktitle = {International Conference on Learning Representations (ICLR)},
+  year      = {2025},
+  note      = {arXiv:2410.06270}
 }
 
 @article{bitsmoe,
   title   = {{BitsMoE}: Efficient Spectral Energy-Guided Bit Allocation for {MoE} {LLM} Quantization},
-  author  = {Zhao and Teng and Fan and Ma and Ren and Chen and Liu},
+  author  = {Zhao, Jiayu and Teng, Zihan and Fan, Minhao and Ma, Tianrui and Ren, Wentao and Chen, Song and Liu, Weichen},
   journal = {arXiv preprint arXiv:2606.00079},
   year    = {2026}
 }
 
 @inproceedings{gptq,
   title     = {{GPTQ}: Accurate Post-Training Quantization for Generative Pre-trained Transformers},
-  author    = {Frantar and Ashkboos and Hoefler and Alistarh},
+  author    = {Frantar, Elias and Ashkboos, Saleh and Hoefler, Torsten and Alistarh, Dan},
   booktitle = {International Conference on Learning Representations (ICLR)},
   year      = {2023},
   note      = {arXiv:2210.17323}
@@ -93,22 +94,26 @@
 
 @article{shortgpt,
   title   = {{ShortGPT}: Layers in Large Language Models are More Redundant Than You Expect},
-  author  = {Men and Xu and Zhang and Wang and Lin and Lu and Han and Chen},
+  author  = {Men, Xin and Xu, Mingyu and Zhang, Qingyu and Wang, Bingning and Lin, Hongyu and Lu, Yaojie and Han, Xianpei and Chen, Weipeng},
   journal = {arXiv preprint arXiv:2403.03853},
   year    = {2024}
 }
 
-@article{gromov2024unreasonable,
+@inproceedings{gromov2024unreasonable,
   title   = {The Unreasonable Ineffectiveness of the Deeper Layers},
-  author  = {Gromov and others},
-  journal = {arXiv preprint arXiv:2403.17887},
-  year    = {2024}
+  author    = {Gromov, Andrey and Tirumala, Kushal and Shapourian, Hassan and Glorioso, Paolo and Roberts, Daniel A.},
+  booktitle = {International Conference on Learning Representations (ICLR)},
+  year      = {2025},
+  note      = {arXiv:2403.17887}
 }
 
 @article{switch,
   title   = {Switch Transformers: Scaling to Trillion Parameter Models with Simple and Efficient Sparsity},
-  author  = {Fedus and Zoph and Shazeer},
+  author  = {Fedus, William and Zoph, Barret and Shazeer, Noam},
   journal = {Journal of Machine Learning Research (JMLR)},
+  volume  = {23},
+  number  = {120},
+  pages   = {1--39},
   year    = {2022},
   note    = {arXiv:2101.03961}
 }
@@ -226,4 +231,111 @@
   author  = {Yu, Mengxia and Wang, De and Shan, Qi and Reed, Colorado J. and Wan, Alvin},
   journal = {arXiv preprint arXiv:2411.07191},
   year    = {2024}
+}
+
+% Added for the v2 revision (2026-09-20). Title, publisher and date taken from
+% the whitepaper's own title page; no arXiv identifier is known for it.
+@techreport{prismml2026bonsai2,
+  title       = {Ternary {Bonsai} 2 {27B}: A {27B} Ternary Reasoning Model},
+  author      = {{PrismML}},
+  institution = {PrismML},
+  type        = {Technical report},
+  year        = {2026},
+  month       = {September},
+  note        = {Whitepaper; no arXiv identifier known. Model weights released at \url{https://huggingface.co/prism-ml/Ternary-Bonsai-2-27B-gguf} (accessed 2026-09-20)}
+}
+
+% ── Added for the v2 revision (2026-09-20) ───────────────────────────────
+
+@inproceedings{tseng2024qtip,
+  title     = {{QTIP}: Quantization with Trellises and Incoherence Processing},
+  author    = {Tseng, Albert and Sun, Qingyao and Hou, David and De Sa, Christopher},
+  booktitle = {Advances in Neural Information Processing Systems (NeurIPS)},
+  year      = {2024},
+  note      = {arXiv:2406.11235}
+}
+
+@inproceedings{tseng2024quipsharp,
+  title     = {{QuIP\#}: Even Better {LLM} Quantization with Hadamard Incoherence and Lattice Codebooks},
+  author    = {Tseng, Albert and Chee, Jerry and Sun, Qingyao and Kuleshov, Volodymyr and De Sa, Christopher},
+  booktitle = {International Conference on Machine Learning (ICML)},
+  year      = {2024},
+  note      = {arXiv:2402.04396}
+}
+
+@inproceedings{egiazarian2024aqlm,
+  title     = {Extreme Compression of Large Language Models via Additive Quantization},
+  author    = {Egiazarian, Vage and Panferov, Andrei and Kuznedelev, Denis and Frantar, Elias and Babenko, Artem and Alistarh, Dan},
+  booktitle = {International Conference on Machine Learning (ICML)},
+  year      = {2024},
+  note      = {arXiv:2401.06118}
+}
+
+@inproceedings{malinovskii2024pvtuning,
+  title     = {{PV-Tuning}: Beyond Straight-Through Estimation for Extreme {LLM} Compression},
+  author    = {Malinovskii, Vladimir and Mazur, Denis and Ilin, Ivan and Kuznedelev, Denis and Burlachenko, Konstantin and Yi, Kai and Alistarh, Dan and Richtarik, Peter},
+  booktitle = {Advances in Neural Information Processing Systems (NeurIPS)},
+  year      = {2024},
+  note      = {arXiv:2405.14852}
+}
+
+@article{ashkboos2024quarot,
+  title   = {{QuaRot}: Outlier-Free 4-Bit Inference in Rotated {LLMs}},
+  author  = {Ashkboos, Saleh and Mohtashami, Amirkeivan and Croci, Maximilian L. and Li, Bo and Cameron, Pashmina and Jaggi, Martin and Alistarh, Dan and Hoefler, Torsten and Hensman, James},
+  journal = {arXiv preprint arXiv:2404.00456},
+  year    = {2024}
+}
+
+@inproceedings{liu2025spinquant,
+  title     = {{SpinQuant}: {LLM} Quantization with Learned Rotations},
+  author    = {Liu, Zechun and Zhao, Changsheng and Fedorov, Igor and Soran, Bilge and Choudhary, Dhruv and Krishnamoorthi, Raghuraman and Chandra, Vikas and Tian, Yuandong and Blankevoort, Tijmen},
+  booktitle = {International Conference on Learning Representations (ICLR)},
+  year      = {2025},
+  note      = {arXiv:2405.16406}
+}
+
+@inproceedings{wu2025semantichub,
+  title     = {The Semantic Hub Hypothesis: Language Models Share Semantic Representations Across Languages and Modalities},
+  author    = {Wu, Zhaofeng and Yu, Xinyan Velocity and Yogatama, Dani and Lu, Jiasen and Kim, Yoon},
+  booktitle = {International Conference on Learning Representations (ICLR)},
+  year      = {2025},
+  note      = {arXiv:2411.04986}
+}
+
+@misc{compilade2024tq1,
+  title        = {ggml-quants: ternary packing for {TriLMs} and {BitNet} b1.58},
+  author       = {{compilade}},
+  year         = {2024},
+  howpublished = {Pull request \#8151, ggml-org/llama.cpp, merged 2024-09-06, \url{https://github.com/ggml-org/llama.cpp/pull/8151}},
+  note         = {Software pull request; introduces the TQ1\_0 and TQ2\_0 formats}
+}
+
+@misc{ikawrakow2024iq1m,
+  title        = {{IQ1\_M}: 1.75 bpw quantization},
+  author       = {Kawrakow, Iwan},
+  year         = {2024},
+  howpublished = {Pull request \#6302, ggml-org/llama.cpp, merged 2024-03-26, \url{https://github.com/ggml-org/llama.cpp/pull/6302}},
+  note         = {Software pull request}
+}
+
+@misc{ikawrakow2024imatrix,
+  title        = {Importance Matrix calculation},
+  author       = {Kawrakow, Iwan},
+  year         = {2024},
+  howpublished = {Pull request \#4861, ggml-org/llama.cpp, merged 2024-01-12, \url{https://github.com/ggml-org/llama.cpp/pull/4861}},
+  note         = {Software pull request}
+}
+
+@misc{bartowski2026ornith397,
+  title        = {{Ornith-1.5-397B-GGUF}},
+  author       = {{bartowski}},
+  year         = {2026},
+  howpublished = {Hugging Face model repository, folder \texttt{Ornith-1.5-397B-IQ1\_M} (three shards, 85.09~GiB), \url{https://huggingface.co/bartowski/Ornith-1.5-397B-GGUF} (accessed 2026-09-20)}
+}
+
+@misc{mudler2026ornith35,
+  title        = {{Ornith-1.5-35B-A3B-APEX-MTP-GGUF}},
+  author       = {{mudler}},
+  year         = {2026},
+  howpublished = {Hugging Face model repository, files \texttt{APEX-MTP-I-Compact} (16.24~GiB) and \texttt{APEX-MTP-I-Quality} (22.09~GiB), \url{https://huggingface.co/mudler/Ornith-1.5-35B-A3B-APEX-MTP-GGUF} (accessed 2026-09-20)}
 }
