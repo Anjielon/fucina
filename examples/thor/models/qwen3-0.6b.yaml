@@ -1,0 +1,12 @@
+# Qwen3-0.6B (dense, 28 layers) — second check of Fucina's genericity: the small-scale reproductions of the audit
+# (A3 YAQA, A5 RILQ) run with their own scripts, not with Thor's wrappers -> every technique is excluded here until
+# wrappers for the qwen3 architecture are written.
+name: Qwen3-0.6B
+model_type: dense
+architecture: qwen3
+start: $THOR_HF/Qwen3-0.6B
+pieces: [attn, ffn_dense, embedding, head]
+constraints: {all_ternary: true}
+objectives:
+  A: "ram<=1GiB"
+candidates: {}

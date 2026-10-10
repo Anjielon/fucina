@@ -1,0 +1,21 @@
+# Thor-T (Ornith-1.5-35B-A3B, qwen35moe hybrid GatedDeltaNet + MoE, 40 layers + MTP blk.40) on the reference machine.
+name: Thor-T
+model_type: hybrid
+architecture: qwen35moe                         # GGUF general.architecture
+start: $THOR_GGUF/thor-src-hf             # bf16 (F1 "three_planes" derives R2B3m from it)
+pieces: [attn, gdn, shexp, experts_gate_up, experts_down, router, embedding, head, mtp]
+constraints: {all_ternary: true}
+# objectives of the 8 Oct plan (A: MMLU 80.05 at the size of the Q2_K rival; B: best MMLU under 9 GiB of RAM)
+objectives:
+  A: "mmlu>=80.05,file<=13085779616,tg>=50"
+  B: "ram<=9GiB,tg>=50"
+# candidates already built: signatures used to recognise the measurements made AGAINST them in the database
+candidates:
+  R2B3m: {gguf: $THOR_GGUF/tony-tern/R2B3m/Thor-T-R2B3m.gguf, file_bytes: 8846968608, kl: 0.41539,
+          mmlu: [74.60, 74.65, 74.85], tg: 67.9, kl_json: kl_ref,
+          note: "74.85 = same model on the Dell; 74.65 = with int8 activations"}
+  PV12P: {gguf: $THOR_GGUF/tony-tern/PV12P/Thor-T-pv12p.gguf, file_bytes: 12126492544, mmlu: [78.80], tg: 53.5,
+          kl_pct: -43.3, note: "KL estimated from pv12 (same structure, 32-row dKL)"}
+  pv12: {gguf: $THOR_GGUF/tony-tern/R022/Thor-T-R022-pv12.gguf, file_bytes: 13085728800, mmlu: [78.50],
+         kl_pct: -43.3, note: "second plane from the 32-row dKL (R022), predecessor of PV12P"}
+kl_mmlu_law: {base: 74.60, coeff: 0.00186}

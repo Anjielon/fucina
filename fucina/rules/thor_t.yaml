@@ -1,0 +1,58 @@
+# Initial rules learned on Thor-T (Ornith-1.5-35B-A3B, qwen35moe hybrid GatedDeltaNet + MoE).
+# Evidence = rows of the measurement database / the Thor-T lab notebook.
+- id: local_without_realignment
+  statement: "Local levers (per-layer error) do not move MMLU without a whole-model realignment: they break the compensation between layers."
+  scope: {model_type: [moe, hybrid], phase: [F1, F2]}
+  effect: {order: "structural levers first, then ONE F4 realignment on top of the final structure"}
+  evidence: ["local GPTQ/YAQA: flat", "scale-only TT6: flat", "QTEA KL +0.37 %", "scale soups: flat"]
+  confidence: 0.8
+- id: kl_mmlu_law
+  statement: "MMLU-2000 ≈ 74.60 + 0.00186·(drop % of realised KL on the teacher corpus)²"
+  scope: {model_type: [moe, hybrid]}
+  effect: {visible_mmlu_threshold_pct: -25, kl_for_80_05_pct: -54}
+  evidence: ["R2B3m 0 %/74.60", "oggi9 -12 %/75.05", "pv9 -11 %/74.80", "Q2_K -46 %/78.15", "pv12 -43 %/78.50"]
+  confidence: 0.7
+  exceptions: ["fitted by varying the planes; not yet verified for RILQ at large drops"]
+- id: second_plane_from_dkl
+  statement: "The experts' second plane must be chosen by whole-model measured dKL, not by proxies (imatrix, weight criteria)."
+  scope: {phase: F2, piece: [experts_gate_up, experts_down]}
+  effect: {criterion: measured_dkl, se_k: 1, min_rows: 64}
+  evidence: ["RD1/ALLOC1 from imatrix -1.8 MMLU (p 0.005)", "Colla-Q, Gaussian probe, curvature: no information", "PV12P 78.80 > pv12 78.50"]
+  confidence: 0.75
+- id: realignment_steps
+  statement: "In low-rank realignment the number of steps matters, not the position nor the precision of the adapters."
+  scope: {phase: F4}
+  effect: {min_steps: 200, ternary_adapters: allowed}
+  evidence: ["RILQ Qwen3-0.6B: 200 steps -52.3 %, 12 steps -19.8 %, ternary r64 -51.8 %", "RILQ Thor attn+gdn 532 steps: -17.5 % (TT6b corpus), -11.7 % teacher corpus"]
+  confidence: 0.6
+  exceptions: ["on Thor the descent is much slower than on the small model: being verified with shexp and the teacher corpus"]
+- id: int8_activations
+  statement: "int8 activations in the engine: MMLU flat, +12 % tg on gfx1151."
+  scope: {phase: F5}
+  effect: {enable: true}
+  evidence: ["R2B3m 74.65 vs 74.60 p 1.0; tg 50.4 -> 56.3"]
+  confidence: 0.9
+- id: expert_bytes_cost_tg
+  statement: "Every byte added to the experts costs generation speed."
+  scope: {phase: F2, piece: [experts_gate_up, experts_down]}
+  effect: {measure_tg: required}
+  evidence: ["second plane on 374 experts: tg -14 %", "pv12: tg ~-20 %"]
+  confidence: 0.7
+- id: speed_constraint
+  statement: "A lever that slows the R2B3m reference without int8 (~50 tok/s) a lot is rejected before MMLU; some slowdown is accepted if it improves the result."
+  scope: {}
+  effect: {tg_gate: true, reference_tg: 50}
+  evidence: ["on-the-fly GGUF-Z -90 %", "g64 -13 %"]
+  confidence: 1.0
+- id: resident_ram
+  statement: "The RAM constraint holds with the model loaded: file on disk <= ~8.84 GiB to stay under 9 GiB (ctx 8192)."
+  scope: {}
+  effect: {file_max_bytes_9gib: 9492293427}
+  evidence: ["pv9 9.16 GiB in RAM", "z9 8.999 GiB on disk but 9.52 in RAM"]
+  confidence: 1.0
+- id: published_lever
+  statement: "A published lever that yields less than reported is 'to verify' until its number is reproduced or the cause is shown."
+  scope: {}
+  effect: {negative_state: to_verify}
+  evidence: ["RILQ: P2c stopped at step 12 -> reproduced with 200 steps"]
+  confidence: 1.0

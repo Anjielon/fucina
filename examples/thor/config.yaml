@@ -1,0 +1,97 @@
+# Fucina configuration of the reference machine (Corsair ONE, Ryzen AI Max+ 395 / gfx1151, Vulkan, 128 GB UMA) for
+# Thor-T. Every machine-specific location lives here; the package itself hard-codes none of them.
+# Use it with:  fucina --config examples/thor/config.yaml auto --dry-run
+# Relative paths below are relative to this file.
+
+python: $THOR_PYTHON        # interpreter used inside the job scripts
+runs_dir: ../../runs
+database: ../../measurements.sqlite
+outputs: $THOR_GGUF/tony-tern/FUCINA          # jobs write GGUF files here (never /tmp: it is RAM)
+tmpdir: $THOR_GGUF/tony-tern/R026/_tmp
+models_dirs: [models]
+default_model: thor
+default_objective: A
+
+# activity log of the lab (date<TAB>STATUS<TAB>text); the lab uses Italian status words
+cycle_log: $THOR_LAB/stato/cicli.tsv
+cycle_log_status: ATTIVO
+
+# machine-wide GPU lock: a shell file defining the three functions below
+lock_script: $THOR_LAB/lucchetto.sh
+lock_owner_file: $THOR_LAB/lucchetti/gpu.lock/proprietario
+lock_commands: {acquire: prendi_gpu, release: molla_gpu, ram_guard: guardia_ram}
+
+# environment exported to every job (order is kept)
+job_env:
+  OMP_NUM_THREADS: "8"
+  TT_THREADS: "8"
+  LEVE_THREADS: "8"
+  PYTHONDONTWRITEBYTECODE: "1"
+
+measure_architectures: [qwen35moe]
+
+paths:
+  # reference GGUF files
+  structure_three_planes: &r2b3m $THOR_GGUF/tony-tern/R2B3m/Thor-T-R2B3m.gguf
+  gguf_r2b3m: *r2b3m
+  gguf_pv12p: $THOR_GGUF/tony-tern/PV12P/Thor-T-pv12p.gguf
+  # engines (llama.cpp builds with the ternary kernels)
+  bin_planes: $THOR_BUILD/thor-rexppiani2/build-rexp/bin
+  bin_cardan: $THOR_BUILD/thor-cardan/build-rexp/bin
+  bin_prism: $THOR_BUILD/thor-prism/build-rexp/bin
+  bin_shexp: $THOR_BUILD/thor-e1-shexp/build-rexp/bin
+  # measurement
+  combo_measure: $THOR_LAB/stato/combo_misura.sh
+  combo_experts: $THOR_LAB/stato/combo_esperti.sh
+  combo_dir: $THOR_GGUF/tony-tern/COMBO
+  kl_ref: $THOR_GGUF/tony-tern/LEVE_G4/kl_base/kl/kl_R2B3m.json
+  # F0 dKL
+  rd_ternary: $THOR_BUILD/wt-r022b/thor_v2/rd_ternary
+  rd_ternary_dkl: $THOR_GGUF/tony-tern/R026/_wt/r023/thor_v2/rd_ternary
+  recovery: $THOR_DEPOT/e2e/codice/RECUPERO
+  rd_plans: $THOR_GGUF/tony-tern/rd_ternary
+  dkl_merged: $THOR_GGUF/tony-tern/PRECISO/dkl_unito.tsv
+  teacher_cache_tt6: $THOR_DEPOT/e2e_teacher_tt6/q8-TT6b
+  dequant_cache: $THOR_DEPOT/e2e/cache_dequant
+  # F1/F2 levers
+  levers_g4: $THOR_LAB/thor_v2/leve_g4
+  refine: $THOR_BUILD/leve/raffina
+  combo_trials: $THOR_POD/combo-exps2/thor_v2/prove_combo
+  rot: $THOR_DEPOT/tmp_p1/rot
+  e1_letter: $THOR_BUILD/wt-e1/thor_v2/lettera
+  # F3
+  letter: $THOR_LAB/thor_v2/lettera
+  letter_run: $THOR_GGUF/tony-tern/lettera/corsa
+  # F4
+  rilqt: $THOR_GGUF/tony-tern/RILQT
+  rilq_shexp_run: $THOR_GGUF/tony-tern/RILQT/corsa_shexp.sh
+  # F5 (tool not written yet: MTP stays "missing_tool")
+  mtp_measure: $THOR_LAB/thor_v2/strumenti/mtp_misura.sh
+  # not used by the wrappers yet (F6 evaluation tools)
+  mcnemar: $THOR_LAB/thor_v2/strumenti/mcnemar_mclp.py
+  probe: $THOR_LAB/thor_v2/leve_flusso/sonda_corsair.sh
+  mmlu_bench: $THOR_LAB/mc_v2/mmlu_00000.bin
+  teacher_cache: $THOR_DEPOT/e2e_teacher/q8-maestro
+
+# GGUF files already written by validated runs: a technique applied to `base` yields `product` without rebuilding
+techniques:
+  second_plane_dkl:
+    known_products:
+      # PV12P = second plane from the 64-row merged dKL on top of R2B3m at the Q2_K size cap (12.19 GiB)
+      - {base: gguf_r2b3m, product: gguf_pv12p, cap_min: 12126492544, cap_max: 13085779616}
+  shq8:
+    known_products: [{base: gguf_r2b3m, product: $THOR_GGUF/tony-tern/ROT/Thor-T-R2B3m-shQ8.gguf}]
+  cardan:
+    known_products: [{base: gguf_r2b3m, product: $THOR_GGUF/tony-tern/LEVE_G4/cardan/Thor-T-R2B3m-CARDAN16.gguf}]
+  prism:
+    known_products: [{base: gguf_r2b3m, product: $THOR_GGUF/tony-tern/ROT/Thor-T-R2B3m-PA16.gguf}]
+  rilq:
+    # validated run on top of R2B3m (attn+gdn, TT6b corpus): GGUF and measurements in RILQT/R2B3m
+    known_products: [{base: gguf_r2b3m, product: $THOR_GGUF/tony-tern/RILQT/R2B3m/Thor-T-R2B3m-RILQ.gguf}]
+
+# lab-notebook sources read by `fucina import` (Thor-T notebook, Italian)
+import_sources:
+  cycles: $THOR_LAB/stato/cicli.tsv
+  results: $THOR_LAB/thor_v2/RISULTATI_3-5_OTTOBRE.md
+  plan: $THOR_LAB/thor_v2/PIANO_2026-10-08.md
+  audit: $THOR_LAB/ricerche/AUDIT_RIPRODUZIONE.md

@@ -1,0 +1,56 @@
+# Fucina configuration — copy to ./fucina.yaml (or point FUCINA_CONFIG / --config at it) and fill in your paths.
+# A complete, real configuration is in examples/thor/config.yaml.
+# Relative file-system paths are resolved against the directory of this file.
+
+python: /usr/bin/python3            # interpreter used inside the job scripts (needs torch/numpy for the wrappers)
+runs_dir: runs                      # one directory per run: state.json, queue.json, questions.json, recipe.yaml
+database: measurements.sqlite       # measurement log (every experiment is a row)
+outputs: /data/fucina-outputs       # where --dry-run/--run jobs write GGUF files and measurements (not /tmp)
+tmpdir: /data/tmp                   # TMPDIR exported to the jobs (optional)
+models_dirs: [models]               # `--model NAME` loads NAME.yaml from these directories
+rules_dirs: []                      # extra rule files on top of the packaged rule base (fucina/rules)
+default_model: null
+default_objective: A
+
+# optional activity log, one line per launch: date<TAB>STATUS<TAB>text
+cycle_log: null
+cycle_log_status: ACTIVE
+
+# Machine-wide GPU lock. `lock_script` is a shell file sourced by every GPU job; it must define:
+#   acquire_gpu "<who>" <GiB>   blocks until the GPU is free and records the owner
+#   release_gpu                 releases it (installed as an EXIT trap)
+#   ram_guard                   returns 0 when there is enough free RAM to start
+# Rename the functions with lock_commands if yours differ.
+lock_script: /opt/fucina/lock.sh
+lock_owner_file: /opt/fucina/gpu.lock/owner     # read-only, shown in the UI
+lock_commands: {acquire: acquire_gpu, release: release_gpu, ram_guard: ram_guard}
+
+# environment exported to every job, in this order
+job_env:
+  OMP_NUM_THREADS: "8"
+  PYTHONDONTWRITEBYTECODE: "1"
+
+# architectures (GGUF general.architecture) for which the measurement script is validated
+measure_architectures: [qwen35moe]
+
+# Locations used by the technique wrappers (`fucina techniques` lists what is missing).
+paths:
+  structure_three_planes: /data/models/MyModel-three-planes.gguf   # F1 base structure, if already built
+  kl_ref: /data/kl/kl_base.json          # per-row realised KL of the reference candidate
+  combo_measure: /opt/scripts/combo_misura.sh     # measurement script (KL + tg128 + optional MMLU)
+  combo_experts: /opt/scripts/combo_esperti.sh    # combination writer (dense + second plane + K scale)
+  combo_dir: /data/combo
+  bin_planes: /opt/llama.cpp-ternary/build/bin    # inference engine(s)
+  # ... one key per tool: rd_ternary, rd_ternary_dkl, recovery, rd_plans, dkl_merged, teacher_cache_tt6,
+  #     dequant_cache, levers_g4, refine, combo_trials, rot, e1_letter, letter, letter_run, rilqt, rilq_shexp_run,
+  #     bin_cardan, bin_prism, bin_shexp, mtp_measure (see examples/thor/config.yaml)
+
+# Per-technique overrides: default parameters and GGUF files already produced by a validated run.
+techniques:
+  prism:
+    params: {k: 16}
+    known_products:
+      - {base: structure_three_planes, product: /data/models/MyModel-prism16.gguf}
+
+# Lab-notebook sources read by `fucina import` (the bundled importers parse the Thor-T notebook format).
+import_sources: {}
