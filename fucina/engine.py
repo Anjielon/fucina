@@ -324,6 +324,9 @@ class Engine:
         if getattr(t, "suspended", "") and user != "enable":
             v.state, v.reason = "suspended", t.suspended
             return v
+        if getattr(t, "default_off", "") and user != "enable":
+            v.state, v.reason = "off", f"opt-in module ({t.default_off}): `fucina enable {t.name}`"
+            return v
         e = t.cheap_test(self.ctx(cand))
         if e.verdict == "UNINFORMATIVE":
             v.state, v.reason, v.numbers = "missing_tool", e.reason, e.numbers
@@ -436,6 +439,8 @@ class Engine:
             v = Evaluation(t.name, "F0", self.pieces_of(t), "testing", switch=t.switch(), base=cand.label)
             if self.exclusion(t, "F0"):
                 v.state, v.reason = "excluded", self.exclusion(t, "F0")
+            elif getattr(t, "default_off", "") and self.switches.get(t.name) != "enable":
+                v.state, v.reason = "off", f"opt-in module ({t.default_off}): `fucina enable {t.name}`"
             elif e.verdict == "PASS":
                 v.state, v.reason, v.numbers = "consolidated", e.reason, e.numbers
             elif e.verdict == "UNINFORMATIVE":

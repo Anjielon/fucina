@@ -72,6 +72,26 @@ paths:
   probe: $THOR_LAB/thor_v2/leve_flusso/sonda_corsair.sh
   mmlu_bench: $THOR_LAB/mc_v2/mmlu_00000.bin
   teacher_cache: $THOR_DEPOT/e2e_teacher/q8-maestro
+  # lever drivers of 12-13 Oct (opt-in modules in techniques/single_plane.py and techniques/finishing.py).
+  # The Thor-T lab drivers choose their host and output directory themselves (they ignore FUCINA_HOST/FUCINA_OUT,
+  # which a generic driver must honour); they are referenced read-only.
+  driver_c_ptq: $THOR_LAB/stato/c_ptq2_1012.sh
+  driver_c_g64: $THOR_LAB/stato/c_g64_braccio_1013.sh
+  driver_c_ssm_dt: $THOR_LAB/stato/c_m1_ssmdt_1013.sh
+  driver_c_fair_calib: $THOR_LAB/stato/c_fair_calib_1013.sh
+  driver_hsvdquant: $THOR_LAB/stato/hsvdquant_a_1013.sh
+  driver_c_flow_stats: $THOR_LAB/stato/c_s1_statistiche_1013.sh
+  driver_c_zero_byte: $THOR_LAB/stato/c_s1b_bytezero_1013.sh
+  driver_c_sequential: $THOR_LAB/stato/c_s23_sequenziale_1013.sh
+  driver_c_tesseraq: $THOR_LAB/stato/c_s4_tesseraq_1013.sh
+  driver_c_e2e_qp: $THOR_LAB/stato/e2e_c3_1012.sh
+  driver_c_on_policy: $THOR_LAB/stato/c_onpolicy_fedele_1013.sh
+  driver_c_cardan_experts: $THOR_LAB/stato/c_cardan_esperti_1013.sh
+  driver_a_dense_kl4: $THOR_LAB/stato/a_densi_kl4_v2_1013.sh
+  driver_a_k_scale: $THOR_LAB/stato/a_leva_k_1013.sh
+  driver_a_e2m: $THOR_LAB/stato/a_e2m_1013.sh
+  driver_a_dense_then_kd: $THOR_LAB/stato/a_s23_cardan_1013.sh
+  driver_b_lever_search: $THOR_LAB/stato/dell_b_senzaneg_1013.sh
 
 # GGUF files already written by validated runs: a technique applied to `base` yields `product` without rebuilding
 techniques:

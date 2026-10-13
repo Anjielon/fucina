@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Any, Optional
 
 from .. import config
-from ..executor import Job
+from ..executor import Job, bash
 from ..measure import Measurement
 from ..registry import Change, Outcome, Technique, Thresholds
 
@@ -44,6 +44,14 @@ class ScriptTechnique(Technique):
     structural: bool = False          # changes the structure: consolidated at the end of its phase
     architectures: tuple = ("qwen35moe",)   # GGUF architectures for which the wrapped scripts are validated
     self_measuring: bool = False      # True = the last job measures by itself (paired KL/tg/MMLU): no extra measurement
+    # ── lever census (docs/LEVERS.md is generated from these fields: ``fucina techniques --census``) ──
+    variant: str = ""                 # faithful | thor (faithful + declared extension) | original (no paper) | control
+    deviations: str = ""              # declared deviations from the paper (empty = none)
+    default_off: str = ""             # opt-in module: off in automatic runs until ``fucina enable <name>``
+    lab_status: str = ""              # PASS | FAIL | NEUTRAL | PREPARED | RUNNING (last verdict in the lab notebook)
+    measured: tuple = ()              # evidence records, see :func:`result`
+    correction_hook: bool = False     # trains a correction; an optional CLOSED external hook (not part of Fucina)
+                                      # may post-process it, otherwise it is written as extra tensors
 
     # ── preflight ──
     def missing(self) -> list:
@@ -125,3 +133,46 @@ class ScriptTechnique(Technique):
 
 def thresholds(**kw: Any) -> Thresholds:
     return Thresholds(**kw)
+
+
+def result(objective: str, host: str, value: str, vs: str = "", wins_losses: str = "", p: str = "", extra: str = "",
+           evidence: str = "") -> dict:
+    """One measured outcome of a lever. ``value``/``vs``: MMLU-2000 (or the named metric) of the candidate and of its
+    reference; ``wins_losses``: paired McNemar counts; ``evidence``: activity-log line and result file, relative to the
+    lab root (the numbers are copied, never recomputed)."""
+    return {"objective": objective, "host": host, "value": value, "vs": vs, "wins_losses": wins_losses, "p": p,
+            "extra": extra, "evidence": evidence}
+
+
+class DriverTechnique(ScriptTechnique):
+    """A lever run by one validated driver script (``paths.<driver>`` in the configuration).
+
+    The driver receives ``FUCINA_HOST`` (starting GGUF), ``FUCINA_OUT`` (output directory), ``FUCINA_PRODUCT``
+    (GGUF to write) and one ``FUCINA_P_<PARAM>`` per parameter; it takes the GPU lock by itself, measures with the
+    paired protocol (spoken probe, KL4 held-out gate, MMLU + McNemar, speed ABBAAB) and is idempotent."""
+    driver: str = ""                  # config path key of the driver script
+    driver_gpu: bool = True
+    driver_training: bool = False
+    self_measuring = True
+    judged_by = "kl"
+
+    def __init__(self) -> None:
+        if self.driver and self.driver not in self.tools:
+            self.tools = tuple(self.tools) + (self.driver,)
+
+    def jobs(self, ctx: Any, piece: str) -> list:
+        c = cfg()
+        o = self.output_dir(ctx, piece)
+        g = self.product_gguf(ctx, piece)
+        conf = {**self.params, **(c.technique(self.name).get("params") or {})}
+        env = " ".join(f"FUCINA_P_{k.upper()}={self.param(ctx, k)!s}".replace(" ", "_") for k in conf)
+        s = (f"mkdir -p {o}; FUCINA_HOST={ctx.candidate.gguf} FUCINA_OUT={o} FUCINA_PRODUCT={g} {env} "
+             f"nice -n 10 bash {c.path(self.driver)} > {o}/driver.log 2>&1")
+        return [Job(id=f"{self.phase}_{self.name}", name=f"{self.name}: {self.description()}", command=bash(s),
+                    gpu=self.driver_gpu, training=self.driver_training, est_h=self.gpu_cost_h, output_dir=o)]
+
+    def switch(self) -> str:
+        if self.correction_hook:
+            return "file: back to the starting GGUF (the correction is a separate tensor set unless post-processed)"
+        return "file: same size and tensor set -> switched off by going back to the starting GGUF"
+

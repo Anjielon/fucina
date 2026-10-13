@@ -58,6 +58,58 @@ Three modes of execution, for every command that queues work:
 - **Rules** — generalisations learned from past measurements (`fucina/rules/*.yaml`), with scope, evidence and
   confidence; they weight priorities and can consolidate a technique from strong evidence.
 
+## Technique modules
+
+Every lever is a module with a paper reference, a declared variant, parameters, a switch and its measured status.
+The full census — parameters, deviations from the paper and every measured number with its evidence file — is in
+[`docs/LEVERS.md`](docs/LEVERS.md), generated with `fucina techniques --census`. *Opt-in* modules (most of them
+added on 12-13 Oct 2026 for the single-plane objective C and the finishing levers of A and B) are skipped by
+automatic runs until `fucina enable <name>`.
+
+| module | phase | pieces | reference | variant | status | default |
+|---|---|---|---|---|---|---|
+| `flow_statistics` | F0 | attn, gdn, shexp, experts_gate_up, experts_down | arXiv 2504.02692 (GPTAQ) + arXiv 2504.09629 (QEP) + arXiv 2505.03804 (MoEQuant AGQ) + arXiv 2609.31009 (G2PTQ gradients) | faithful | PREPARED | opt-in |
+| `measured_dkl` | F0 | experts_gate_up, experts_down | rule second_plane_from_dkl (RD1/ALLOC1 from an imatrix proxy: -1.8 MMLU) | — | — | on |
+| `act_order_sign` | F1 | attn, gdn, shexp | arXiv 2605.18933 (sign criterion) + static act-order (arXiv 2210.17323 §4) | faithful | NEUTRAL | opt-in |
+| `bil` | F1 | attn, gdn, shexp, head | arXiv 2609.05641 (nuclear limit -> uniform grid); offline weighted error 0.054 -> 0.026 | — | — | on |
+| `bil_k1_jarq` | F1 | attn, gdn, shexp | arXiv 2609.05641 (balanced grid) + arXiv 2609.38599 (JARQ) | faithful | PASS | opt-in |
+| `dense_ptq_before_expert_kd` | F1 | attn, gdn, shexp | arXiv 2608.15567 (SchurQuant) + arXiv 2609.31009 (G2PTQ), then arXiv 2609.21137 (CARDAN) | faithful | PREPARED | opt-in |
+| `drq` | F1 | attn, gdn, shexp | arXiv 2610.11226 (DRQ; paper +0.91 on a 3-bit MoE); 13/13 closed-form tests (audit 13 Oct) | faithful | PASS | opt-in |
+| `e2m_stage2` | F1 | attn, gdn, shexp | arXiv 2606.13054 (TWLA §3.2 / Alg. 3) | faithful | PREPARED | opt-in |
+| `fair_calib` | F1 | attn, gdn, shexp | arXiv 2606.06547 (FAIR-Calib, ICML 2026) | faithful | RUNNING | opt-in |
+| `family_lever_search` | F1 | attn, gdn, shexp | original (K-FAC curvature, arXiv 1503.05671, as the predictor) | original | RUNNING | opt-in |
+| `foem` | F1 | attn, gdn, shexp | arXiv 2507.11017 (FOEM); bit-identical to GPTQModel foem.py (audit 13 Oct) | faithful | NEUTRAL | opt-in |
+| `g2ptq` | F1 | attn, gdn, shexp | G2PTQ (official code, audit G2 #17) | — | SUSPENDED | suspended |
+| `gptq_k1` | F1 | attn, gdn, shexp | arXiv 2210.17323 (GPTQ) | control | FAIL | opt-in |
+| `hsvdquant` | F1 | attn, gdn, shexp | arXiv 2610.11315 (H-SVDQuant) | faithful | PREPARED | opt-in |
+| `jarq` | F1 | attn, gdn, shexp | arXiv 2609.38599 (JARQ) | — | — | on |
+| `jarq_k1` | F1 | attn, gdn, shexp | arXiv 2609.38599 (JARQ, Alg. 1) | faithful | PASS | opt-in |
+| `osaq` | F1 | attn, gdn, shexp | arXiv 2605.04738 (OSAQ) | faithful | FAIL | opt-in |
+| `qtea` | F1 | attn, gdn, shexp | arXiv 2609.00224 (QTEA) | — | — | on |
+| `scale_groups_g64` | F1 | attn, gdn, shexp | no paper: Thor-T scale-group redistribution (engine types TQ1_0R_1024_G64/_G256) | original | FAIL | opt-in |
+| `schur` | F1 | attn, gdn, shexp | arXiv 2608.15567 (SchurOpt) | — | SUSPENDED | suspended |
+| `schuropt_k1` | F1 | attn, gdn, shexp | arXiv 2608.15567 (SchurQuant / SchurOpt) | faithful | FAIL | opt-in |
+| `sequential_re_ptq` | F1 | attn, gdn, shexp, experts_gate_up, experts_down | arXiv 2504.09629 (QEP) with the C recipe (2609.05641 + 2609.38599 + 2610.11226) | faithful | PREPARED | opt-in |
+| `shq8` | F1 | shexp | RotaryQuant (lever #18) | — | — | on |
+| `ssm_dt_bias` | F1 | gdn | original (derived from bias correction, arXiv 1906.04721, and Gated DeltaNet, arXiv 2412.06464) | original | FAIL | opt-in |
+| `three_planes` | F1 | attn, gdn, shexp, head | Thor-T recipe (R2B3m 8,846,968,608 B, MMLU-2000 74.60) | — | — | on |
+| `tied` | F1 | attn, gdn, shexp | arXiv 2608.08910 (Tied Trit-Planes) | — | — | on |
+| `zero_byte_scales` | F1 | attn, gdn, shexp, experts_gate_up, experts_down | arXiv 2510.03267 (PT2-LLM AGA) + arXiv 2410.03129 (ARB-LLM_RC) + arXiv 2609.38599 (JARQ eq. 6) + arXiv 1906.04721 (DFQ) + arXiv 2402.11295 (OneBit) | faithful | PREPARED | opt-in |
+| `cardan` | F2 | experts_gate_up | lever #20 CARDAN (G4) | — | — | on |
+| `cardan_experts_k1` | F2 | experts_gate_up | arXiv 2609.21137 (CARDAN §3.3 Eq. 3 + App. A.1 Eq. 5-6) | faithful | NEUTRAL | opt-in |
+| `k_scale` | F2 | experts_gate_up, experts_down | R029 item 30 (k 1.045) | — | — | on |
+| `k_scale_answer_kl4` | F2 | experts_gate_up, experts_down | original (Thor-T lever K, R029 item 30) | original | PREPARED | opt-in |
+| `prism` | F2 | experts_gate_up | arXiv 2609.32429 (PrismQuant) | — | — | on |
+| `second_plane_dkl` | F2 | experts_gate_up, experts_down | rule second_plane_from_dkl (PV12P 78.80 at 12.13 GiB; pv12 78.50) | — | — | on |
+| `e2_rank1` | F3 | head | arXiv 2409.18857 (E2/BNP: ARC 52.3 -> 56.7) | — | — | on |
+| `dense_residual_kl4` | F4 | attn, gdn, shexp | arXiv 2412.01129 (RILQ) as the form; the loss is ours | thor | NEUTRAL | opt-in |
+| `e2e_qp` | F4 | attn, gdn, shexp, experts_gate_up, experts_down | arXiv 2407.11062 (EfficientQAT E2E-QP) + arXiv 2405.14852 (PV-Tuning) + arXiv 2402.10631 (CAKLD) | faithful | NEUTRAL | opt-in |
+| `on_policy_distillation` | F4 | whole model | arXiv 2609.26708 (QAOPD, official reward math_mixed_reward.py) | faithful | NEUTRAL | opt-in |
+| `rilq` | F4 | attn, gdn, shexp | arXiv 2412.01129 (RILQ: -51 % of the log-PPL gap at W2); reproduced small-scale -52.3 % (audit A5) | — | — | on |
+| `tesseraq` | F4 | attn, gdn, shexp, experts_gate_up, experts_down | arXiv 2410.19103 (TesseraQ, Alg. 1) | faithful | PREPARED | opt-in |
+| `int8` | F5 | whole model | in-house lever (GGML_VK_TQ1R_Q8): MMLU 74.65 vs 74.60, tg 50.4 -> 56.3 | — | — | on |
+| `mtp` | F5 | mtp | plan of 8 Oct: MTP head to be measured (acceptance and tok/s) on PV12P/RILQ | — | — | on |
+
 ## Installation
 
 ```bash
@@ -134,13 +186,16 @@ fucina/
   db.py             measurement database and rule base
   config.py         configuration loading (no hard-coded paths)
   phases.py, pieces.py
-  techniques/       wrappers: diagnosis (F0), dense (F1), experts (F2), head/realignment/runtime (F3-F5)
+  techniques/       wrappers: diagnosis (F0), dense (F1), experts (F2), head/realignment/runtime (F3-F5),
+                    single_plane (objective C), finishing (A/B levers and the per-family lever search)
+  census.py         lever census renderer (docs/LEVERS.md)
   importers/        loaders of existing lab records into the measurement database
   rules/            packaged rule base (learned on Thor-T)
   tools/            small CLI adapters used inside jobs
   view.py, tui.py   rich report and textual UI
 examples/thor/      reference machine configuration and model files
 docs/SPEC.md        design specification
+docs/LEVERS.md      lever census (generated)
 tests/              unit tests + Thor-T integration tests (skipped when its sources are absent)
 ```
 

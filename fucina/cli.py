@@ -159,6 +159,10 @@ def cmd_import(a: argparse.Namespace) -> None:
 
 def cmd_techniques(a: argparse.Namespace) -> None:
     from .registry import load_techniques
+    if getattr(a, "census", False):
+        from .census import census_markdown
+        print(census_markdown(load_techniques().values(), short=a.short))
+        return
     for t in sorted(load_techniques().values(), key=lambda t: (t.phase, t.name)):
         susp = f" [suspended: {t.suspended}]" if getattr(t, "suspended", "") else ""
         miss = t.missing() if hasattr(t, "missing") else []
@@ -249,6 +253,8 @@ def build_parser() -> argparse.ArgumentParser:
     q.set_defaults(f=cmd_import)
     q = s.add_parser("techniques", help="registered techniques")
     q.set_defaults(f=cmd_techniques)
+    q.add_argument("--census", action="store_true", help="markdown lever census (docs/LEVERS.md)")
+    q.add_argument("--short", action="store_true", help="with --census: one-line module table (README)")
     q = s.add_parser("forge", help="replay a recipe.yaml")
     q.set_defaults(f=cmd_forge)
     q.add_argument("--recipe", required=True)
