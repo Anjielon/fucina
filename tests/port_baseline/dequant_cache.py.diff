@@ -1,0 +1,18 @@
+--- original(renamed)
++++ port
+@@ -275,7 +275,13 @@
+         args=[
+          BinOp(
+-          left=Name(id='_HERE', ctx=Load()),
++          left=BinOp(
++           left=Attribute(
++            value=Name(id='_HERE', ctx=Load()),
++            attr='parent',
++            ctx=Load()),
++           op=Div(),
++           right=Constant(value='ternary')),
+           op=Div(),
+-          right=Constant(value='dequant_gguf_torch.py'))]),
++          right=Constant(value='gguf_dequant.py'))]),
+        attr='encode',
+        ctx=Load()))])),

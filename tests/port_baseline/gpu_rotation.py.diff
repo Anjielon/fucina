@@ -1,0 +1,19 @@
+--- original(renamed)
++++ port
+@@ -13,16 +13,4 @@
+  names=[
+   alias(name='torch')])
+-Expr(
+- value=Call(
+-  func=Attribute(
+-   value=Attribute(
+-    value=Name(id='sys', ctx=Load()),
+-    attr='path',
+-    ctx=Load()),
+-   attr='insert',
+-   ctx=Load()),
+-  args=[
+-   Constant(value=0),
+-   Constant(value='<ABSOLUTE-PATH>')]))
+ ImportFrom(
+  module='fucina.ternary.tq1_0r_1024_codec',

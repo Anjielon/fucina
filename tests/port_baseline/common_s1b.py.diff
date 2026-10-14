@@ -1,0 +1,61 @@
+--- original(renamed)
++++ port
+@@ -47,47 +47,15 @@
+   attr='parent',
+   ctx=Load()))
+-Assign(
+- targets=[
+-  Name(id='_LIB', ctx=Store())],
+- value=BinOp(
+-  left=Attribute(
+-   value=Name(id='HERE', ctx=Load()),
+-   attr='parent',
+-   ctx=Load()),
+-  op=Div(),
+-  right=Constant(value='lib')))
+-For(
+- target=Name(id='p', ctx=Store()),
+- iter=Tuple(
+-  elts=[
+-   Call(
+-    func=Name(id='str', ctx=Load()),
+-    args=[
+-     Name(id='_LIB', ctx=Load())])],
+-  ctx=Load()),
+- body=[
+-  If(
+-   test=Compare(
+-    left=Name(id='p', ctx=Load()),
+-    ops=[
+-     NotIn()],
+-    comparators=[
+-     Attribute(
+-      value=Name(id='sys', ctx=Load()),
+-      attr='path',
+-      ctx=Load())]),
+-   body=[
+-    Expr(
+-     value=Call(
+-      func=Attribute(
+-       value=Attribute(
+-        value=Name(id='sys', ctx=Load()),
+-        attr='path',
+-        ctx=Load()),
+-       attr='insert',
+-       ctx=Load()),
+-      args=[
+-       Constant(value=0),
+-       Name(id='p', ctx=Load())]))])])
++ImportFrom(
++ module='fucina.extdeps',
++ names=[
++  alias(name='ENV_RD_TERNARY'),
++  alias(name='add_path')],
++ level=0)
++Expr(
++ value=Call(
++  func=Name(id='add_path', ctx=Load()),
++  args=[
++   Name(id='ENV_RD_TERNARY', ctx=Load())]))
+ ImportFrom(
+  module='rd_ternary',

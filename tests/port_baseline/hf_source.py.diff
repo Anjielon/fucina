@@ -1,0 +1,80 @@
+--- original(renamed)
++++ port
+@@ -29,4 +29,32 @@
+  names=[
+   alias(name='numpy', asname='np')])
++ImportFrom(
++ module='fucina.extdeps',
++ names=[
++  alias(name='data_path')],
++ level=0)
++Assign(
++ targets=[
++  Name(id='_DATA', ctx=Store())],
++ value=BinOp(
++  left=BinOp(
++   left=Attribute(
++    value=Attribute(
++     value=Call(
++      func=Attribute(
++       value=Call(
++        func=Name(id='Path', ctx=Load()),
++        args=[
++         Name(id='__file__', ctx=Load())]),
++       attr='resolve',
++       ctx=Load())),
++     attr='parent',
++     ctx=Load()),
++    attr='parent',
++    ctx=Load()),
++   op=Div(),
++   right=Constant(value='ternary')),
++  op=Div(),
++  right=Constant(value='data')))
+ Assign(
+  targets=[
+@@ -42,19 +70,22 @@
+     args=[
+      Constant(value='TT_HF'),
+-     Constant(value='<ABSOLUTE-PATH>')])]))
++     Call(
++      func=Name(id='data_path', ctx=Load()),
++      args=[
++       Constant(value='thor-src-hf')])])]))
+ Assign(
+  targets=[
+   Name(id='MAP_JSON', ctx=Store())],
+- value=Call(
+-  func=Name(id='Path', ctx=Load()),
+-  args=[
+-   Constant(value='<ABSOLUTE-PATH>')]))
++ value=BinOp(
++  left=Name(id='_DATA', ctx=Load()),
++  op=Div(),
++  right=Constant(value='gguf_hf_map.json')))
+ Assign(
+  targets=[
+   Name(id='MAP_NPZ', ctx=Store())],
+- value=Call(
+-  func=Name(id='Path', ctx=Load()),
+-  args=[
+-   Constant(value='<ABSOLUTE-PATH>')]))
++ value=BinOp(
++  left=Name(id='_DATA', ctx=Load()),
++  op=Div(),
++  right=Constant(value='gguf_hf_perm.npz')))
+ Assign(
+  targets=[
+@@ -74,5 +105,11 @@
+     args=[
+      Constant(value='TT_LORA'),
+-     Constant(value='<ABSOLUTE-PATH>')])]))
++     Call(
++      func=Name(id='data_path', ctx=Load()),
++      args=[
++       Constant(value='e2e_snapshots'),
++       Constant(value='EB3'),
++       Constant(value='passo_000020'),
++       Constant(value='lora.npz')])])]))
+ Assign(
+  targets=[

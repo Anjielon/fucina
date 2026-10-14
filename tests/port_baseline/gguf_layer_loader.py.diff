@@ -1,0 +1,82 @@
+--- original(renamed)
++++ port
+@@ -21,16 +21,16 @@
+  names=[
+   alias(name='torch')])
++ImportFrom(
++ module='fucina.extdeps',
++ names=[
++  alias(name='ENV_GGUF_PY'),
++  alias(name='add_path'),
++  alias(name='data_path')],
++ level=0)
+ Expr(
+  value=Call(
+-  func=Attribute(
+-   value=Attribute(
+-    value=Name(id='sys', ctx=Load()),
+-    attr='path',
+-    ctx=Load()),
+-   attr='insert',
+-   ctx=Load()),
++  func=Name(id='add_path', ctx=Load()),
+   args=[
+-   Constant(value=0),
+-   Constant(value='<ABSOLUTE-PATH>')]))
++   Name(id='ENV_GGUF_PY', ctx=Load())]))
+ ImportFrom(
+  module='gguf',
+@@ -70,7 +70,10 @@
+     func=Attribute(
+      value=BinOp(
+-      left=Name(id='HERE', ctx=Load()),
++      left=BinOp(
++       left=Name(id='HERE', ctx=Load()),
++       op=Div(),
++       right=Constant(value='data')),
+       op=Div(),
+-      right=Constant(value='mappa_completa_gguf_hf.json')),
++      right=Constant(value='gguf_hf_map.json')),
+      attr='read_text',
+      ctx=Load()))]))
+@@ -88,7 +91,10 @@
+     args=[
+      BinOp(
+-      left=Name(id='HERE', ctx=Load()),
++      left=BinOp(
++       left=Name(id='HERE', ctx=Load()),
++       op=Div(),
++       right=Constant(value='data')),
+       op=Div(),
+-      right=Constant(value='mappa_completa_gguf_hf_perm.npz'))])]))
++      right=Constant(value='gguf_hf_perm.npz'))])]))
+ Assign(
+  targets=[
+@@ -945,9 +951,15 @@
+    targets=[
+     Name(id='HF', ctx=Store())],
+-   value=Constant(value='<ABSOLUTE-PATH>')),
++   value=Call(
++    func=Name(id='data_path', ctx=Load()),
++    args=[
++     Constant(value='thor-src-hf')])),
+   Assign(
+    targets=[
+     Name(id='GGUF', ctx=Store())],
+-   value=Constant(value='<ABSOLUTE-PATH>')),
++   value=Call(
++    func=Name(id='data_path', ctx=Load()),
++    args=[
++     Constant(value='Thor-v20-downaggr3.gguf')])),
+   Assign(
+    targets=[
+@@ -956,5 +968,8 @@
+     func=Name(id='Path', ctx=Load()),
+     args=[
+-     Constant(value='<ABSOLUTE-PATH>')])),
++     Call(
++      func=Name(id='data_path', ctx=Load()),
++      args=[
++       Constant(value='teacher-pass-thor')])])),
+   Assign(
+    targets=[

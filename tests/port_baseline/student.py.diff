@@ -1,0 +1,110 @@
+--- original(renamed)
++++ port
+@@ -53,4 +53,11 @@
+  names=[
+   alias(name='torch.nn.functional', asname='F')])
++ImportFrom(
++ module='fucina.extdeps',
++ names=[
++  alias(name='ENV_GGUF_PY'),
++  alias(name='add_path'),
++  alias(name='data_path')],
++ level=0)
+ Assign(
+  targets=[
+@@ -69,41 +76,7 @@
+ Expr(
+  value=Call(
+-  func=Attribute(
+-   value=Attribute(
+-    value=Name(id='sys', ctx=Load()),
+-    attr='path',
+-    ctx=Load()),
+-   attr='insert',
+-   ctx=Load()),
++  func=Name(id='add_path', ctx=Load()),
+   args=[
+-   Constant(value=0),
+-   Call(
+-    func=Name(id='str', ctx=Load()),
+-    args=[
+-     Name(id='HERE', ctx=Load())])]))
+-Expr(
+- value=Call(
+-  func=Attribute(
+-   value=Attribute(
+-    value=Name(id='sys', ctx=Load()),
+-    attr='path',
+-    ctx=Load()),
+-   attr='insert',
+-   ctx=Load()),
+-  args=[
+-   Constant(value=0),
+-   Constant(value='<ABSOLUTE-PATH>')]))
+-Expr(
+- value=Call(
+-  func=Attribute(
+-   value=Attribute(
+-    value=Name(id='sys', ctx=Load()),
+-    attr='path',
+-    ctx=Load()),
+-   attr='insert',
+-   ctx=Load()),
+-  args=[
+-   Constant(value=0),
+-   Constant(value='<ABSOLUTE-PATH>')]))
++   Name(id='ENV_GGUF_PY', ctx=Load())]))
+ ImportFrom(
+  module='gguf',
+@@ -144,5 +117,8 @@
+     args=[
+      Constant(value='E2E_GGUF'),
+-     Constant(value='<ABSOLUTE-PATH>')])]))
++     Call(
++      func=Name(id='data_path', ctx=Load()),
++      args=[
++       Constant(value='Thor-v2-ThorT-scor150.gguf')])])]))
+ Assign(
+  targets=[
+@@ -158,5 +134,8 @@
+     args=[
+      Constant(value='THOR_HF_DIR'),
+-     Constant(value='<ABSOLUTE-PATH>')])]))
++     Call(
++      func=Name(id='data_path', ctx=Load()),
++      args=[
++       Constant(value='thor-src-hf')])])]))
+ Assign(
+  targets=[
+@@ -29229,5 +29208,17 @@
+      ctx=Load()),
+     args=[
+-     Constant(value='<ABSOLUTE-PATH>')],
++     Call(
++      func=Attribute(
++       value=Name(id='os', ctx=Load()),
++       attr='getenv',
++       ctx=Load()),
++      args=[
++       Constant(value='E2E_CORPUS'),
++       Call(
++        func=Name(id='data_path', ctx=Load()),
++        args=[
++         Constant(value='calibrazione'),
++         Constant(value='e2e'),
++         Constant(value='e2e_corpus_4096_tutte.pt')])])],
+     keywords=[
+      keyword(
+@@ -31708,7 +31699,10 @@
+           func=Name(id='Path', ctx=Load()),
+           args=[
+-           Constant(value='<ABSOLUTE-PATH>')]),
++           Call(
++            func=Name(id='data_path', ctx=Load()),
++            args=[
++             Constant(value='e2e_student')])]),
+          op=Div(),
+-         right=Constant(value='misura_m0.json'))]))])),
++         right=Constant(value='measure_m0.json'))]))])),
+   Expr(
+    value=Call(

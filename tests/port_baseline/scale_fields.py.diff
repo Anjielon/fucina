@@ -1,0 +1,27 @@
+--- original(renamed)
++++ port
+@@ -10,16 +10,15 @@
+  names=[
+   alias(name='numpy', asname='np')])
++ImportFrom(
++ module='fucina.extdeps',
++ names=[
++  alias(name='ENV_GGUF_PY'),
++  alias(name='add_path')],
++ level=0)
+ Expr(
+  value=Call(
+-  func=Attribute(
+-   value=Attribute(
+-    value=Name(id='sys', ctx=Load()),
+-    attr='path',
+-    ctx=Load()),
+-   attr='insert',
+-   ctx=Load()),
++  func=Name(id='add_path', ctx=Load()),
+   args=[
+-   Constant(value=0),
+-   Constant(value='<ABSOLUTE-PATH>')]))
++   Name(id='ENV_GGUF_PY', ctx=Load())]))
+ Assign(
+  targets=[

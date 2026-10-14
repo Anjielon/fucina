@@ -1,0 +1,75 @@
+--- original(renamed)
++++ port
+@@ -44,43 +44,16 @@
+   attr='parent',
+   ctx=Load()))
++ImportFrom(
++ module='fucina.extdeps',
++ names=[
++  alias(name='ENV_GGUF_PY'),
++  alias(name='add_path'),
++  alias(name='data_path')],
++ level=0)
+ Expr(
+  value=Call(
+-  func=Attribute(
+-   value=Attribute(
+-    value=Name(id='sys', ctx=Load()),
+-    attr='path',
+-    ctx=Load()),
+-   attr='insert',
+-   ctx=Load()),
++  func=Name(id='add_path', ctx=Load()),
+   args=[
+-   Constant(value=0),
+-   Call(
+-    func=Name(id='str', ctx=Load()),
+-    args=[
+-     Name(id='HERE', ctx=Load())])]))
+-Expr(
+- value=Call(
+-  func=Attribute(
+-   value=Attribute(
+-    value=Name(id='sys', ctx=Load()),
+-    attr='path',
+-    ctx=Load()),
+-   attr='insert',
+-   ctx=Load()),
+-  args=[
+-   Constant(value=0),
+-   Constant(value='<ABSOLUTE-PATH>')]))
+-Expr(
+- value=Call(
+-  func=Attribute(
+-   value=Attribute(
+-    value=Name(id='sys', ctx=Load()),
+-    attr='path',
+-    ctx=Load()),
+-   attr='insert',
+-   ctx=Load()),
+-  args=[
+-   Constant(value=0),
+-   Constant(value='<ABSOLUTE-PATH>')]))
++   Name(id='ENV_GGUF_PY', ctx=Load())]))
+ ImportFrom(
+  module='gguf',
+@@ -1888,5 +1861,8 @@
+      Tuple(
+       elts=[
+-       Constant(value='<ABSOLUTE-PATH>'),
++       Call(
++        func=Name(id='data_path', ctx=Load()),
++        args=[
++         Constant(value='Thor-v20-densiv5.gguf')]),
+        List(
+         elts=[
+@@ -1897,5 +1873,8 @@
+      Tuple(
+       elts=[
+-       Constant(value='<ABSOLUTE-PATH>'),
++       Call(
++        func=Name(id='data_path', ctx=Load()),
++        args=[
++         Constant(value='Thor-T-ibrido-0-19-ThorT-veloce.gguf')]),
+        List(
+         elts=[

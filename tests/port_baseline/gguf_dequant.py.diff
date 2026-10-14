@@ -1,0 +1,71 @@
+--- original(renamed)
++++ port
+@@ -35,39 +35,16 @@
+     args=[
+      Name(id='__file__', ctx=Load())])]))
++ImportFrom(
++ module='fucina.extdeps',
++ names=[
++  alias(name='ENV_GGUF_PY'),
++  alias(name='add_path'),
++  alias(name='data_path')],
++ level=0)
+ Expr(
+  value=Call(
+-  func=Attribute(
+-   value=Attribute(
+-    value=Name(id='sys', ctx=Load()),
+-    attr='path',
+-    ctx=Load()),
+-   attr='insert',
+-   ctx=Load()),
++  func=Name(id='add_path', ctx=Load()),
+   args=[
+-   Constant(value=0),
+-   Constant(value='<ABSOLUTE-PATH>')]))
+-Expr(
+- value=Call(
+-  func=Attribute(
+-   value=Attribute(
+-    value=Name(id='sys', ctx=Load()),
+-    attr='path',
+-    ctx=Load()),
+-   attr='insert',
+-   ctx=Load()),
+-  args=[
+-   Constant(value=0),
+-   Call(
+-    func=Attribute(
+-     value=Attribute(
+-      value=Name(id='os', ctx=Load()),
+-      attr='path',
+-      ctx=Load()),
+-     attr='join',
+-     ctx=Load()),
+-    args=[
+-     Name(id='_HERE', ctx=Load()),
+-     Constant(value='..'),
+-     Constant(value='kernel-rotation')])]))
++   Name(id='ENV_GGUF_PY', ctx=Load())]))
+ ImportFrom(
+  module='gguf',
+@@ -636,5 +613,8 @@
+    targets=[
+     Name(id='HF', ctx=Store())],
+-   value=Constant(value='<ABSOLUTE-PATH>')),
++   value=Call(
++    func=Name(id='data_path', ctx=Load()),
++    args=[
++     Constant(value='thor-src-hf')])),
+   Assign(
+    targets=[
+@@ -674,5 +654,8 @@
+       args=[
+        Constant(value='THOR_GGUF'),
+-       Constant(value='<ABSOLUTE-PATH>')])])),
++       Call(
++        func=Name(id='data_path', ctx=Load()),
++        args=[
++         Constant(value='Thor-v20-downaggr3.gguf')])])])),
+   Assign(
+    targets=[

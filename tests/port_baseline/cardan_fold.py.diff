@@ -1,0 +1,72 @@
+--- original(renamed)
++++ port
+@@ -35,16 +35,45 @@
+  names=[
+   alias(name='torch')])
+-Assign(
+- targets=[
+-  Name(id='REFINE', ctx=Store())],
+- value=Constant(value='<ABSOLUTE-PATH>'))
++ImportFrom(
++ module='fucina.extdeps',
++ names=[
++  alias(name='ENV_REFINE'),
++  alias(name='add_path'),
++  alias(name='data_path')],
++ level=0)
+ Assign(
+  targets=[
+   Name(id='GQ_DIR', ctx=Store())],
+- value=Constant(value='<ABSOLUTE-PATH>'))
++ value=Call(
++  func=Attribute(
++   value=Attribute(
++    value=Name(id='os', ctx=Load()),
++    attr='environ',
++    ctx=Load()),
++   attr='get',
++   ctx=Load()),
++  args=[
++   Constant(value='FUCINA_CARDAN_GQ_DIR'),
++   Call(
++    func=Name(id='data_path', ctx=Load()),
++    args=[
++     Constant(value='pod-schur-esperti')])]))
+ Assign(
+  targets=[
+   Name(id='HFFN_DIR', ctx=Store())],
+- value=Constant(value='<ABSOLUTE-PATH>'))
++ value=Call(
++  func=Attribute(
++   value=Attribute(
++    value=Name(id='os', ctx=Load()),
++    attr='environ',
++    ctx=Load()),
++   attr='get',
++   ctx=Load()),
++  args=[
++   Constant(value='FUCINA_CARDAN_HFFN_DIR'),
++   Call(
++    func=Name(id='data_path', ctx=Load()),
++    args=[
++     Constant(value='hessiane-densi-grande')])]))
+ Assign(
+  targets=[
+@@ -2654,14 +2683,7 @@
+   Expr(
+    value=Call(
+-    func=Attribute(
+-     value=Attribute(
+-      value=Name(id='sys', ctx=Load()),
+-      attr='path',
+-      ctx=Load()),
+-     attr='insert',
+-     ctx=Load()),
+-    args=[
+-     Constant(value=0),
+-     Name(id='REFINE', ctx=Load())])),
++    func=Name(id='add_path', ctx=Load()),
++    args=[
++     Name(id='ENV_REFINE', ctx=Load())])),
+   Import(
+    names=[

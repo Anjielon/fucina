@@ -1,0 +1,9 @@
+--- original(renamed)
++++ port
+@@ -63,5 +63,5 @@
+     args=[
+      Name(id='_HERE', ctx=Load()),
+-     Constant(value='gdn_veloce_corsa_v5.py')])]))
++     Constant(value='gdn_fast_v5.py')])]))
+ Assign(
+  targets=[

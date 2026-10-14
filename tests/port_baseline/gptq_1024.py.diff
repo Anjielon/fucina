@@ -1,0 +1,78 @@
+--- original(renamed)
++++ port
+@@ -16,75 +16,4 @@
+  names=[
+   alias(name='torch')])
+-Expr(
+- value=Call(
+-  func=Attribute(
+-   value=Attribute(
+-    value=Name(id='sys', ctx=Load()),
+-    attr='path',
+-    ctx=Load()),
+-   attr='insert',
+-   ctx=Load()),
+-  args=[
+-   Constant(value=0),
+-   Call(
+-    func=Attribute(
+-     value=Attribute(
+-      value=Name(id='os', ctx=Load()),
+-      attr='path',
+-      ctx=Load()),
+-     attr='dirname',
+-     ctx=Load()),
+-    args=[
+-     Call(
+-      func=Attribute(
+-       value=Attribute(
+-        value=Name(id='os', ctx=Load()),
+-        attr='path',
+-        ctx=Load()),
+-       attr='abspath',
+-       ctx=Load()),
+-      args=[
+-       Name(id='__file__', ctx=Load())])])]))
+-Expr(
+- value=Call(
+-  func=Attribute(
+-   value=Attribute(
+-    value=Name(id='sys', ctx=Load()),
+-    attr='path',
+-    ctx=Load()),
+-   attr='insert',
+-   ctx=Load()),
+-  args=[
+-   Constant(value=0),
+-   Call(
+-    func=Attribute(
+-     value=Attribute(
+-      value=Name(id='os', ctx=Load()),
+-      attr='path',
+-      ctx=Load()),
+-     attr='join',
+-     ctx=Load()),
+-    args=[
+-     Call(
+-      func=Attribute(
+-       value=Attribute(
+-        value=Name(id='os', ctx=Load()),
+-        attr='path',
+-        ctx=Load()),
+-       attr='dirname',
+-       ctx=Load()),
+-      args=[
+-       Call(
+-        func=Attribute(
+-         value=Attribute(
+-          value=Name(id='os', ctx=Load()),
+-          attr='path',
+-          ctx=Load()),
+-         attr='abspath',
+-         ctx=Load()),
+-        args=[
+-         Name(id='__file__', ctx=Load())])]),
+-     Constant(value='..'),
+-     Constant(value='kernel-rotation')])]))
+ ImportFrom(
+  module='fucina.ternary.tq1_0r_1024_codec',
