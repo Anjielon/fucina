@@ -1,0 +1,13 @@
+# Names that belong to code OUTSIDE this package (not ported yet) and therefore keep their original spelling in the port.
+# file<TAB>kind<TAB>name      kind: module = imported module path (any prefix), alias = attributes accessed through this alias,
+#                             key = string key of a data file written by unported code (calibration corpora)
+cardan_fold.py	module	comune
+cardan_fold.py	module	rd_ternary
+cardan_fold.py	alias	CM
+common_s1b.py	module	rd_ternary
+sweep.py	module	sequenziale_thor
+sweep.py	alias	ST
+sweep.py	alias	P
+sweep.py	key	sorgenti
+student.py	key	domini
+student.py	key	nomi_domini

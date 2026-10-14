@@ -193,9 +193,16 @@ fucina/
   rules/            packaged rule base (learned on Thor-T)
   tools/            small CLI adapters used inside jobs
   view.py, tui.py   rich report and textual UI
+  kernels/          Triton GPU kernels of the ternary student (bf16x3 and hi/lo split products, flash attention,
+                    GDN recurrence, direct convolution, folded dense planes, fused trit sweep), with CPU fallbacks
+  student/          end-to-end ternary student (scales trained against the teacher) and plane-code optimizer
+  ternary/          TQ1_0 / TQ1_0R_1024 codecs, rotation, GGUF dequantization, GGUF <-> HF map (data/)
+  sequential/       layer-by-layer re-quantization of dense tensors and experts (stages S2+S3) and GGUF writer
+  extdeps.py        environment variables locating external dependencies and data (no hard-coded paths)
 examples/thor/      reference machine configuration and model files
 docs/SPEC.md        design specification
 docs/LEVERS.md      lever census (generated)
+docs/GLOSSARY_IT_EN.md  names of the original (Italian) code base -> names in this package
 tests/              unit tests + Thor-T integration tests (skipped when its sources are absent)
 ```
 
@@ -208,6 +215,14 @@ python -m pytest            # or: PYTHONDONTWRITEBYTECODE=1 nice -n 15 python -m
 The unit tests need nothing else. The Thor-T integration tests (simulated runs, dry run, TUI pilot, CLI) read the
 reference lab notebook and GGUF files and are skipped on machines that do not have them; they freeze the activity log
 at a fixed timestamp so that they test the engine, not the latest experiments.
+
+### Port equivalence
+
+`kernels/`, `student/`, `ternary/` and `sequential/` are a pure rename of the code that produced the Thor-T results
+(`docs/GLOSSARY_IT_EN.md`). Two checks prove it against the original tree: `scripts/check_port_ast.py` (syntax
+trees identical after the rename) and `tests/test_kernels_equivalence.py` (bit-identical outputs on CPU and GPU).
+Both are run by `scripts/run_equivalence_after_passata.sh`, configured through `scripts/equivalence_paths.env`
+(copy `scripts/equivalence_paths.env.example`); the numerical tests are skipped when the original tree is absent.
 
 ## Status and limitations
 
