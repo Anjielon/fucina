@@ -42,6 +42,15 @@ if [ "$WAIT" = 1 ]; then
     echo "$(date '+%F %T') the run is finished; starting the checks"
 fi
 
+# ── optional shared GPU lock: other jobs may be queued for the GPU, so take the lock before the numerical tests ──
+# FUCINA_GPU_LOCK_SCRIPT must define take_gpu/prendi_gpu <who> <GiB> and release_gpu/molla_gpu (sourced).
+if [ -n "${FUCINA_GPU_LOCK_SCRIPT:-}" ]; then
+    # shellcheck disable=SC1090
+    . "$FUCINA_GPU_LOCK_SCRIPT"
+    if declare -F take_gpu >/dev/null; then take_gpu "FUCINA-EQUIVALENCE $$" "${FUCINA_GPU_GIB:-20}"; trap 'release_gpu' EXIT
+    else prendi_gpu "FUCINA-EQUIVALENCE $$" "${FUCINA_GPU_GIB:-20}"; trap 'molla_gpu' EXIT; fi
+fi
+
 # ── pytest: from $PYTHON, or (pure-Python packages only) from FUCINA_PYTEST_SITE ───────────────────────────────
 PYPATH="$ROOT"
 if ! "$PYTHON" -c "import pytest" 2>/dev/null; then
