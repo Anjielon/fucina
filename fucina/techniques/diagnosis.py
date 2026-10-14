@@ -1,5 +1,10 @@
 """F0 — measured dKL per group (expert/tensor, option +1 plane): the diagnosis the second plane is chosen from.
-Wraps ``rd_ternary/dkl_raccogli.py``. If the merged dKL table already exists, no job is queued."""
+Wraps ``rd_ternary/dkl_raccogli.py``. If the merged dKL table already exists, no job is queued.
+
+The command-line options and environment variables in the job below (``--strati``, ``--blocco``, ``--righe-kl``,
+``--solo-esperti``, ``--seme``, ``E2E_MOTORE``, ``E2E_CONV_DIRETTA``, ...) are the interface of that external,
+not yet ported tool and must keep its spelling; their English names are listed in ``docs/GLOSSARY_IT_EN.md``.
+``measurement_aliases`` matches the wording of the existing lab notebook."""
 from __future__ import annotations
 
 import os

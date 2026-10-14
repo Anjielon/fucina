@@ -165,7 +165,7 @@ class Prism(ScriptTechnique):
         s = (f"mkdir -p {o}; sed \"s|^SRC = .*|SRC = '{src}'|\" {rot}/scrivi_prism.py > {copy} && "
              f"grep -qF \"SRC = '{src}'\" {copy} || {{ echo 'copy of scrivi_prism failed'; exit 2; }}; "
              f"cd {rot}; export HIP_VISIBLE_DEVICES=-1 CUDA_VISIBLE_DEVICES=-1 PYTHONPATH={rot}; "
-             f"nice -n 15 {c['python']} {copy} {g} {p('k')} {p('projections')} {p('mode')} > {o}/scrivi.log 2>&1")
+             f"nice -n 15 {c['python']} {copy} {g} {p('k')} {p('projections')} {p('mode')} > {o}/write.log 2>&1")
         return [Job(id="F2_prism", name=f"Prism k={p('k')} {p('mode')}: GGUF write (CPU)", command=bash(s),
                     est_h=0.0, output_dir=o)]
 
