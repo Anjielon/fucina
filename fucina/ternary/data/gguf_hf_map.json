@@ -1,0 +1,202 @@
+{
+ "linear": {
+  "attn_gate.weight": {
+   "hf": "linear_attn.in_proj_z.weight",
+   "slice_": null,
+   "rel": "perm_rows",
+   "perm_npz": "linear.attn_gate.weight"
+  },
+  "attn_norm.weight": {
+   "hf": "input_layernorm.weight",
+   "slice_": null,
+   "rel": "transform",
+   "f": "plus_one"
+  },
+  "attn_qkv.weight": {
+   "hf": "linear_attn.in_proj_qkv.weight",
+   "slice_": null,
+   "rel": "perm_rows",
+   "perm_npz": "linear.attn_qkv.weight"
+  },
+  "ffn_down_exps.weight": {
+   "hf": "mlp.experts.down_proj",
+   "slice_": null,
+   "rel": "identity",
+   "per_expert": true
+  },
+  "ffn_down_shexp.weight": {
+   "hf": "mlp.shared_expert.down_proj.weight",
+   "slice_": null,
+   "rel": "identity"
+  },
+  "ffn_gate_exps.weight": {
+   "hf": "mlp.experts.gate_up_proj",
+   "slice_": "rows[:512]",
+   "rel": "identity",
+   "per_expert": true
+  },
+  "ffn_gate_inp.weight": {
+   "hf": "mlp.gate.weight",
+   "slice_": null,
+   "rel": "identity"
+  },
+  "ffn_gate_inp_shexp.weight": {
+   "hf": "mlp.shared_expert_gate.weight",
+   "slice_": null,
+   "rel": "identity"
+  },
+  "ffn_gate_shexp.weight": {
+   "hf": "mlp.shared_expert.gate_proj.weight",
+   "slice_": null,
+   "rel": "identity"
+  },
+  "ffn_up_exps.weight": {
+   "hf": "mlp.experts.gate_up_proj",
+   "slice_": "rows[512:]",
+   "rel": "identity",
+   "per_expert": true
+  },
+  "ffn_up_shexp.weight": {
+   "hf": "mlp.shared_expert.up_proj.weight",
+   "slice_": null,
+   "rel": "identity"
+  },
+  "post_attention_norm.weight": {
+   "hf": "post_attention_layernorm.weight",
+   "slice_": null,
+   "rel": "transform",
+   "f": "plus_one"
+  },
+  "ssm_a": {
+   "hf": "linear_attn.A_log",
+   "slice_": null,
+   "rel": "perm_1d",
+   "f": "neg_exp",
+   "perm_npz": "linear.ssm_a"
+  },
+  "ssm_alpha.weight": {
+   "hf": "linear_attn.in_proj_a.weight",
+   "slice_": null,
+   "rel": "perm_rows",
+   "perm_npz": "linear.ssm_alpha.weight"
+  },
+  "ssm_beta.weight": {
+   "hf": "linear_attn.in_proj_b.weight",
+   "slice_": null,
+   "rel": "perm_rows",
+   "perm_npz": "linear.ssm_beta.weight"
+  },
+  "ssm_conv1d.weight": {
+   "hf": "linear_attn.conv1d.weight",
+   "slice_": "squeeze",
+   "rel": "perm_rows",
+   "perm_npz": "linear.ssm_conv1d.weight"
+  },
+  "ssm_dt.bias": {
+   "hf": "linear_attn.dt_bias",
+   "slice_": null,
+   "rel": "perm_1d",
+   "perm_npz": "linear.ssm_dt.bias"
+  },
+  "ssm_norm.weight": {
+   "hf": "linear_attn.norm.weight",
+   "slice_": null,
+   "rel": "identity"
+  },
+  "ssm_out.weight": {
+   "hf": "linear_attn.out_proj.weight",
+   "slice_": null,
+   "rel": "perm_columns",
+   "perm_npz": "linear.ssm_out.weight"
+  }
+ },
+ "full": {
+  "attn_k.weight": {
+   "hf": "self_attn.k_proj.weight",
+   "slice_": null,
+   "rel": "identity"
+  },
+  "attn_k_norm.weight": {
+   "hf": "self_attn.k_norm.weight",
+   "slice_": null,
+   "rel": "transform",
+   "f": "plus_one"
+  },
+  "attn_norm.weight": {
+   "hf": "input_layernorm.weight",
+   "slice_": null,
+   "rel": "transform",
+   "f": "plus_one"
+  },
+  "attn_output.weight": {
+   "hf": "self_attn.o_proj.weight",
+   "slice_": null,
+   "rel": "identity"
+  },
+  "attn_q.weight": {
+   "hf": "self_attn.q_proj.weight",
+   "slice_": null,
+   "rel": "identity"
+  },
+  "attn_q_norm.weight": {
+   "hf": "self_attn.q_norm.weight",
+   "slice_": null,
+   "rel": "transform",
+   "f": "plus_one"
+  },
+  "attn_v.weight": {
+   "hf": "self_attn.v_proj.weight",
+   "slice_": null,
+   "rel": "identity"
+  },
+  "ffn_down_exps.weight": {
+   "hf": "mlp.experts.down_proj",
+   "slice_": null,
+   "rel": "identity",
+   "per_expert": true
+  },
+  "ffn_down_shexp.weight": {
+   "hf": "mlp.shared_expert.down_proj.weight",
+   "slice_": null,
+   "rel": "identity"
+  },
+  "ffn_gate_exps.weight": {
+   "hf": "mlp.experts.gate_up_proj",
+   "slice_": "rows[:512]",
+   "rel": "identity",
+   "per_expert": true
+  },
+  "ffn_gate_inp.weight": {
+   "hf": "mlp.gate.weight",
+   "slice_": null,
+   "rel": "identity"
+  },
+  "ffn_gate_inp_shexp.weight": {
+   "hf": "mlp.shared_expert_gate.weight",
+   "slice_": null,
+   "rel": "identity"
+  },
+  "ffn_gate_shexp.weight": {
+   "hf": "mlp.shared_expert.gate_proj.weight",
+   "slice_": null,
+   "rel": "identity"
+  },
+  "ffn_up_exps.weight": {
+   "hf": "mlp.experts.gate_up_proj",
+   "slice_": "rows[512:]",
+   "rel": "identity",
+   "per_expert": true
+  },
+  "ffn_up_shexp.weight": {
+   "hf": "mlp.shared_expert.up_proj.weight",
+   "slice_": null,
+   "rel": "identity"
+  },
+  "post_attention_norm.weight": {
+   "hf": "post_attention_layernorm.weight",
+   "slice_": null,
+   "rel": "transform",
+   "f": "plus_one"
+  }
+ }
+}
