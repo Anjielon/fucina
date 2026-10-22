@@ -176,7 +176,23 @@ def cmd_manual(a: argparse.Namespace) -> None:
     model = _model(a)
     run = Path(a.run_dir) if a.run_dir else _runs_dir() / f"{model}-manual-{a.piece}-{_mode(a)}"
     print_manual(manual(model, _objective(a), str(run), a.piece, _list(a.series), _list(a.parallel),
-                        _mode(a), a.db, a.base))
+                        _mode(a), a.db, a.base, _overrides(a.set)))
+
+
+def _overrides(items: Optional[list]) -> dict:
+    """``--set joint_cardan.steps=550 --set joint_cardan.stop_mmlu=73.8`` -> {technique: {param: value}}."""
+    out: dict = {}
+    for it in items or []:
+        k, _, v = it.partition("=")
+        t, _, prm = k.partition(".")
+        if not (t and prm and _):
+            raise SystemExit(f"--set expects technique.param=value, got {it!r}")
+        try:
+            val = json.loads(v)
+        except ValueError:
+            val = v
+        out.setdefault(t, {})[prm] = val
+    return out
 
 
 def _list(s: Optional[str]) -> list:
@@ -223,6 +239,8 @@ def build_parser() -> argparse.ArgumentParser:
     q.add_argument("--series")
     q.add_argument("--parallel")
     q.add_argument("--base", help="label of the starting candidate (default: R2B3m)")
+    q.add_argument("--set", action="append", metavar="TECH.PARAM=VALUE",
+                   help="per-step parameter (repeatable): steps, stop level, rank, ...")
     q.add_argument("--run-dir")
     modes(q)
     q = s.add_parser("status", help="phase/technique tree of a run")

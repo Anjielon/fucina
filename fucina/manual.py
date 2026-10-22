@@ -18,8 +18,14 @@ ADVICE = {"passed": "enable", "consolidated": "enable", "superseded": "enable (b
 
 
 def manual(model: str, objective: str, run_dir: str, piece: str, series: list, parallel: list,
-           mode: str = "simulate", db: Optional[str] = None, base: Optional[str] = None) -> dict:
+           mode: str = "simulate", db: Optional[str] = None, base: Optional[str] = None,
+           overrides: Optional[dict] = None) -> dict:
     e = Engine(model, objective, run_dir, mode, db)
+    for name, kv in (overrides or {}).items():      # per-step choices: steps, stop level, rank, ... (manual mode)
+        if name not in e.techniques:
+            raise SystemExit(f"--set: unknown technique {name}")
+        t = e.techniques[name]
+        t.params = {**dict(getattr(t, "params", {}) or {}), **kv}
     sb = next((s for s in e.signatures.values() if s.label == (base or "R2B3m")), None)
     if sb is None:
         raise SystemExit(f"unknown base {base!r}: the model's candidates are "
