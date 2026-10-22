@@ -260,10 +260,25 @@ def build_parser() -> argparse.ArgumentParser:
     q.add_argument("--recipe", required=True)
     q.add_argument("--run-dir")
     modes(q)
+    q = s.add_parser("analyze", help="read any GGUF: layer types, tensor families, applicable levers (serial/parallel)")
+    q.set_defaults(f=cmd_analyze)
+    q.add_argument("gguf")
+    q.add_argument("--yaml", help="also write the analysis + plan as YAML")
     q = s.add_parser("tui", help="terminal user interface")
     q.set_defaults(f=cmd_tui)
     q.add_argument("--run-dir")
     return p
+
+
+def cmd_analyze(a) -> None:
+    from . import analyze as A
+    an = A.analyze(a.gguf)
+    pl = A.plan(an)
+    print(A.report(an, pl))
+    if a.yaml:
+        import yaml
+        Path(a.yaml).write_text(yaml.safe_dump({"analysis": an, "plan": pl}, sort_keys=False))
+        print(f"written {a.yaml}")
 
 
 def main(argv: Optional[list] = None) -> None:

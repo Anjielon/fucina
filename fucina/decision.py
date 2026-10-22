@@ -178,6 +178,11 @@ def judge(m: Measurement, thresholds: Thresholds, objective: Objective, judged_b
             return Verdict("FAIL", f"speed lever that slows down (tg {tp:+.1f} %)", "disable", numbers=num)
         return Verdict("AMBIGUOUS", f"small speed gain (tg {tp:+.1f} %)", "enable", numbers=num)
     qk, tk = _kl_quality(m, thresholds)
+    # reasoning guard (22 Oct 2026): a knowledge lever must not damage reasoning (paired GSM8K, exact McNemar)
+    if m.reasoning is not None and m.reasoning_base is not None and m.p_reasoning is not None \
+            and m.reasoning < m.reasoning_base and m.p_reasoning <= 0.05:
+        return _fail(f"reasoning significantly worse: {m.reasoning:.1f} vs {m.reasoning_base:.1f} "
+                     f"(p {m.p_reasoning:.3g})", source, num)
     if qm == -1.0:
         return _fail(f"worse: {tm}" + (f"; {tk}" if tk else ""), source, num)
     if qm == 1.0:
@@ -186,6 +191,10 @@ def judge(m: Measurement, thresholds: Thresholds, objective: Objective, judged_b
         if qm is None:
             return Verdict("AMBIGUOUS", "no quality measurement (neither KL nor MMLU)", "remeasure", numbers=num)
         q, reason = 0.0, tm
+        if m.mmlu_delta is not None and m.mmlu_delta >= 0:
+            # 22 Oct 2026: flat-but-not-worse is a branch head (CARRY), never a closed cycle: the next lever is applied
+            # to it and to its base, and the next gate decides (RECIPE_C_GRAPH.md)
+            return Verdict("AMBIGUOUS", f"CARRY as a branch head: {tm}", "carry", quality=q, numbers=num)
     else:
         q, reason = qk, tk + (f"; {tm}" if tm else "")
         d = m.mmlu_delta

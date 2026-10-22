@@ -396,6 +396,8 @@ class Engine:
             v.state, v.reason = "passed", ver.reason
         elif ver.verdict == "FAIL":
             v.state, v.reason = "off", ver.reason + (" [to verify]" if ver.to_verify else "")
+        elif ver.advice == "carry":       # 22 Oct 2026: flat-not-worse = branch head kept automatically, no question
+            v.state, v.reason = "deferred", f"CARRY (branch head, re-tested with the next lever): {ver.reason}"
         else:
             label = self.signature(cand).label
             id_q = f"{t.name}@{label}"

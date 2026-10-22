@@ -38,6 +38,9 @@ class Measurement:
     wins: Optional[int] = None
     losses: Optional[int] = None
     probe: Optional[str] = None
+    reasoning: Optional[float] = None      # paired reasoning benchmark (GSM8K-256 strict, %), candidate
+    reasoning_base: Optional[float] = None
+    p_reasoning: Optional[float] = None    # exact McNemar on the paired reasoning answers
     source: str = ""
     note: str = ""
     extra: dict = field(default_factory=dict)
