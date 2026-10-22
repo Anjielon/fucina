@@ -32,6 +32,17 @@ CATALOGUE = (
     Piece("embedding", r"token_embd\d*", "embedding"),
     Piece("head", r"output\d*", "head"),
     Piece("mtp", r"blk\.\d+\.nextn\.\w+|mtp\.\w+", "mtp"),
+    # 22 Oct 2026, from the analysis of every architecture on disk (docs/ARCHITECTURES.md): appended at the end so that
+    # the classification of the pieces above does not change.
+    Piece("attn_mla", r"blk\.\d+\.attn_(q_a|q_b|kv_a_mqa|kv_b|k_b|v_b)\d*", "dense", ("moe", "dense", "hybrid"),
+          "multi-head latent attention (DeepSeek-V2/V3)"),
+    Piece("sparse_indexer", r"blk\.\d+\.indexer\.(q_proj|k_proj|weights_proj|proj)\w*", "dense",
+          ("moe", "dense", "hybrid"), "lightning indexer of sparse attention (DeepSeek-V3.2 / Qwen4-exp)"),
+    Piece("hyper_conn", r"blk\.\d+\.hc_\w+", "keep", ("moe", "dense", "hybrid"),
+          "hyper-connection mixing (tiny, kept in full precision)"),
+    Piece("draft_fc", r"fc\d*|blk\.\d+\.fc\d*", "dense", ("dense",), "speculative-draft fusion projection"),
+    Piece("norm", r"(blk\.\d+\.)?([\w.]*norm\w*|rope_freqs|indexer\.k_norm)", "keep", ("moe", "dense", "hybrid"),
+          "normalisation / rope tables: kept in full precision, never quantised"),
 )
 
 
