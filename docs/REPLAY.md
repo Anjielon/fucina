@@ -66,6 +66,17 @@ Nothing else is needed: no private repository snapshot, no mount namespace, no d
 Because the paths change, the two writers that embed input paths in a GGUF metadata note produce files that differ
 from the record in that note only; chain GGUFs are therefore checked by tensor digest.
 
+## Thor-T helpers in this package
+
+* `fucina.replay.unpack_planes` — the released root is the *packed* GGUF (multi-plane families as
+  `TQ1_0R_1024_X3` / `TQ1_0_X3`, the form the release engine loads). Step `U0` unpacks it into the separate-plane
+  layout the recorded code reads; it is the exact inverse of the engine's `tools/ternary/pack_planes.py` (same file
+  bytes, checked by sha256). `--hash-only` verifies without writing the 8.8 GB file.
+* `fucina.replay.thor.s7_onpolicy` — step 27, the on-policy distillation rounds with the student server and the
+  probe as child processes (the trainer argv of every round is identical to the recorded launcher's).
+* `fucina.replay.thor.post_export` — second half of step 31: export of the POST checkpoint (scales, F32 tensors),
+  zero-byte fold of the dense residuals, byte checks, MMLU-2000 on the mixed bench and McNemar against the replay's T400.
+
 ## Determinism classes
 
 | class | meaning | check |

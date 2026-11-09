@@ -64,7 +64,7 @@ def test_recipe_c_dry_run_resolves_everything(tmp_path):
     script = tmp_path / "commands.sh"
     res = runner.plan(r, roots, sel, forbid=list(PRIVATE), show=False, script=script)
     assert res["problems"] == []
-    assert set(res["blocked"]) == {"I9", "27", "31"}
+    assert res["blocked"] == []
     body = script.read_text().replace(str(RECIPE_C.parent), "RECIPE").replace(str(ROOT / "fucina"), "PACKAGE")
     for p in PRIVATE:
         assert p not in body
@@ -197,3 +197,36 @@ def test_merge_shards(tmp_path):
         (d / "manifesto.json").write_text(json.dumps({n: {"ok": 1} for n in names}))
     assert merge_shards.merge(tmp_path, "v") == 3
     assert sorted(json.loads((tmp_path / "v" / "tensori" / "manifesto.json").read_text())) == ["x", "y", "z"]
+
+
+def test_unpack_is_the_exact_inverse_of_pack(tmp_path):
+    """Separate planes -> pack_planes-style packed tensor -> unpack: same file, same tensor digest."""
+    gguf = pytest.importorskip("gguf")
+    if not hasattr(gguf.GGMLQuantizationType, "TQ1_0R_1024_X3"):
+        pytest.skip("needs the gguf-py of the release engine (ternary packed types)")
+    import numpy as np
+    from fucina.replay import unpack_planes
+    QT = gguf.GGMLQuantizationType
+    rng = np.random.default_rng(0)
+    planes = [rng.integers(0, 256, (4, 2 * 224), dtype=np.uint8) for _ in range(3)]
+    norm = rng.standard_normal(16).astype(np.float32)
+    orig = tmp_path / "orig.gguf"
+    w = gguf.GGUFWriter(orig, arch="qwen35moe")
+    w.add_string("note", "x")
+    w.add_tensor("blk.0.attn_qkv.weight", planes[0], raw_dtype=QT.TQ1_0R_1024)
+    w.add_tensor("blk.0.attn_norm.weight", norm, raw_dtype=QT.F32)
+    w.add_tensor("blk.0.attn_qkv2.weight", planes[1], raw_dtype=QT.TQ1_0R_1024)
+    w.add_tensor("blk.0.attn_qkv3.weight", planes[2], raw_dtype=QT.TQ1_0R_1024)
+    w.write_header_to_file(); w.write_kv_data_to_file(); w.write_tensors_to_file(); w.close()
+    packed = tmp_path / "packed.gguf"
+    w = gguf.GGUFWriter(packed, arch="qwen35moe")
+    w.add_string("note", "x")
+    w.add_tensor("blk.0.attn_qkv.weight", np.stack([p.reshape(-1, 224) for p in planes], 1).reshape(4, -1),
+                 raw_dtype=QT.TQ1_0R_1024_X3)
+    w.add_tensor("blk.0.attn_norm.weight", norm, raw_dtype=QT.F32)
+    w.write_header_to_file(); w.write_kv_data_to_file(); w.write_tensors_to_file(); w.close()
+    order = tmp_path / "order.txt"
+    order.write_text("blk.0.attn_qkv.weight\nblk.0.attn_norm.weight\nblk.0.attn_qkv2.weight\nblk.0.attn_qkv3.weight\n")
+    res = unpack_planes.unpack(packed, None, order)
+    assert res["file_sha256"] == gguf_hash.file_sha256(orig)
+    assert res["tensor_digest"] == gguf_hash.tensor_digest(gguf_hash.tensor_hashes(orig))

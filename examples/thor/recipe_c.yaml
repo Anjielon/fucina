@@ -80,15 +80,20 @@ inputs:
             wikitext-103-raw-v1/validation-00000-of-00001.parquet]
     path: "{inputs}/wikitext"
     manifest: recipe_c/recorded/wikitext_parquet.manifest
-  root:
+  root_packed:
     kind: hf
     repo: Anjielon/Thor-T-35B-A3B-root
     revision: thor-t-v1
-    files: [Thor-T-R2B3m.gguf]
-    path: "{models}/gguf/tony-tern/R2B3m/Thor-T-R2B3m.gguf"
-    sha256: 56cb5bcdd9813a1015a7cad5364b5a80226f990fb8bd561b7cae4727d70efc43
+    files: [Thor-T-R2B3m-packed.gguf]
+    path: "{inputs}/root/Thor-T-R2B3m-packed.gguf"
+    sha256: e40cffd480091a8b11ee1ea63434e4d8440fc5af80ed8a3b443ebc6f3e4bc9fd
     size_gib: 8.2
-    published: "at launch (Hugging Face model repo)"
+    published: "at launch (Hugging Face model repo): the root with its 252 multi-plane families packed as TQ1_0R_1024_X3 / TQ1_0_X3, the form the release engine loads"
+  root_order:
+    kind: package
+    path: "{recipe_dir}/recipe_c/recorded/root_tensor_order.txt"
+    sha256: 403555e996b2978bfa69170553c00d3e49e3e656937e07e4cf3cd7ba8717fca9
+    note: "tensor order of the recorded separate-plane root (names only)"
   teacher_q8:
     kind: hf
     repo: Anjielon/Thor-T-bench
@@ -172,12 +177,24 @@ inputs:
     sha256: 0f65c16227fa5b83641a35619054c4c159c0b50b6ee1201dbc479d97e3964b11
     size_gib: 11.7
     published: "TO UPLOAD: the earlier quantized student whose flow defines the per-expert statistics (step I9)"
+  gq_experts:
+    kind: hf
+    repo: Anjielon/Thor-T-fold-stats
+    repo_type: dataset
+    revision: thor-t-v1
+    files: [Gq_00.npy .. Gq_31.npy]
+    path: "{models}/gguf/tony-tern/pod-schur-esperti"
+    manifest: recipe_c/recorded/fold_stats.manifest
+    size_gib: 128
+    published: "TO UPLOAD (decided 9 Nov): 32 files of 4 GiB, sha256 list hashed 9 Nov; recapture path: step I9"
+    note: "per-expert input Hessians in the flow of the earlier student Thor-v20-downaggr3 (layers 0-31), read by the expert folds 26 and 30"
   perm_map:
     kind: package
     path: "{package}/ternary/data/gguf_hf_perm.npz"
     sha256: 6114b1f4500b364e13c2b8b0f2d93836080ec75c37158a697265471360e14b16
 
   # ── produced by the preparation steps below ────────────────────────────────────────────────────────────────────
+  root: {kind: derived, produced_by: U0, path: "{models}/gguf/tony-tern/R2B3m/Thor-T-R2B3m.gguf"}
   calib: {kind: derived, produced_by: I1, path: "{models}/gguf/tony-tern/SELRISP/calib/calib_mmlu.jsonl"}
   calib_mclp: {kind: derived, produced_by: I2, path: "{models}/gguf/tony-tern/SELRISP/calib/mclp_maestro.log"}
   wt103: {kind: derived, produced_by: I3, path: "{models}/gguf/tony-tern/CARDAN_FEDELE/corpus/e2e_corpus_4096_wt103.pt"}
@@ -186,7 +203,6 @@ inputs:
   teacher_cache_wt103: {kind: derived, produced_by: I6, path: "{models}/gguf/tony-tern/CARDAN_FEDELE/teacher/q8-maestro-wt103"}
   hess_attn: {kind: derived, produced_by: I7, path: "{models}/gguf/tony-tern/hessiane-attn"}
   hess_dense: {kind: derived, produced_by: I8, path: "{models}/gguf/tony-tern/hessiane-densi-grande"}
-  gq_experts: {kind: derived, produced_by: I9, path: "{models}/gguf/tony-tern/pod-schur-esperti"}
   kl4_rotations: {kind: derived, produced_by: I10, path: "{models}/gguf/tony-tern/OBIETTIVO_C/SINTESI_1025/L2/kl4_rotazioni"}
   teacher_states: {kind: derived, produced_by: I11, path: "{models}/gguf/tony-tern/OBIETTIVO_C/SINTESI_1025/L2/STATI_MAESTRO_wt103_1024tok"}
 
@@ -223,7 +239,8 @@ steps:
       - "hf download cais/mmlu --repo-type dataset --revision c30699e8356da336a370243923dbaf21066bb9fe all/test-00000-of-00001.parquet all/validation-00000-of-00001.parquet all/dev-00000-of-00001.parquet --local-dir {path.mmlu}"
       - "hf download Salesforce/wikitext --repo-type dataset --revision b08601e04326c79dfdd32d625aee71d232d685c3 --include 'wikitext-103-raw-v1/train-*' 'wikitext-103-raw-v1/validation-*' --local-dir {path.wikitext}"
       - "D={work}/download; mkdir -p $D; hf download Anjielon/Thor-T-35B-A3B-root --revision thor-t-v1 --local-dir $D/root; hf download Anjielon/Thor-T-bench --repo-type dataset --revision thor-t-v1 --include 'teacher/*' 'bench/*' 'corpora/*' --local-dir $D/bench"
-      - "D={work}/download; place() { mkdir -p \"$(dirname \"$2\")\"; ln -sfn \"$1\" \"$2\"; }; place $D/root/Thor-T-R2B3m.gguf {path.root}; place $D/root/stats/Thor-v20-downaggr3.gguf {path.student_v20}; place $D/root/tensori_R2B3 $(dirname {path.r2b3_dense_inputs}); place $D/bench/teacher/Ornith-1.5-35B-A3B-Q8_0.gguf {path.teacher_q8}; place $D/bench/bench/mmlu_00000.bin {path.bench}; place $D/bench/bench/mmlu2000_mescolato.bin {path.bench_mixed}; place $D/bench/bench/mmlu2000_mescolato.indice.tsv $(dirname {path.bench_mixed})/mmlu2000_mescolato.indice.tsv; place $D/bench/corpora/calib_auto2_pulito.txt {path.corpus_attn}; place $D/bench/corpora/calib_grande_2026_09_20.txt {path.corpus_large}; place $D/bench/corpora/corpus_cot.txt {path.corpus_cot}; place $D/bench/corpora/e2e_corpus_4096_maestro.pt {path.teacher_corpus}; place $D/bench/corpora/e2e_heldout_4096_maestro.pt $(dirname {path.teacher_corpus})/e2e_heldout_4096_maestro.pt"
+      - "hf download Anjielon/Thor-T-fold-stats --repo-type dataset --revision thor-t-v1 --include 'Gq_*.npy' --local-dir {path.gq_experts}"
+      - "D={work}/download; place() { mkdir -p \"$(dirname \"$2\")\"; ln -sfn \"$1\" \"$2\"; }; place $D/root/Thor-T-R2B3m-packed.gguf {path.root_packed}; place $D/root/stats/Thor-v20-downaggr3.gguf {path.student_v20}; place $D/root/tensori_R2B3 $(dirname {path.r2b3_dense_inputs}); place $D/bench/teacher/Ornith-1.5-35B-A3B-Q8_0.gguf {path.teacher_q8}; place $D/bench/bench/mmlu_00000.bin {path.bench}; place $D/bench/bench/mmlu2000_mescolato.bin {path.bench_mixed}; place $D/bench/bench/mmlu2000_mescolato.indice.tsv $(dirname {path.bench_mixed})/mmlu2000_mescolato.indice.tsv; place $D/bench/corpora/calib_auto2_pulito.txt {path.corpus_attn}; place $D/bench/corpora/calib_grande_2026_09_20.txt {path.corpus_large}; place $D/bench/corpora/corpus_cot.txt {path.corpus_cot}; place $D/bench/corpora/e2e_corpus_4096_maestro.pt {path.teacher_corpus}; place $D/bench/corpora/e2e_heldout_4096_maestro.pt $(dirname {path.teacher_corpus})/e2e_heldout_4096_maestro.pt"
       - "{python} -m fucina.replay.check_inputs {recipe_dir}/recipe_c.yaml --set work={work} --set engine={engine} --set bundle_src={bundle_src} --set venv={venv} --out {work}/state/inputs_checked.json"
     produces:
       - {key: inputs_checked, path: "{work}/state/inputs_checked.json", verify: exists}
@@ -336,23 +353,21 @@ steps:
     produces:
       - {key: hess_dense_dir, path: "{models}/gguf/tony-tern/hessiane-densi-grande", verify: manifest, expect: recipe_c/recorded/hessians_dense_large.manifest, tolerance: "as I7"}
   - id: I9
-    title: "per-expert input statistics Gq_LL in the flow of the earlier quantized student (layers 0-31; read by the expert folds)"
+    title: "optional: recapture the per-expert statistics Gq_LL from the earlier quantized student and compare with the published ones"
     kind: gpu
-    status: blocked
+    status: bundle
+    optional: true
     determinism: tolerance
     gpu_hours: 12.0
     vram_gib: 90
     disk_gib: 230
-    needs: [bf16, student_v20, corpus_cot]
+    needs: [bf16, student_v20, corpus_cot, gq_experts]
     code: ["bundle:hessians/cattura_schur_esperti.py"]
-    blockers:
-      - "no recorded hash of the 32 Gq files (128 GiB; the folder holds 225 GB with the unused C_/Mqr_ arrays): hash them before publishing"
-      - "the recorded capture ran on a rented GPU with no registered time; 12 GPU h is an estimate, not a measurement"
-      - "student Thor-v20-downaggr3.gguf (12.6 GB, sha256 0f65c162...) must be uploaded first"
+    note: "the record ran on a rented GPU and its time was not registered: 12 GPU h is an estimate. The chain uses the published files (gq_experts); this step documents and checks where they come from."
     run:
-      - "cd {bundle}/hessians && env THOR_HF_DIR={path.bf16} THOR_GPTQ_BASE={path.student_v20} THOR_CORPUS={path.corpus_cot} FINESTRA_SCHUR_OUT={path.gq_experts} THOR_STRATI=0-31 {python} cattura_schur_esperti.py"
+      - "cd {bundle}/hessians && env THOR_HF_DIR={path.bf16} THOR_GPTQ_BASE={path.student_v20} THOR_CORPUS={path.corpus_cot} FINESTRA_SCHUR_OUT={inputs}/gq_recaptured THOR_STRATI=0-31 {python} cattura_schur_esperti.py"
     produces:
-      - {key: gq_dir, path: "{models}/gguf/tony-tern/pod-schur-esperti", verify: exists, tolerance: "GPU accumulation; the fold reads Gq only"}
+      - {key: gq_recaptured, path: "{inputs}/gq_recaptured", verify: manifest, expect: recipe_c/recorded/fold_stats.manifest, tolerance: "GPU accumulation: bytes are expected to differ; compare with compare_tol (relative Frobenius)"}
   - id: I10
     title: "KL4 rotations of the calibration set (4 orderings) and the teacher log-probs on each"
     kind: measure
@@ -384,11 +399,25 @@ steps:
       - {key: teacher_states_dir, path: "{models}/gguf/tony-tern/OBIETTIVO_C/SINTESI_1025/L2/STATI_MAESTRO_wt103_1024tok/piano_stati.json", verify: exists}
 
   # ── the chain ───────────────────────────────────────────────────────────────────────────────────────────────────
+  - id: U0
+    title: "unpack the released (packed) root into the separate-plane layout the recorded code reads"
+    kind: cpu
+    status: ported
+    determinism: bitwise
+    cpu_hours: 0.2
+    disk_gib: 8.3
+    needs: [root_packed, root_order, inputs_checked]
+    code: ["package:fucina.replay.unpack_planes"]
+    note: "exact inverse of tools/ternary/pack_planes.py of the release engine; verified 9 Nov: the unpacked stream has the recorded root's file sha256 and tensor digest"
+    run:
+      - "mkdir -p $(dirname {path.root}); {python} -m fucina.replay.unpack_planes {path.root_packed} {path.root} --order {path.root_order} --gguf-py $(dirname $(dirname {engine}))/gguf-py"
+    produces:
+      - {key: root_unpacked, path: "{models}/gguf/tony-tern/R2B3m/Thor-T-R2B3m.gguf", verify: sha256, expect: 56cb5bcdd9813a1015a7cad5364b5a80226f990fb8bd561b7cae4727d70efc43}
   - id: "00"
     title: "verify the frozen root R2B3m"
     kind: check
     status: ported
-    needs: [root, inputs_checked]
+    needs: [root]
     run: ["test \"$(sha256sum {path.root} | cut -c1-64)\" = 56cb5bcdd9813a1015a7cad5364b5a80226f990fb8bd561b7cae4727d70efc43"]
   - id: "01"
     title: "C0: ssm_alpha/ssm_beta F32 -> TQ1_0R_1024 (60 tensors; GPTQ + exact ternary coordinate descent, H = attention-input Hessian)"
@@ -605,21 +634,18 @@ steps:
     produces:
       - {key: t550, path: "{models}/gguf/tony-tern/OBIETTIVO_C/CARDAN_CONGIUNTO_1018/tappa_550/piega_d/Thor-T-C-S4b-CONGIUNTO.gguf", verify: tensors, tolerance: "753 tensors, 210 changed vs OBQ (gate/up experts + attn/GDN dense); MMLU-2000 71.30 recorded"}
   - id: "27"
-    title: "S7 on-policy distillation (QAOPD), 10 rounds x 2 steps on T550 -> g10"
+    title: "S7 on-policy distillation (QAOPD), 10 rounds x 2 steps on T550 -> g10 (server and probe as child processes)"
     kind: gpu
-    status: blocked
+    status: ported
     determinism: stochastic
-    technique: "QAOPD (arXiv 2609.26708), official reward"
+    technique: "QAOPD (arXiv 2609.26708), official strict reward"
     gpu_hours: 8.6
     vram_gib: 60
     disk_gib: 73
-    needs: [t550, teacher_cache, dump_tool]
-    code: ["bundle:launchers/c_s7_t550_1020.sh", "bundle:onpolicy/thor_v2/e2e_onpolicy.py", "bundle:onpolicy/thor_v2/e2e_allena.py"]
-    blockers:
-      - "the recorded launcher (402 lines) starts the student llama-server and the probe as `systemd-run --user` units and writes the house activity log; it must be rewritten as a child-process loop (rollouts -> teacher -> 2 steps -> export) before it runs elsewhere"
-      - "sampled rollouts: not reproducible; the 31 Oct internal re-run measured the effect (GSM8K start 57.81 vs 48.83 on the same engine)"
-      - "server patch of the development build (raw text instead of HTTP 500 when the chat parser fails, thor-c0t uncommitted diff of tools/server/server-task.cpp): upstream rewrote that code (chat_session.feed/finish); check that /completion never returns 500 on the release engine, or port the try/catch"
-    run: ["OC={models}/gguf/tony-tern/OBIETTIVO_C; env OPD_OSPITE=$OC/CARDAN_CONGIUNTO_1018/tappa_550/piega_d/Thor-T-C-S4b-CONGIUNTO.gguf OPD_SENZA_S4=1 bash {bundle}/launchers/c_s7_t550_1020.sh"]
+    needs: [t550, teacher_q8, dump_tool]
+    code: ["package:fucina.replay.thor.s7_onpolicy", "bundle:faithful/opd_fedele.py", "bundle:onpolicy/thor_v2/e2e_allena.py", "bundle:onpolicy/thor_v2/e2e_onpolicy.py", "bundle:probe/sonda_giudice.py"]
+    note: "sampled rollouts: not reproducible (31 Oct internal re-run: GSM8K start 57.81 vs 48.83). Use an engine build that includes 00375e8ae (server returns the raw text instead of HTTP 500 when the chat parser rejects a reply), as the development server did."
+    run: ["OC={models}/gguf/tony-tern/OBIETTIVO_C; ln -sfn {path.dump_tool} {bundle}/onpolicy/thor_v2/e2e_dump_logit; {python} -m fucina.replay.thor.s7_onpolicy --host $OC/CARDAN_CONGIUNTO_1018/tappa_550/piega_d/Thor-T-C-S4b-CONGIUNTO.gguf --out $OC/S7_CONGIUNTO_T550_1020 --code $OC/ONPOLICY/codice/thor_v2 --faithful {bundle}/faithful --teacher-q8 {path.teacher_q8} --engine {engine} --python {python} --probe-judge {bundle}/probe/sonda_giudice.py"]
     produces:
       - {key: g10, path: "{models}/gguf/tony-tern/OBIETTIVO_C/S7_CONGIUNTO_T550_1020/Thor-T-C-S7-T550-g10.gguf", verify: tensors, tolerance: "recorded sha 7ba0b57f...; trits unchanged vs T550, scales in 430 tensors, 301 F32; MMLU-2000 71.70"}
   - id: 27k
@@ -672,19 +698,32 @@ steps:
       - "OC={models}/gguf/tony-tern/OBIETTIVO_C; W=$OC/CARDAN_CONGIUNTO_S7T550_1020; T=$W/tappa_400; {python} {models}/build/leve/raffina/patch_gguf.py --dir $T/piega_d/tensori --out $T/piega_d/Thor-T-C-S4b-CONGIUNTO.gguf --base $T/piega_e/Thor-T-C-S4b-CONG-E.gguf"
     produces:
       - {key: t400, path: "{models}/gguf/tony-tern/OBIETTIVO_C/CARDAN_CONGIUNTO_S7T550_1020/tappa_400/piega_d/Thor-T-C-S4b-CONGIUNTO.gguf", verify: tensors, tolerance: "recorded file sha f118d59a61b29db7; 210 tensors changed vs g10; MMLU-2000 72.40"}
+  - id: 30m
+    title: "MMLU-2000 of T400 in the original order (the reference log of the POST McNemar test)"
+    kind: measure
+    status: ported
+    determinism: measurement
+    gpu_hours: 0.3
+    vram_gib: 16
+    needs: [t400, bench]
+    code: ["engine:llama-perplexity"]
+    run: ["env LD_LIBRARY_PATH={engine} GGML_VK_TQ1R_Q8=1 GGML_VK_DISABLE_GRAPH_OPTIMIZE=1 {engine}/llama-perplexity -m {path.t400} -ngl 999 -c 4096 -np 4 -ub 512 -dev {vk_dev} --multiple-choice --multiple-choice-tasks 100000 -f {path.bench} > $(dirname {path.t400})/../mmlu_T400.log 2>&1"]
+    produces:
+      - {key: t400_mmlu, path: "{models}/gguf/tony-tern/OBIETTIVO_C/CARDAN_CONGIUNTO_S7T550_1020/tappa_400/mmlu_T400.log", verify: mmlu, expect: "72.40", tolerance: "band=1.0"}
   - id: "31"
     title: "POST: 50 joint steps on T400 (gate/up and down scales, all 301 F32, dense residuals, KL4 rotations, CKA alignment), export and fold -> C"
     kind: gpu
-    status: blocked
+    status: bundle
     determinism: tolerance
+    note: "fallback levels of the recorded launcher kept: exit 2 -> fewer speed levers (grouped plans, plan reuse), exit 6 -> reference GDN kernel"
     gpu_hours: 1.5
     vram_gib: 88
     disk_gib: 60
-    needs: [t400, kl4_rotations, teacher_states, teacher_cache, teacher_cache_wt103, calib, bench_mixed]
-    code: ["bundle:bpp/cardan_congiunto_scale.py", "bundle:post_tools/bpost_scale_down_fp32_1026.py", "bundle:post_tools/f32_esporta.py", "bundle:post_tools/scale_gateup_esporta.py", "bundle:cardan/cardan_piega_densi_gpu_veloce.py", "bundle:launchers/t400post_tappe_v2_1027.sh"]
-    blockers:
-      - "the export/patch/measure sequence after training (H1 scales + F32 export, dense fold, mixed-order MMLU and remap) exists only as the internal runner's post.py, which imports the private layout module; it must be ported into this package (~300 lines) or the recorded t400post_tappe_v2_1027.sh launcher must be freed of the house lock and activity log"
-    run: ["OC={models}/gguf/tony-tern/OBIETTIVO_C; W=$OC/CARDAN_T400POST_1027; E=$W/allena; mkdir -p $E/tappe $W/cache_dequant; cd $OC/SINTESI_1025/BPP/codice && env CARDAN_GRUPPI=1 E2E_RIUSO=1 E2E_GDN=veloce E2E_GDN_MODULO=gdn_veloce_corsa_v5 E2E_MOTORE=triton2 E2E_CONV_DIRETTA=1 E2E_SENZA_COESISTENZA=1 E2E_CACHE_DEQUANT=$W/cache_dequant E2E_DENSI_PIEGATI=x2 E2E_PIEGA_GEMM=triton E2E_DENSI_SSM_AB=1 {gpu_env} {python} cardan_congiunto_scale.py --uscita $E --gguf $OC/CARDAN_CONGIUNTO_S7T550_1020/tappa_400/piega_d/Thor-T-C-S4b-CONGIUNTO.gguf --nome C-T400POST --scale-down-lr 1e-4 --strati 0-39 --rango-esperti 0 --famiglie attn,gdn --rango-densi 16 --lr-densi 1e-5 --lr-gamma 1e-4 --tau 1.0 --lambda-ce 0.5 --topk 256 --kl4-peso 1 --kl-peso 0 --kl4-n 896 --modo congiunto --passi 50 --heldout-ogni 50 --pazienza 1000 --selezione kl24_paper --guardia-kl24 0.02 --tappe-dir $E/tappe --fuso --kl4-rotazioni 4 --kl4-rotazioni-modo ciclo --kl4-rotazioni-dir {path.kl4_rotations} --allinea-peso 0.3 --allinea-modo rapporto --allinea-metrica cka --allinea-strati 0-39 --allinea-cache {path.teacher_states} --scale-gateup-lr 1e-4 --ricetta B3 --vram-tetto 88 --ore-max 20 --allena-f32 tutte >> $E/corsa.log 2>&1"]
+    needs: [t400, t400_mmlu, kl4_rotations, teacher_states, teacher_cache, teacher_cache_wt103, calib, bench_mixed]
+    code: ["package:fucina.replay.thor.post_export", "bundle:bpp/cardan_congiunto_scale.py", "bundle:post_tools/bpost_scale_down_fp32_1026.py", "bundle:post_tools/f32_esporta.py", "bundle:post_tools/scale_gateup_esporta.py", "bundle:cardan/cardan_piega_densi_gpu_veloce.py", "bundle:post_tools/bpost_verifica_1026.py", "bundle:post_tools/parziale_mmlu.py", "bundle:post_tools/mcnemar_mclp.py"]
+    run:
+      - "OC={models}/gguf/tony-tern/OBIETTIVO_C; W=$OC/CARDAN_T400POST_1027; E=$W/allena; mkdir -p $E/tappe $W/cache_dequant; cd $OC/SINTESI_1025/BPP/codice; A=\"--uscita $E --gguf $OC/CARDAN_CONGIUNTO_S7T550_1020/tappa_400/piega_d/Thor-T-C-S4b-CONGIUNTO.gguf --nome C-T400POST --scale-down-lr 1e-4 --strati 0-39 --rango-esperti 0 --famiglie attn,gdn --rango-densi 16 --lr-densi 1e-5 --lr-gamma 1e-4 --tau 1.0 --lambda-ce 0.5 --topk 256 --kl4-peso 1 --kl-peso 0 --kl4-n 896 --modo congiunto --passi 50 --heldout-ogni 50 --pazienza 1000 --selezione kl24_paper --guardia-kl24 0.02 --tappe-dir $E/tappe --fuso --kl4-rotazioni 4 --kl4-rotazioni-modo ciclo --kl4-rotazioni-dir {path.kl4_rotations} --allinea-peso 0.3 --allinea-modo rapporto --allinea-metrica cka --allinea-strati 0-39 --allinea-cache {path.teacher_states} --scale-gateup-lr 1e-4 --ricetta B3 --vram-tetto 88 --ore-max 20 --allena-f32 tutte --riprendi\"; FAST=\"E2E_GDN=veloce E2E_GDN_MODULO=gdn_veloce_corsa_v5 E2E_MOTORE=triton2 E2E_CONV_DIRETTA=1 E2E_SENZA_COESISTENZA=1 E2E_CACHE_DEQUANT=$W/cache_dequant E2E_DENSI_PIEGATI=x2 E2E_PIEGA_GEMM=triton E2E_DENSI_SSM_AB=1\"; REF=\"E2E_GDN=veloce E2E_GDN_MODULO=gdn_veloce_corsa E2E_MOTORE=triton2 E2E_SENZA_COESISTENZA=1 E2E_CACHE_DEQUANT=$W/cache_dequant E2E_DENSI_PIEGATI=x2 E2E_PIEGA_GEMM=triton E2E_DENSI_SSM_AB=1\"; B=$FAST; ref=0; for L in 'CARDAN_GRUPPI=1 E2E_RIUSO=1' 'CARDAN_GRUPPI=1' ''; do while :; do rc=0; env $L $B {gpu_env} {python} cardan_congiunto_scale.py $A >> $E/corsa.log 2>&1 || rc=$?; if [ $rc = 6 ] && [ $ref = 0 ]; then B=$REF; ref=1; continue; fi; break; done; [ $rc = 2 ] || break; done; [ $rc = 0 ]"
+      - "OC={models}/gguf/tony-tern/OBIETTIVO_C; {python} -m fucina.replay.thor.post_export --base $OC/CARDAN_CONGIUNTO_S7T550_1020/tappa_400/piega_d/Thor-T-C-S4b-CONGIUNTO.gguf --work $OC/CARDAN_T400POST_1027 --code $OC/SINTESI_1025/BPP/codice --scripts {forge}/stato --tools {bundle}/post_tools --patch {models}/build/leve/raffina/patch_gguf.py --engine {engine} --bench-mixed {path.bench_mixed} --index $(dirname {path.bench_mixed})/mmlu2000_mescolato.indice.tsv --reference {path.t400_mmlu} --python {python} --device {vk_dev}"
     produces:
       - {key: c_post50, path: "{models}/gguf/tony-tern/OBIETTIVO_C/CARDAN_T400POST_1027/tappa_50/Thor-T-C-T400POST-T50.gguf", verify: tensors, expect: bc36d18b7fd8257403653132fa0fa3db353b51c000304646322ef38c731b036b, tolerance: "exact match unlikely (GPU training); acceptance: MMLU-2000 within 1.0 of 73.15 and McNemar p >= 0.05"}
   - id: M1

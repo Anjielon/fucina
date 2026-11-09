@@ -31,15 +31,54 @@ def normalize(s: str) -> str:
     return re.sub(r"\s+", " ", re.sub(r"[^a-z0-9 ]", " ", s.lower())).strip()
 
 
-def windows(tok, text: str, n: int, rng: random.Random):
+CHUNK = 4_000_000
+
+
+def text_rows(files):
+    """The ``text`` column of parquet files, row by row, without loading a file at once."""
+    import pyarrow.parquet as pq
+    for f in files:
+        for batch in pq.ParquetFile(f).iter_batches(batch_size=4096, columns=["text"]):
+            yield from batch.column(0).to_pylist()
+
+
+def chunks(rows):
+    """The chunks of the recorded tokenization: from position a, cut after the first newline at or beyond
+    a + 4,000,000 characters of the concatenated text (or at its end). Same cuts as on the whole string."""
+    pieces, size, need = [], 0, CHUNK + 1
+    for r in rows:
+        pieces.append(r)
+        size += len(r)
+        while size >= need:
+            buf = "".join(pieces)
+            b = buf.find("\n", CHUNK)
+            if b < 0:
+                pieces, need = [buf], size + 65536      # no newline yet: read more before looking again
+                break
+            yield buf[:b + 1]
+            rest = buf[b + 1:]
+            pieces, size, need = [rest], len(rest), CHUNK + 1
+    buf = "".join(pieces)
+    while buf:
+        b = buf.find("\n", CHUNK)
+        b = len(buf) if b < 0 else b + 1
+        yield buf[:b]
+        buf = buf[b:]
+
+
+def token_stream(tok, files, store: Path):
+    """Tokenize the split chunk by chunk into an int32 file on disk; returns a read-only memmap of the ids."""
     import numpy as np
-    pieces, a = [], 0
-    while a < len(text):
-        b = text.find("\n", a + 4_000_000)
-        b = len(text) if b < 0 else b + 1
-        pieces.append(np.asarray(tok(text[a:b], add_special_tokens=False)["input_ids"], dtype=np.int32))
-        a = b
-    ids = np.concatenate(pieces)
+    n = 0
+    with open(store, "wb") as f:
+        for c in chunks(text_rows(files)):
+            ids = np.asarray(tok(c, add_special_tokens=False)["input_ids"], dtype=np.int32)
+            ids.tofile(f)
+            n += len(ids)
+    return np.memmap(store, dtype=np.int32, mode="r", shape=(n,))
+
+
+def windows(ids, n: int, rng: random.Random):
     starts = sorted(rng.sample(range(0, len(ids) - SEQ), n))
     return [ids[s:s + SEQ].tolist() for s in starts], int(len(ids))
 
@@ -57,12 +96,15 @@ def main(argv=None) -> int:
     from transformers import AutoTokenizer
     tok = AutoTokenizer.from_pretrained(a.tokenizer)
     a.out.mkdir(parents=True, exist_ok=True)
-    train = "".join(t for f in sorted(a.wikitext.glob("train-*.parquet")) for t in pd.read_parquet(f)["text"].tolist())
-    valid = "".join(pd.read_parquet(a.wikitext / "validation-00000-of-00001.parquet")["text"].tolist())
     rng = random.Random(SEED)
-    sel_train, n_train = windows(tok, train, N_TRAIN, rng)
-    del train
-    sel_held, n_valid = windows(tok, valid, N_HELD, rng)
+    store = a.out / "_tokens.i32"                 # on disk, next to the outputs: peak RAM stays well under 2 GB
+    ids_train = token_stream(tok, sorted(a.wikitext.glob("train-*.parquet")), store)
+    sel_train, n_train = windows(ids_train, N_TRAIN, rng)
+    del ids_train
+    ids_valid = token_stream(tok, [a.wikitext / "validation-00000-of-00001.parquet"], store)
+    sel_held, n_valid = windows(ids_valid, N_HELD, rng)
+    del ids_valid
+    store.unlink()
     texts = [tok.decode(x) for x in sel_train + sel_held]
     questions = pd.read_parquet(a.mmlu_test)["question"].tolist()
     everything = normalize(" ".join(texts))

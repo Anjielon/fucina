@@ -36,6 +36,9 @@ TYPES: dict[int, tuple[str, int, int]] = {
     46: ("TQ1_0R_1024_X2", 1024, 448),
     47: ("TQ1_0R_1024_X3", 1024, 672),
     48: ("TQ1_0R_1024_X4", 1024, 896),
+    49: ("TQ1_0_X2", 256, 108),
+    50: ("TQ1_0_X3", 256, 162),
+    51: ("TQ1_0_X4", 256, 216),
 }
 
 # GGUF metadata value types -> struct format (fixed-size scalars)

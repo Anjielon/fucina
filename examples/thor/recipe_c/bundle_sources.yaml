@@ -40,3 +40,5 @@ trees:
   - {from: "{forge}/stato/dopo_tappa_misura_gpu_1021_v10.sh.bak_kl4x4_1024", to: launchers, name: dopo_tappa_misura_gpu_1021_v10.sh}
   - {from: "{forge}/stato/t400post_tappe_v2_1027.sh", to: launchers}
   - {from: "{forge}/converti_multiple_choice.py", to: selrisp}
+  - {from: "{forge}/sorgenti_forgia/obiettivo_c/onpolicy_fedele", to: faithful}      # frozen QAOPD arm (official reward)
+  - {from: "{forge}/thor_v2/leve_flusso/sonda_giudice.py", to: probe}                # judge of the 21-seed probe
