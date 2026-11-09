@@ -54,6 +54,7 @@ class Input:
     files: list = field(default_factory=list)
     sha256: str = ""                  # recorded hash of a single file
     manifest: str = ""                # recorded per-file hashes of a directory (file relative to the recipe)
+    hashes: dict = field(default_factory=dict)   # repository path -> sha256, for inputs made of several files
     size_gib: float = 0.0
     produced_by: str = ""
     published: str = ""               # where the recorded copy is (or will be) published
@@ -103,6 +104,7 @@ class Recipe:
     description: str = ""
     deviations: list = field(default_factory=list)
     forge: dict = field(default_factory=dict)
+    bench_list: dict = field(default_factory=dict)
 
     def step(self, sid: str) -> Step:
         for s in self.steps:
@@ -155,7 +157,8 @@ def load(path: str | Path) -> Recipe:
         steps.append(Step(**raw))
     r = Recipe(name=d["name"], title=d.get("title", d["name"]), roots=d.get("roots") or {}, inputs=inputs,
                steps=steps, target=d.get("target") or {}, source=path, description=d.get("description", ""),
-               deviations=_list(d.get("deviations")), forge=d.get("forge") or {})
+               deviations=_list(d.get("deviations")), forge=d.get("forge") or {},
+               bench_list=d.get("bench_list") or {})
     validate(r)
     return r
 

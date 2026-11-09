@@ -295,3 +295,40 @@ def run(r: Recipe, roots: dict, sel: list[Step], allow_blocked: bool = False) ->
             print(f"[{s.id}] non-bitwise step outside its check: continuing, the final target decides")
     return 0
 
+
+
+def bench_list_problems(r: Recipe, tsv: Path, recipe_dir: Path) -> list[str]:
+    """Every input of the recipe that lives in the bench dataset must have a row in its file list with the same path
+    and the same sha256 (directories: one row per file of the recorded manifest)."""
+    repo = (r.bench_list or {}).get("repo")
+    if not repo:
+        return []
+    rows = {}
+    for line in Path(tsv).read_text().splitlines()[1:]:
+        f = line.split("\t")
+        if len(f) >= 3:
+            rows[f[0]] = f[2]
+    want: dict[str, str] = {}
+    for k, i in r.inputs.items():
+        if i.kind != "hf" or i.repo != repo:
+            continue
+        if i.hashes:
+            want.update({p: (h, k) for p, h in i.hashes.items()})
+        elif i.manifest and len(i.files) == 1 and i.files[0].endswith("/"):
+            for line in (recipe_dir / i.manifest).read_text().splitlines():
+                if line.strip():
+                    h, rel = line.split(None, 1)
+                    want[i.files[0] + rel.strip()] = (h, k)
+        elif len(i.files) == 1 and i.sha256:
+            want[i.files[0]] = (i.sha256, k)
+        else:
+            want[f"<{k}>"] = ("", k)
+    bad = []
+    for path, (h, k) in sorted(want.items()):
+        if path.startswith("<"):
+            bad.append(f"bench list: input {k} names no single file with a hash")
+        elif path not in rows:
+            bad.append(f"bench list: input {k}: no row for {path}")
+        elif rows[path] != h:
+            bad.append(f"bench list: input {k}: {path} has sha256 {rows[path][:16]} in the list, {h[:16]} in the recipe")
+    return bad

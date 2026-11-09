@@ -282,3 +282,27 @@ def test_forge_commit_from_a_release_tarball(tmp_path, monkeypatch):
     monkeypatch.setattr(status, "_git", lambda *a: "")
     commit, why = status.forge_commit("thor-recipe-c-v1", strict=False)
     assert commit == "" and "not a git clone" in why
+
+
+def test_bench_list_check(tmp_path):
+    """Every Thor-T-bench input of recipe C needs a row with the same path and sha256 in the dataset's file list."""
+    r = R.load(RECIPE_C)
+    want = {}
+    for i in r.inputs.values():
+        if i.kind == "hf" and i.repo == "Anjielon/Thor-T-bench":
+            if i.hashes:
+                want.update(i.hashes)
+            elif i.manifest and i.files[0].endswith("/"):
+                for line in (RECIPE_C.parent / i.manifest).read_text().splitlines():
+                    if line.strip():
+                        h, rel = line.split(None, 1)
+                        want[i.files[0] + rel.strip()] = h
+            else:
+                want[i.files[0]] = i.sha256
+    tsv = tmp_path / "BENCH_FILES.tsv"
+    tsv.write_text("path_in_bundle\tsource_path\tsha256\tbytes\tlicence\n" +
+                   "".join(f"{p}\tsrc\t{h}\t1\tx\n" for p, h in want.items()))
+    assert runner.bench_list_problems(r, tsv, RECIPE_C.parent) == []
+    p0 = sorted(want)[0]
+    tsv.write_text("".join(l for l in tsv.read_text().splitlines(True) if not l.startswith(p0 + "\t")))
+    assert any(p0 in x for x in runner.bench_list_problems(r, tsv, RECIPE_C.parent))

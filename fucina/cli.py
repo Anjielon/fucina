@@ -299,6 +299,8 @@ def build_parser() -> argparse.ArgumentParser:
     q.add_argument("--quiet", action="store_true", help="with --dry-run: summary only, no commands")
     q.add_argument("--allow-blocked", action="store_true", help="with --run: also run steps marked blocked")
     q.add_argument("--with-optional", action="store_true", help="also plan/run the optional steps (recaptures)")
+    q.add_argument("--bench-list", help="file list of the bench dataset (BENCH_FILES.tsv): every bench input must "
+                   "have a row with the same path and sha256")
     q = s.add_parser("replay-bundle", help="build / install / verify the code bundle of a replay recipe")
     q.set_defaults(f=cmd_replay_bundle)
     q.add_argument("args", nargs=argparse.REMAINDER)
@@ -320,6 +322,12 @@ def cmd_replay(a) -> None:
             raise SystemExit("refusing to run: " + "; ".join(res["problems"][:10]))
         raise SystemExit(RU.run(r, roots, sel, a.allow_blocked))
     res = RU.plan(r, roots, sel, forbid, show=not a.quiet, script=Path(a.script) if a.script else None)
+    if a.bench_list:
+        extra = RU.bench_list_problems(r, Path(a.bench_list), r.source.parent)
+        print(f"bench list {a.bench_list}: {len(extra)} problems")
+        for p in extra:
+            print(f"  - {p}")
+        res["problems"] += extra
     if a.quiet:
         print(f"{len(sel)} steps; blocked: {', '.join(res['blocked']) or 'none'}; problems: {len(res['problems'])}")
         for p in res["problems"]:
