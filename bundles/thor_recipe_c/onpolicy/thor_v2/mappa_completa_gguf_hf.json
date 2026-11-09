@@ -1,0 +1,202 @@
+{
+ "linear": {
+  "attn_gate.weight": {
+   "hf": "linear_attn.in_proj_z.weight",
+   "fetta": null,
+   "rel": "perm_righe",
+   "perm_npz": "linear.attn_gate.weight"
+  },
+  "attn_norm.weight": {
+   "hf": "input_layernorm.weight",
+   "fetta": null,
+   "rel": "trasformata",
+   "f": "piu_uno"
+  },
+  "attn_qkv.weight": {
+   "hf": "linear_attn.in_proj_qkv.weight",
+   "fetta": null,
+   "rel": "perm_righe",
+   "perm_npz": "linear.attn_qkv.weight"
+  },
+  "ffn_down_exps.weight": {
+   "hf": "mlp.experts.down_proj",
+   "fetta": null,
+   "rel": "identita",
+   "per_esperto": true
+  },
+  "ffn_down_shexp.weight": {
+   "hf": "mlp.shared_expert.down_proj.weight",
+   "fetta": null,
+   "rel": "identita"
+  },
+  "ffn_gate_exps.weight": {
+   "hf": "mlp.experts.gate_up_proj",
+   "fetta": "righe[:512]",
+   "rel": "identita",
+   "per_esperto": true
+  },
+  "ffn_gate_inp.weight": {
+   "hf": "mlp.gate.weight",
+   "fetta": null,
+   "rel": "identita"
+  },
+  "ffn_gate_inp_shexp.weight": {
+   "hf": "mlp.shared_expert_gate.weight",
+   "fetta": null,
+   "rel": "identita"
+  },
+  "ffn_gate_shexp.weight": {
+   "hf": "mlp.shared_expert.gate_proj.weight",
+   "fetta": null,
+   "rel": "identita"
+  },
+  "ffn_up_exps.weight": {
+   "hf": "mlp.experts.gate_up_proj",
+   "fetta": "righe[512:]",
+   "rel": "identita",
+   "per_esperto": true
+  },
+  "ffn_up_shexp.weight": {
+   "hf": "mlp.shared_expert.up_proj.weight",
+   "fetta": null,
+   "rel": "identita"
+  },
+  "post_attention_norm.weight": {
+   "hf": "post_attention_layernorm.weight",
+   "fetta": null,
+   "rel": "trasformata",
+   "f": "piu_uno"
+  },
+  "ssm_a": {
+   "hf": "linear_attn.A_log",
+   "fetta": null,
+   "rel": "perm_1d",
+   "f": "neg_exp",
+   "perm_npz": "linear.ssm_a"
+  },
+  "ssm_alpha.weight": {
+   "hf": "linear_attn.in_proj_a.weight",
+   "fetta": null,
+   "rel": "perm_righe",
+   "perm_npz": "linear.ssm_alpha.weight"
+  },
+  "ssm_beta.weight": {
+   "hf": "linear_attn.in_proj_b.weight",
+   "fetta": null,
+   "rel": "perm_righe",
+   "perm_npz": "linear.ssm_beta.weight"
+  },
+  "ssm_conv1d.weight": {
+   "hf": "linear_attn.conv1d.weight",
+   "fetta": "squeeze",
+   "rel": "perm_righe",
+   "perm_npz": "linear.ssm_conv1d.weight"
+  },
+  "ssm_dt.bias": {
+   "hf": "linear_attn.dt_bias",
+   "fetta": null,
+   "rel": "perm_1d",
+   "perm_npz": "linear.ssm_dt.bias"
+  },
+  "ssm_norm.weight": {
+   "hf": "linear_attn.norm.weight",
+   "fetta": null,
+   "rel": "identita"
+  },
+  "ssm_out.weight": {
+   "hf": "linear_attn.out_proj.weight",
+   "fetta": null,
+   "rel": "perm_colonne",
+   "perm_npz": "linear.ssm_out.weight"
+  }
+ },
+ "full": {
+  "attn_k.weight": {
+   "hf": "self_attn.k_proj.weight",
+   "fetta": null,
+   "rel": "identita"
+  },
+  "attn_k_norm.weight": {
+   "hf": "self_attn.k_norm.weight",
+   "fetta": null,
+   "rel": "trasformata",
+   "f": "piu_uno"
+  },
+  "attn_norm.weight": {
+   "hf": "input_layernorm.weight",
+   "fetta": null,
+   "rel": "trasformata",
+   "f": "piu_uno"
+  },
+  "attn_output.weight": {
+   "hf": "self_attn.o_proj.weight",
+   "fetta": null,
+   "rel": "identita"
+  },
+  "attn_q.weight": {
+   "hf": "self_attn.q_proj.weight",
+   "fetta": null,
+   "rel": "identita"
+  },
+  "attn_q_norm.weight": {
+   "hf": "self_attn.q_norm.weight",
+   "fetta": null,
+   "rel": "trasformata",
+   "f": "piu_uno"
+  },
+  "attn_v.weight": {
+   "hf": "self_attn.v_proj.weight",
+   "fetta": null,
+   "rel": "identita"
+  },
+  "ffn_down_exps.weight": {
+   "hf": "mlp.experts.down_proj",
+   "fetta": null,
+   "rel": "identita",
+   "per_esperto": true
+  },
+  "ffn_down_shexp.weight": {
+   "hf": "mlp.shared_expert.down_proj.weight",
+   "fetta": null,
+   "rel": "identita"
+  },
+  "ffn_gate_exps.weight": {
+   "hf": "mlp.experts.gate_up_proj",
+   "fetta": "righe[:512]",
+   "rel": "identita",
+   "per_esperto": true
+  },
+  "ffn_gate_inp.weight": {
+   "hf": "mlp.gate.weight",
+   "fetta": null,
+   "rel": "identita"
+  },
+  "ffn_gate_inp_shexp.weight": {
+   "hf": "mlp.shared_expert_gate.weight",
+   "fetta": null,
+   "rel": "identita"
+  },
+  "ffn_gate_shexp.weight": {
+   "hf": "mlp.shared_expert.gate_proj.weight",
+   "fetta": null,
+   "rel": "identita"
+  },
+  "ffn_up_exps.weight": {
+   "hf": "mlp.experts.gate_up_proj",
+   "fetta": "righe[512:]",
+   "rel": "identita",
+   "per_esperto": true
+  },
+  "ffn_up_shexp.weight": {
+   "hf": "mlp.shared_expert.up_proj.weight",
+   "fetta": null,
+   "rel": "identita"
+  },
+  "post_attention_norm.weight": {
+   "hf": "post_attention_layernorm.weight",
+   "fetta": null,
+   "rel": "trasformata",
+   "f": "piu_uno"
+  }
+ }
+}

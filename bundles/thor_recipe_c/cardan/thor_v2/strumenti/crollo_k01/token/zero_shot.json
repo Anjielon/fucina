@@ -1,0 +1,204 @@
+[
+ {
+  "file": "zs0",
+  "compiti": [
+   {
+    "compito": 626,
+    "tipo": "persa",
+    "ultima": 76,
+    "giusta": 1,
+    "dell_ema16": 1,
+    "dell_k01": 0
+   },
+   {
+    "compito": 544,
+    "tipo": "persa",
+    "ultima": 148,
+    "giusta": 2,
+    "dell_ema16": 2,
+    "dell_k01": 1
+   },
+   {
+    "compito": 1566,
+    "tipo": "persa",
+    "ultima": 202,
+    "giusta": 0,
+    "dell_ema16": 0,
+    "dell_k01": 1
+   },
+   {
+    "compito": 1183,
+    "tipo": "persa",
+    "ultima": 260,
+    "giusta": 2,
+    "dell_ema16": 2,
+    "dell_k01": 1
+   },
+   {
+    "compito": 701,
+    "tipo": "persa",
+    "ultima": 320,
+    "giusta": 0,
+    "dell_ema16": 0,
+    "dell_k01": 1
+   },
+   {
+    "compito": 1792,
+    "tipo": "persa",
+    "ultima": 365,
+    "giusta": 3,
+    "dell_ema16": 3,
+    "dell_k01": 2
+   },
+   {
+    "compito": 16,
+    "tipo": "persa",
+    "ultima": 425,
+    "giusta": 2,
+    "dell_ema16": 2,
+    "dell_k01": 1
+   },
+   {
+    "compito": 327,
+    "tipo": "persa",
+    "ultima": 541,
+    "giusta": 0,
+    "dell_ema16": 0,
+    "dell_k01": 2
+   },
+   {
+    "compito": 78,
+    "tipo": "persa",
+    "ultima": 637,
+    "giusta": 3,
+    "dell_ema16": 3,
+    "dell_k01": 2
+   },
+   {
+    "compito": 845,
+    "tipo": "persa",
+    "ultima": 704,
+    "giusta": 3,
+    "dell_ema16": 3,
+    "dell_k01": 1
+   },
+   {
+    "compito": 50,
+    "tipo": "persa",
+    "ultima": 774,
+    "giusta": 3,
+    "dell_ema16": 3,
+    "dell_k01": 2
+   },
+   {
+    "compito": 1024,
+    "tipo": "persa",
+    "ultima": 1012,
+    "giusta": 3,
+    "dell_ema16": 3,
+    "dell_k01": 1
+   }
+  ]
+ },
+ {
+  "file": "zs1",
+  "compiti": [
+   {
+    "compito": 1681,
+    "tipo": "persa",
+    "ultima": 51,
+    "giusta": 2,
+    "dell_ema16": 2,
+    "dell_k01": 1
+   },
+   {
+    "compito": 1790,
+    "tipo": "persa",
+    "ultima": 104,
+    "giusta": 3,
+    "dell_ema16": 3,
+    "dell_k01": 2
+   },
+   {
+    "compito": 528,
+    "tipo": "persa",
+    "ultima": 200,
+    "giusta": 3,
+    "dell_ema16": 3,
+    "dell_k01": 2
+   },
+   {
+    "compito": 1809,
+    "tipo": "persa",
+    "ultima": 318,
+    "giusta": 3,
+    "dell_ema16": 3,
+    "dell_k01": 2
+   },
+   {
+    "compito": 1135,
+    "tipo": "tenuta",
+    "ultima": 376,
+    "giusta": 2,
+    "dell_ema16": 2,
+    "dell_k01": 2
+   },
+   {
+    "compito": 246,
+    "tipo": "tenuta",
+    "ultima": 482,
+    "giusta": 2,
+    "dell_ema16": 2,
+    "dell_k01": 2
+   },
+   {
+    "compito": 1391,
+    "tipo": "tenuta",
+    "ultima": 595,
+    "giusta": 1,
+    "dell_ema16": 1,
+    "dell_k01": 1
+   },
+   {
+    "compito": 1370,
+    "tipo": "tenuta",
+    "ultima": 707,
+    "giusta": 2,
+    "dell_ema16": 2,
+    "dell_k01": 2
+   },
+   {
+    "compito": 1315,
+    "tipo": "tenuta",
+    "ultima": 789,
+    "giusta": 0,
+    "dell_ema16": 0,
+    "dell_k01": 0
+   },
+   {
+    "compito": 955,
+    "tipo": "tenuta",
+    "ultima": 843,
+    "giusta": 0,
+    "dell_ema16": 0,
+    "dell_k01": 0
+   },
+   {
+    "compito": 882,
+    "tipo": "tenuta",
+    "ultima": 917,
+    "giusta": 2,
+    "dell_ema16": 2,
+    "dell_k01": 2
+   },
+   {
+    "compito": 1569,
+    "tipo": "tenuta",
+    "ultima": 980,
+    "giusta": 2,
+    "dell_ema16": 2,
+    "dell_k01": 2
+   }
+  ]
+ }
+]

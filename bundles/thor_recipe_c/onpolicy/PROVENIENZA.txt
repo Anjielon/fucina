@@ -1,0 +1,3 @@
+11/10/2026 15:45 — E2E-C1: copia CONGELATA di @@ROOT:models@@/gguf/tony-tern/CARDAN/codice/recupero_7dabd6f/thor_v2_kqat (albero kernel nuovi E2E_KQAT, 9/10, file segnale stato/KERNEL_NUOVI_PRONTI) + cardan_kd.py/cardan_kd_moduli.py/residui_ternari.py (cancello d'identita' torch<->motore).
+recupero_7dabd6f/thor_v2{,_kqat} -> ../thor_v2: cardan_kd.py (REC = QUI/recupero_7dabd6f/thor_v2_kqat con E2E_KERNEL_NUOVI=1) usa ESATTAMENTE questo albero.
+Uniche modifiche rispetto all'origine: vedi MODIFICHE.txt (ogni file toccato ha la copia .bak-1011-c1).

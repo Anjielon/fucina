@@ -1,0 +1,5 @@
+math_mixed_reward_ufficiale.py = copia IDENTICA di MingZwhy/QAOPD opd/rewards/math_mixed_reward.py (premio di scripts/opd/run_math.sh)
+sorgente: @@ROOT:models@@/gguf/tony-tern/AUDIT_1013/qaopd/repo/opd/rewards/math_mixed_reward.py
+commit del clone: 9a64cdb8d56ff69d7643bdee44060d0f42c9d40a
+sha256: 39d6d380bb779634147e216e730e3b41cc45f4ea0cf3347024941e54c4a99ec7
+copiato il 2026-10-13T14:54:23; argomenti di run_math.sh: REQUIRE_HASH_REWARD=True CORRECT_WITHOUT_HASH_SCORE=0.0 HASH_FORMAT_SCORE=0.0 overlong_penalty 0.5 overlong_chars 3000

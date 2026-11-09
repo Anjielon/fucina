@@ -1,0 +1,37 @@
+{
+ "righe": [
+  0,
+  1
+ ],
+ "micro_token": 8192,
+ "configurazioni": {
+  "0": {
+   "ms_token": {
+    "avanti": 0.2196279529016465,
+    "kl": 2.6152279460802674,
+    "indietro": 3.2277566788252443,
+    "adam": 0.0007521884981542826
+   },
+   "totale_ms_token": 6.0633647663053125,
+   "picco_torch_gib": 12.852701663970947,
+   "tipi": [
+    "linear_attention"
+   ]
+  },
+  "0,1": {
+   "ms_token": {
+    "avanti": 0.618785823462531,
+    "kl": 2.02480549341999,
+    "indietro": 2.653642965015024,
+    "adam": 0.001021981006488204
+   },
+   "totale_ms_token": 5.298256262904033,
+   "picco_torch_gib": 13.377859115600586,
+   "tipi": [
+    "linear_attention",
+    "linear_attention"
+   ]
+  }
+ },
+ "gdn": "ripiego"
+}

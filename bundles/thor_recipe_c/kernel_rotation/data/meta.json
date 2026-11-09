@@ -1,0 +1,6 @@
+{
+  "R": 512,
+  "C": 2048,
+  "blocks_per_row": 8,
+  "tensor": "blk.10.attn_gate.weight"
+}

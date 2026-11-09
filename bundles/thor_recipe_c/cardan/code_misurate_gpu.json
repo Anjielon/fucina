@@ -1,0 +1,121 @@
+{
+ "tipi": {
+  "allenamento_congiunto": {
+   "compute": 2,
+   "fonte": "osservazione passiva pid 16848 (cardan_congiunto.py, SDMA attivo) 21/10 14:12, /sys/class/kfd/kfd/proc/16848/queues",
+   "processi_kfd": 1,
+   "sdma": 1
+  },
+  "compile_thr1": {
+   "cmd": [
+    "@@ROOT:venv@@/bin/python3",
+    "-c",
+    "import torch,time; f=torch.compile(lambda a: (a*a+1).sum()); x=torch.randn(4096,device=\"cuda\"); print(float(f(x))); torch.cuda.synchronize(); time.sleep(3)"
+   ],
+   "compute": 2,
+   "env": {
+    "TORCHINDUCTOR_COMPILE_THREADS": "1"
+   },
+   "fonte": "misura attiva cardan_code_gpu.py misura (processo minimo)",
+   "ora": "2026-10-21 14:17:17",
+   "processi_kfd": 1,
+   "rc": 0,
+   "sdma": 0
+  },
+  "compile_thr1_sdma0": {
+   "cmd": [
+    "@@ROOT:venv@@/bin/python3",
+    "-c",
+    "import torch,time; f=torch.compile(lambda a: (a*a+1).sum()); x=torch.randn(4096,device=\"cuda\"); print(float(f(x))); torch.cuda.synchronize(); time.sleep(3)"
+   ],
+   "compute": 2,
+   "env": {
+    "HSA_ENABLE_SDMA": "0",
+    "TORCHINDUCTOR_COMPILE_THREADS": "1"
+   },
+   "fonte": "misura attiva cardan_code_gpu.py misura (processo minimo)",
+   "ora": "2026-10-21 14:17:28",
+   "processi_kfd": 1,
+   "rc": 0,
+   "sdma": 0
+  },
+  "compile_thr4": {
+   "cmd": [
+    "@@ROOT:venv@@/bin/python3",
+    "-c",
+    "import torch,time; f=torch.compile(lambda a: (a*a+1).sum()); x=torch.randn(4096,device=\"cuda\"); print(float(f(x))); torch.cuda.synchronize(); time.sleep(3)"
+   ],
+   "compute": 2,
+   "env": {
+    "TORCHINDUCTOR_COMPILE_THREADS": "4"
+   },
+   "fonte": "misura attiva cardan_code_gpu.py misura (processo minimo)",
+   "ora": "2026-10-21 14:17:39",
+   "processi_kfd": 1,
+   "rc": 0,
+   "sdma": 0
+  },
+  "mmlu_llama_vulkan": {
+   "compute": 0,
+   "fonte": "llama-server Vulkan (sonda tappa 150) vivo 14:09-14:1x e assente da /sys/class/kfd/kfd/proc: Vulkan usa amdgpu/DRM, non KFD",
+   "processi_kfd": 0,
+   "sdma": 0
+  },
+  "piega_densi_gpu": {
+   "compute": 2,
+   "env": {
+    "HSA_ENABLE_SDMA": "0",
+    "TORCHINDUCTOR_COMPILE_THREADS": "1"
+   },
+   "fonte": "DEDOTTO, non misurato sul lavoratore reale: processo torch minimo con HSA_ENABLE_SDMA=0 (compile_thr1_sdma0: 2 calcolo, 0 SDMA); osservazione passiva pid 133071 (cardan_piega.py, SDMA attivo) 17:05 = 2+1. Da confermare con /sys/class/kfd quando una piega _gpu gira (nessuna lanciata: GPU occupata).",
+   "processi_kfd": 1,
+   "sdma": 0
+  },
+  "piega_esperti_gpu": {
+   "compute": 2,
+   "env": {
+    "HSA_ENABLE_SDMA": "0",
+    "TORCHINDUCTOR_COMPILE_THREADS": "1"
+   },
+   "fonte": "DEDOTTO, non misurato sul lavoratore reale: processo torch minimo con HSA_ENABLE_SDMA=0 (compile_thr1_sdma0: 2 calcolo, 0 SDMA); osservazione passiva pid 133071 (cardan_piega.py, SDMA attivo) 17:05 = 2+1. Da confermare con /sys/class/kfd quando una piega _gpu gira (nessuna lanciata: GPU occupata).",
+   "processi_kfd": 1,
+   "sdma": 0
+  },
+  "piega_flussi_4strati": {
+   "compute": 5,
+   "fonte": "osservazione passiva pid 259756 (cardan_piega_flussi.py --strati 3, sessione altra), 285 campioni 15:53-16:20, massimo costante",
+   "processi_kfd": 1,
+   "sdma": 2
+  },
+  "torch_sdma0": {
+   "cmd": [
+    "@@ROOT:venv@@/bin/python3",
+    "-c",
+    "import torch,time; x=torch.randn(1<<20,device=\"cuda\"); y=(x*2).cpu(); torch.cuda.synchronize(); time.sleep(3)"
+   ],
+   "compute": 2,
+   "env": {
+    "HSA_ENABLE_SDMA": "0"
+   },
+   "fonte": "misura attiva cardan_code_gpu.py misura (processo minimo)",
+   "ora": "2026-10-21 14:17:04",
+   "processi_kfd": 1,
+   "rc": 0,
+   "sdma": 0
+  },
+  "torch_sdma_default": {
+   "cmd": [
+    "@@ROOT:venv@@/bin/python3",
+    "-c",
+    "import torch,time; x=torch.randn(1<<20,device=\"cuda\"); y=(x*2).cpu(); torch.cuda.synchronize(); time.sleep(3)"
+   ],
+   "compute": 2,
+   "env": {},
+   "fonte": "misura attiva cardan_code_gpu.py misura (processo minimo)",
+   "ora": "2026-10-21 14:16:58",
+   "processi_kfd": 1,
+   "rc": 0,
+   "sdma": 1
+  }
+ }
+}

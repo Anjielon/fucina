@@ -1,0 +1,1 @@
+copia di RILQT/codice_shexp (a69c868588722d43) il ven 9 ott 2026, 10:02:02, CEST, per CARDAN-KD; modifiche: e2e_studente.py (gancio cardan), cardan_*.py nuovi

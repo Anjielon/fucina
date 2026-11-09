@@ -1,0 +1,38 @@
+{
+ "strati": [
+  0,
+  1
+ ],
+ "righe": [
+  256,
+  257
+ ],
+ "token": 8192,
+ "K": 524288.0,
+ "kl_somma": {
+  "ripiego": 74244.37631931627,
+  "fla": 74244.35889183082
+ },
+ "tempo_passo_s": {
+  "ripiego": 93.5675726729678,
+  "fla": 56.59233882103581
+ },
+ "ms_token": {
+  "ripiego": 11.42182283605564,
+  "fla": 6.908244484989723
+ },
+ "vive_con_g_non_nullo": 8680576,
+ "nulli_fla": 0,
+ "segno_opposto_fla": 183,
+ "quota_rotti": 2.1081550348732617e-05,
+ "err_rel_mediano": 6.236720946617424e-05,
+ "err_rel_p99": 0.004497280344367027,
+ "err_rel_norma_totale": 5.0550665037008e-05,
+ "stato_involucro": {
+  "fla": true,
+  "chiamate_fla": 8,
+  "chiamate_ripiego": 0,
+  "guasto": null
+ },
+ "cancello_1e-3": true
+}

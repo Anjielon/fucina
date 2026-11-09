@@ -1,0 +1,16 @@
+{
+ "byte": 33554432,
+ "byte_diversi": 0,
+ "esperto": 5,
+ "forma": [
+  2048,
+  2048
+ ],
+ "frazione_byte_diversi": 0.0,
+ "gq": "@@ROOT:models@@/gguf/tony-tern/pod-schur-esperti/Gq_16.npy",
+ "guardia_cpu_s": 0.30768982600420713,
+ "media_contigua_hex": "0x1.03b84cdd50000p+0",
+ "media_stride_hex": "0x1.03b84cdd50000p+0",
+ "prova": "D4 CPU, NON collaudo GPU",
+ "riferimento_cpu_s": 0.1330895139835775
+}

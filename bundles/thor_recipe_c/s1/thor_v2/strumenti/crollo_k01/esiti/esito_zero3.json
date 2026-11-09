@@ -1,0 +1,86 @@
+{
+ "banco_zero_shot": {
+  "base": {
+   "kl_vocabolario": 2.3589922317698737,
+   "kl_4_lettere": 0.2255440416179794,
+   "acc": 0.9166666666666666,
+   "accordo_col_maestro": 0.875,
+   "massa_lettere": 0.08937972392549742
+  },
+  "k01": {
+   "kl_vocabolario": 0.6710341532200713,
+   "kl_4_lettere": 0.832605732247926,
+   "acc": 0.4166666666666667,
+   "accordo_col_maestro": 0.4166666666666667,
+   "massa_lettere": 0.2533397257018031
+  },
+  "maestro": {
+   "acc": 0.9166666666666666,
+   "massa_lettere": 0.20150652570853878
+  },
+  "n": 24
+ },
+ "calibrazione_mc_heldout": {
+  "base": {
+   "kl_vocabolario": 0.7673151874656349,
+   "kl_4_lettere": 0.29522023319466234,
+   "acc": 0.25,
+   "accordo_col_maestro": 0.5,
+   "massa_lettere": 0.9878222415069207
+  },
+  "k01": {
+   "kl_vocabolario": 0.22276856371097806,
+   "kl_4_lettere": 0.15812642477012856,
+   "acc": 0.3333333333333333,
+   "accordo_col_maestro": 0.6666666666666666,
+   "massa_lettere": 0.9775508311195458
+  },
+  "maestro": {
+   "acc": 0.5833333333333334,
+   "massa_lettere": 0.9482683168979598
+  },
+  "n": 12
+ },
+ "calibrazione_mc_addestramento": {
+  "base": {
+   "kl_vocabolario": 0.599165144961583,
+   "kl_4_lettere": 0.24464087468378812,
+   "acc": 0.7857142857142857,
+   "accordo_col_maestro": 0.8571428571428571,
+   "massa_lettere": 0.994670095987252
+  },
+  "k01": {
+   "kl_vocabolario": 0.35741537619288455,
+   "kl_4_lettere": 0.3168989070915094,
+   "acc": 0.6428571428571429,
+   "accordo_col_maestro": 0.7857142857142857,
+   "massa_lettere": 0.9869006870236959
+  },
+  "maestro": {
+   "acc": 0.6428571428571429,
+   "massa_lettere": 0.9847263163088213
+  },
+  "n": 14
+ },
+ "conoscenza_mmlu_val_impacchettata": {
+  "base": {
+   "kl_vocabolario": 0.17137350725906553,
+   "kl_4_lettere": 0.16896209759173142,
+   "acc": 0.75,
+   "accordo_col_maestro": 0.875,
+   "massa_lettere": 0.9303221542127826
+  },
+  "k01": {
+   "kl_vocabolario": 0.22240784982766726,
+   "kl_4_lettere": 0.3785103308603629,
+   "acc": 0.875,
+   "accordo_col_maestro": 0.75,
+   "massa_lettere": 0.9811870380999188
+  },
+  "maestro": {
+   "acc": 0.875,
+   "massa_lettere": 0.936222520274951
+  },
+  "n": 8
+ }
+}

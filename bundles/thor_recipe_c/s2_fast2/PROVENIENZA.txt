@@ -1,0 +1,24 @@
+VELOCE2 14/10/2026: copia al byte di ../codice_veloce_1014 (SHA_CONGELATO verificato prima della copia; = albero della corsa
+c-s23-veloce-1014) con modificato SOLO s23/s23_passata.py e aggiunti s23/s23_test_veloce2.py (5 prove), s23/s23_prova_fili.py
+(prova E0, sotto il ponte), s23/s23_prova_gpu_lotti.py (prova dei lotti di esperti: NON usata, vedi rapporto). Leve AL BIT:
+V1 coda (P4/P5 dal residuo dopo il miscelatore conservato in P3; cancelli al primo lotto di P4 e P5), V2 flussi salvati a fine
+strato e ricaricati alla ripresa (impronte sha256 degli strati), V3 esperti del maestro senza sincronizzazioni per esperto.
+E0 (fili OpenBLAS/OMP) e' nello script di lancio (S23_FILI), scelto al bit dalla prova sotto il ponte.
+Motivo, profilo e misure: ~/tony-forgia/ricerche/C_S23_VELOCE2_1014.md.
+--- provenienza di codice_veloce_1014 ---
+VELOCE 14/10/2026: copia al byte di ../codice_corretto_1014 (SHA_CONGELATO verificato prima della copia; = albero della corsa
+S23_SEQUENZIALE_CORRETTO_1014/codice) con modificati SOLO s23/s23_algebra.py, s23/s23_risolvi.py, s23/s23_passata.py e
+aggiunti s23/s23_test_veloce.py, s23/s23_identita_driver.py, s23/s23_identita_esperti_driver.py. Leve (stesse scelte, stessi
+trit): L1 fattorizzazioni riusate nei densi (cholesky_smorzata della base, Cholesky di DRQ per (unita', beta), blocchi di
+Babai di JARQ, L_unit di K1); L2 Cholesky dei blocchi di Babai riusate negli esperti (jarq_lotto_cache_da = cardan_piega.jarq_lotto
+al bit); L3 K1 con fastkron_banda e RICALCOLO col fastkron_sd esatto quando K1 e' entro S23_K1_DELTA dalla scelta
+(S23_K1_BANDA=0 = codice di prima); L4 trit di GPTQ bilanciato scritti a fine gruppo (interi, identico).
+Motivo, profilo e misure: ~/tony-forgia/ricerche/C_S23_VELOCE_1014.md.
+--- provenienza di codice_corretto_1014 ---
+CORRETTO 14/10/2026: copia al byte di ../codice (congelato 2026-10-14T07:00:03, SHA_CONGELATO originale verificato prima della copia)
+con modificati SOLO s23/s23_risolvi.py, s23/s23_passata.py, s23/s23_test.py: guardia simmetrica + energia (G1), candidati a
+{0;0,5;1}/{0;0,5} (G2), H corta S23_PESO_KW (G3), energia relativa alla partenza S23_ENERGIA_RELATIVA. Motivo e misure: ~/tony-forgia/ricerche/C_S23_CORRETTO_1014.md
+(difetto: ~/tony-forgia/ricerche/C_S1B_AUDIT_1014.md §5). Copia dei sorgenti: ~/tony-forgia/sorgenti_forgia/obiettivo_c/s23_corretto_1014/.
+Provenienza dell'albero originale:
+congelato 2026-10-14T07:00:03 da @@ROOT:forge@@/sorgenti_forgia/obiettivo_c/s23, @@ROOT:models@@/gguf/tony-tern/OBIETTIVO_C/S1B_BYTEZERO_1013/codice/s1b/s1b_comune.py, @@ROOT:models@@/build/wt-r022b/thor_v2/rd_ternary/rd_ternary, @@ROOT:depot@@/tutto_ternario/codice/sorgente.py, @@ROOT:models@@/gguf/tony-tern/OBIETTIVO_C/S1_FLUSSO_C_1013/codice/s1/s1_comune.py, @@ROOT:models@@/build/leve/raffina/solutori.py @@ROOT:models@@/build/leve/raffina/comune.py @@ROOT:models@@/gguf/tony-tern/OBIETTIVO_C/codice/jarq_fedele.py @@ROOT:forge@@/sorgenti_forgia/obiettivo_c/ptq2_costruttori.py
+      @@ROOT:forge@@/ricerche/C_LEVE_FRONTIERA_1013_script/fk_scale_date.py @@ROOT:models@@/gguf/tony-tern/OBIETTIVO_C/CARDAN_C0B/codice/cardan_piega.py; studente e fedeli: @@ROOT:models@@/gguf/tony-tern/OBIETTIVO_C/S1_FLUSSO_C_1013/codice (S1)

@@ -54,10 +54,12 @@ def configured_roots(r: Recipe, sets: list[str], config_section: Optional[dict] 
             raise RecipeError(f"--set {s!r}: expected NAME=PATH")
         k, v = s.split("=", 1)
         out[k] = v
+    seed = {"recipe_dir": str(r.source.parent) if r.source else ".",
+            "package": str(Path(__file__).resolve().parents[1])}
     for _ in range(len(out) + 1):            # defaults may refer to other roots: "{work}/layout"
         changed = False
         for k, v in list(out.items()):
-            new = re.sub(r"\{(\w+)\}", lambda m: out.get(m.group(1), m.group(0)), v)
+            new = re.sub(r"\{(\w+)\}", lambda m: out.get(m.group(1), seed.get(m.group(1), m.group(0))), v)
             if new != v:
                 out[k], changed = new, True
         if not changed:
@@ -65,7 +67,7 @@ def configured_roots(r: Recipe, sets: list[str], config_section: Optional[dict] 
     for k, v in list(out.items()):
         if "{" in v:
             raise RecipeError(f"root {k}: cannot resolve {v}")
-        out[k] = os.path.abspath(os.path.expanduser(v)) if ("/" in v or v.startswith("~")) else v
+        out[k] = os.path.normpath(os.path.abspath(os.path.expanduser(v))) if ("/" in v or v.startswith("~")) else v
     return out
 
 
@@ -125,7 +127,7 @@ def plan(r: Recipe, roots: dict, sel: list[Step], forbid: list[str], show: bool 
          script: Optional[Path] = None) -> dict:
     values = values_for(r, roots)
     allowed = [v for k, v in roots.items() if isinstance(v, str) and v.startswith("/")]
-    allowed += [values["package"], values["recipe_dir"]]
+    allowed += [str(Path(values["package"]).parent), values["recipe_dir"]]
     problems: list[str] = []
     lines = [f"# replay {r.name}: {r.title}", f"# recipe {r.source}"]
     lines += [f"#   root {k} = {roots[k]}" for k in r.roots]
@@ -144,8 +146,10 @@ def plan(r: Recipe, roots: dict, sel: list[Step], forbid: list[str], show: bool 
         have = "present" if Path(p).exists() else "to fetch" if i.kind == "hf" else "MISSING"
         if i.kind == "package" and not Path(p).exists():
             problems.append(f"input {k}: package file missing: {p}")
+        elif i.kind == "package" and i.sha256 and Path(p).is_file() and sha256(Path(p)) != i.sha256:
+            problems.append(f"input {k}: {p} differs from its pinned sha256 {i.sha256[:16]}")
         lines.append(f"  {k:<22} {loc:<60} {pin:<24} {have}")
-        problems += [f"input {k}: {v}" for v in path_violations(p, allowed, forbid, (values["package"], values["recipe_dir"]))]
+        problems += [f"input {k}: {v}" for v in path_violations(p, allowed, forbid, (str(Path(values["package"]).parent), values["recipe_dir"]))]
 
     tot = {"ported": [0.0, 0.0], "bundle": [0.0, 0.0], "blocked": [0.0, 0.0]}
     lines.append("\n## steps")
@@ -172,7 +176,7 @@ def plan(r: Recipe, roots: dict, sel: list[Step], forbid: list[str], show: bool 
         for b in s.blockers:
             lines.append(f"    BLOCKER  {b}")
         text = body + "\n" + "\n".join(f"{k}={v}" for k, v in env.items())
-        for v in path_violations(text, allowed, forbid, (values["package"], values["recipe_dir"])):
+        for v in path_violations(text, allowed, forbid, (str(Path(values["package"]).parent), values["recipe_dir"])):
             problems.append(f"step {s.id}: {v}")
         if show:
             for k, v in env.items():

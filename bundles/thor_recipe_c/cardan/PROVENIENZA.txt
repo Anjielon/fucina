@@ -1,0 +1,1 @@
+copia di @@ROOT:models@@/gguf/tony-tern/OBIETTIVO_C/CARDAN_C0B/codice (SHA_CONGELATO) con il solo rilq_thor_kl4.py modificato; resto = link simbolici

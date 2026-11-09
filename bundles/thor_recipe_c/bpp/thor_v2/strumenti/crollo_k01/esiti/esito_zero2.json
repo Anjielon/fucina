@@ -1,0 +1,228 @@
+{
+ "per_strato": {
+  "19": {
+   "risposta_err_rel_base": 0.7669833898544312,
+   "risposta_err_rel_k01": 0.7669833898544312,
+   "risposta_mse_k01_su_base": 1.0,
+   "risposta_compiti_k01_peggio": 0,
+   "domanda_mse_k01_su_base": 1.0,
+   "risposta_k01_vs_base_rel": 0.0
+  },
+  "20": {
+   "risposta_err_rel_base": 0.7987546324729919,
+   "risposta_err_rel_k01": 0.5727581977844238,
+   "risposta_mse_k01_su_base": 0.5141807794570923,
+   "risposta_compiti_k01_peggio": 0,
+   "domanda_mse_k01_su_base": 0.6192373633384705,
+   "risposta_k01_vs_base_rel": 0.5762684345245361
+  },
+  "21": {
+   "risposta_err_rel_base": 0.7890574932098389,
+   "risposta_err_rel_k01": 0.5411846041679382,
+   "risposta_mse_k01_su_base": 0.47040680050849915,
+   "risposta_compiti_k01_peggio": 0,
+   "domanda_mse_k01_su_base": 0.6070252060890198,
+   "risposta_k01_vs_base_rel": 0.6294417977333069
+  },
+  "22": {
+   "risposta_err_rel_base": 0.7064043283462524,
+   "risposta_err_rel_k01": 0.45813605189323425,
+   "risposta_mse_k01_su_base": 0.4206126034259796,
+   "risposta_compiti_k01_peggio": 0,
+   "domanda_mse_k01_su_base": 0.5304092764854431,
+   "risposta_k01_vs_base_rel": 0.5665066242218018
+  },
+  "23": {
+   "risposta_err_rel_base": 0.7929567098617554,
+   "risposta_err_rel_k01": 0.5227724313735962,
+   "risposta_mse_k01_su_base": 0.4346367418766022,
+   "risposta_compiti_k01_peggio": 0,
+   "domanda_mse_k01_su_base": 0.5818255543708801,
+   "risposta_k01_vs_base_rel": 0.6535257697105408
+  },
+  "25": {
+   "risposta_err_rel_base": 0.8072112202644348,
+   "risposta_err_rel_k01": 0.5203537940979004,
+   "risposta_mse_k01_su_base": 0.4155498445034027,
+   "risposta_compiti_k01_peggio": 0,
+   "domanda_mse_k01_su_base": 0.6223469972610474,
+   "risposta_k01_vs_base_rel": 0.6831809282302856
+  },
+  "27": {
+   "risposta_err_rel_base": 0.7982053160667419,
+   "risposta_err_rel_k01": 0.4823288917541504,
+   "risposta_mse_k01_su_base": 0.3651382625102997,
+   "risposta_compiti_k01_peggio": 0,
+   "domanda_mse_k01_su_base": 0.632496178150177,
+   "risposta_k01_vs_base_rel": 0.697017252445221
+  },
+  "29": {
+   "risposta_err_rel_base": 0.7800306081771851,
+   "risposta_err_rel_k01": 0.45418691635131836,
+   "risposta_mse_k01_su_base": 0.3390360474586487,
+   "risposta_compiti_k01_peggio": 0,
+   "domanda_mse_k01_su_base": 0.6484028697013855,
+   "risposta_k01_vs_base_rel": 0.6810914278030396
+  },
+  "31": {
+   "risposta_err_rel_base": 0.7792972326278687,
+   "risposta_err_rel_k01": 0.4354463517665863,
+   "risposta_mse_k01_su_base": 0.3122217059135437,
+   "risposta_compiti_k01_peggio": 0,
+   "domanda_mse_k01_su_base": 0.6891145706176758,
+   "risposta_k01_vs_base_rel": 0.6840066313743591
+  },
+  "33": {
+   "risposta_err_rel_base": 0.7552131414413452,
+   "risposta_err_rel_k01": 0.4590532183647156,
+   "risposta_mse_k01_su_base": 0.36947664618492126,
+   "risposta_compiti_k01_peggio": 0,
+   "domanda_mse_k01_su_base": 0.6917865872383118,
+   "risposta_k01_vs_base_rel": 0.6665069460868835
+  },
+  "35": {
+   "risposta_err_rel_base": 0.768914520740509,
+   "risposta_err_rel_k01": 0.5108720064163208,
+   "risposta_mse_k01_su_base": 0.4414363503456116,
+   "risposta_compiti_k01_peggio": 0,
+   "domanda_mse_k01_su_base": 0.7230135202407837,
+   "risposta_k01_vs_base_rel": 0.6678599119186401
+  },
+  "37": {
+   "risposta_err_rel_base": 0.7894981503486633,
+   "risposta_err_rel_k01": 0.5763185024261475,
+   "risposta_mse_k01_su_base": 0.5328719615936279,
+   "risposta_compiti_k01_peggio": 0,
+   "domanda_mse_k01_su_base": 0.724778413772583,
+   "risposta_k01_vs_base_rel": 0.6745258569717407
+  },
+  "39": {
+   "risposta_err_rel_base": 0.7767229080200195,
+   "risposta_err_rel_k01": 0.6738890409469604,
+   "risposta_mse_k01_su_base": 0.7527393102645874,
+   "risposta_compiti_k01_peggio": 1,
+   "domanda_mse_k01_su_base": 0.685833752155304,
+   "risposta_k01_vs_base_rel": 0.6047876477241516
+  }
+ },
+ "lente": {
+  "19": {
+   "delta_logit_medio_A_D": [
+    0.0,
+    0.0,
+    0.0,
+    0.0
+   ],
+   "delta_BC_meno_AD": 0.0
+  },
+  "20": {
+   "delta_logit_medio_A_D": [
+    -0.454,
+    -0.542,
+    -0.286,
+    -0.556
+   ],
+   "delta_BC_meno_AD": 0.09131643871295168
+  },
+  "21": {
+   "delta_logit_medio_A_D": [
+    -0.1,
+    -0.383,
+    -0.187,
+    -0.455
+   ],
+   "delta_BC_meno_AD": -0.007427927596512747
+  },
+  "22": {
+   "delta_logit_medio_A_D": [
+    -0.349,
+    -0.63,
+    -0.566,
+    -0.677
+   ],
+   "delta_BC_meno_AD": -0.08508789327352956
+  },
+  "23": {
+   "delta_logit_medio_A_D": [
+    -0.384,
+    -0.633,
+    -0.489,
+    -0.794
+   ],
+   "delta_BC_meno_AD": 0.027606620480582173
+  },
+  "25": {
+   "delta_logit_medio_A_D": [
+    -0.033,
+    -0.358,
+    -0.172,
+    -0.409
+   ],
+   "delta_BC_meno_AD": -0.0438621314105922
+  },
+  "27": {
+   "delta_logit_medio_A_D": [
+    0.045,
+    -0.633,
+    -0.359,
+    -0.509
+   ],
+   "delta_BC_meno_AD": -0.2640603501524364
+  },
+  "29": {
+   "delta_logit_medio_A_D": [
+    -0.34,
+    -0.667,
+    -0.47,
+    -0.577
+   ],
+   "delta_BC_meno_AD": -0.10956342226100398
+  },
+  "31": {
+   "delta_logit_medio_A_D": [
+    -0.993,
+    -1.674,
+    -1.433,
+    -1.085
+   ],
+   "delta_BC_meno_AD": -0.5142800296086033
+  },
+  "33": {
+   "delta_logit_medio_A_D": [
+    -0.931,
+    -1.446,
+    -0.459,
+    0.028
+   ],
+   "delta_BC_meno_AD": -0.501322184763771
+  },
+  "35": {
+   "delta_logit_medio_A_D": [
+    -1.353,
+    -1.228,
+    -1.876,
+    -1.855
+   ],
+   "delta_BC_meno_AD": 0.0520373935897774
+  },
+  "37": {
+   "delta_logit_medio_A_D": [
+    1.03,
+    0.361,
+    -2.117,
+    -0.946
+   ],
+   "delta_BC_meno_AD": -0.9200813437218901
+  },
+  "39": {
+   "delta_logit_medio_A_D": [
+    2.058,
+    4.293,
+    2.199,
+    0.741
+   ],
+   "delta_BC_meno_AD": 1.8465378509925798
+  }
+ },
+ "compiti": []
+}

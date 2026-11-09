@@ -1,0 +1,1 @@
+congelato 2026-10-13T18:36:36 da @@ROOT:forge@@/sorgenti_forgia/obiettivo_c/s1, @@ROOT:models@@/gguf/tony-tern/OBIETTIVO_C/E2E_C1/codice/thor_v2, @@ROOT:forge@@/sorgenti_forgia/fedeli

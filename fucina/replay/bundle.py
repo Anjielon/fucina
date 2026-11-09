@@ -86,7 +86,8 @@ def build(sources_file: str | Path, out: str | Path, recorded_roots: dict[str, s
         else:
             pairs = [(p, p.relative_to(src)) for p in sorted(src.rglob("*")) if p.is_file()]
             pairs = [(p, r) for p, r in pairs if _wanted(r) and p.stat().st_size <= MAX_BYTES]
-            for pat in entry.get("exclude", []):
+            pairs = [(p, r) for p, r in pairs if not any(fnmatch.fnmatch(r.name, x) for x in spec.get("exclude", []))]
+            for pat in entry.get("exclude", []) + spec.get("exclude", []):
                 pairs = [(p, r) for p, r in pairs if not fnmatch.fnmatch(str(r), pat)]
         for p, rel in pairs:
             raw = p.read_bytes()
@@ -104,13 +105,14 @@ def build(sources_file: str | Path, out: str | Path, recorded_roots: dict[str, s
             if os.access(p, os.X_OK):
                 target.chmod(0o755)
             key = str(target.relative_to(out))
-            files[key] = {"sha256": _sha(new.encode()), "source": str(p), "source_sha256": _sha(raw)}
+            files[key] = {"sha256": _sha(new.encode()), "source": rewrite(str(p), root_list)[0],
+                         "source_sha256": _sha(raw)}
             if c:
                 subs[key] = c
             rest = sorted(set(ABS.findall(TOKEN_RE.sub("", new))))
             if rest:
                 leftover[key] = rest
-    meta = {"built": time.strftime("%FT%T"), "sources_file": str(sources_file),
+    meta = {"built": time.strftime("%FT%T"), "sources_file": Path(sources_file).name,
             "recorded_roots": sorted(recorded_roots), "files": files, "substitutions": subs,
             "unmapped_absolute_paths": leftover, "secrets_found": secrets}
     (out / "BUNDLE.json").write_text(json.dumps(meta, indent=1, sort_keys=True))

@@ -298,6 +298,7 @@ def build_parser() -> argparse.ArgumentParser:
     q.add_argument("--script", help="with --dry-run: also write the resolved commands to this bash file")
     q.add_argument("--quiet", action="store_true", help="with --dry-run: summary only, no commands")
     q.add_argument("--allow-blocked", action="store_true", help="with --run: also run steps marked blocked")
+    q.add_argument("--with-optional", action="store_true", help="also plan/run the optional steps (recaptures)")
     q = s.add_parser("replay-bundle", help="build / install / verify the code bundle of a replay recipe")
     q.set_defaults(f=cmd_replay_bundle)
     q.add_argument("args", nargs=argparse.REMAINDER)
@@ -311,7 +312,7 @@ def cmd_replay(a) -> None:
     from .replay import recipe as RR, runner as RU
     r = RR.load(a.recipe)
     roots = RU.configured_roots(r, a.sets, (config.current().data.get("replay") or {}) if config.is_active() else {})
-    sel = RU.select(r, a.steps, a.first, a.last, with_optional=True)
+    sel = RU.select(r, a.steps, a.first, a.last, with_optional=a.with_optional)
     forbid = a.forbid + [x for x in os.environ.get("FUCINA_REPLAY_FORBID", "").split(":") if x]
     if a.run:
         res = RU.plan(r, roots, sel, forbid, show=False)

@@ -1,0 +1,7 @@
+CORRETTO 14/10/2026: copia al byte di ../codice (congelato 2026-10-14T07:00:03, SHA_CONGELATO originale verificato prima della copia)
+con modificati SOLO s23/s23_risolvi.py, s23/s23_passata.py, s23/s23_test.py: guardia simmetrica + energia (G1), candidati a
+{0;0,5;1}/{0;0,5} (G2), H corta S23_PESO_KW (G3), energia relativa alla partenza S23_ENERGIA_RELATIVA. Motivo e misure: ~/tony-forgia/ricerche/C_S23_CORRETTO_1014.md
+(difetto: ~/tony-forgia/ricerche/C_S1B_AUDIT_1014.md §5). Copia dei sorgenti: ~/tony-forgia/sorgenti_forgia/obiettivo_c/s23_corretto_1014/.
+Provenienza dell'albero originale:
+congelato 2026-10-14T07:00:03 da @@ROOT:forge@@/sorgenti_forgia/obiettivo_c/s23, @@ROOT:models@@/gguf/tony-tern/OBIETTIVO_C/S1B_BYTEZERO_1013/codice/s1b/s1b_comune.py, @@ROOT:models@@/build/wt-r022b/thor_v2/rd_ternary/rd_ternary, @@ROOT:depot@@/tutto_ternario/codice/sorgente.py, @@ROOT:models@@/gguf/tony-tern/OBIETTIVO_C/S1_FLUSSO_C_1013/codice/s1/s1_comune.py, @@ROOT:models@@/build/leve/raffina/solutori.py @@ROOT:models@@/build/leve/raffina/comune.py @@ROOT:models@@/gguf/tony-tern/OBIETTIVO_C/codice/jarq_fedele.py @@ROOT:forge@@/sorgenti_forgia/obiettivo_c/ptq2_costruttori.py
+      @@ROOT:forge@@/ricerche/C_LEVE_FRONTIERA_1013_script/fk_scale_date.py @@ROOT:models@@/gguf/tony-tern/OBIETTIVO_C/CARDAN_C0B/codice/cardan_piega.py; studente e fedeli: @@ROOT:models@@/gguf/tony-tern/OBIETTIVO_C/S1_FLUSSO_C_1013/codice (S1)

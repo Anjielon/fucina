@@ -34,8 +34,7 @@ def _fake_bundle(r: R.Recipe, where: Path) -> Path:
 def _roots(r: R.Recipe, tmp: Path) -> dict:
     (tmp / "engine").mkdir(exist_ok=True)
     (tmp / "venv" / "bin").mkdir(parents=True, exist_ok=True)
-    sets = [f"work={tmp / 'work'}", f"engine={tmp / 'engine'}", f"bundle_src={_fake_bundle(r, tmp / 'bsrc')}",
-            f"venv={tmp / 'venv'}"]
+    sets = [f"work={tmp / 'work'}", f"engine={tmp / 'engine'}", f"venv={tmp / 'venv'}"]   # bundle: the shipped one
     return runner.configured_roots(r, sets)
 
 
@@ -60,12 +59,12 @@ def test_recipe_c_has_no_private_path():
 def test_recipe_c_dry_run_resolves_everything(tmp_path):
     r = R.load(RECIPE_C)
     roots = _roots(r, tmp_path)
-    sel = runner.select(r, None, None, None, with_optional=True)
+    sel = runner.select(r, None, None, None, with_optional=False)
     script = tmp_path / "commands.sh"
     res = runner.plan(r, roots, sel, forbid=list(PRIVATE), show=False, script=script)
     assert res["problems"] == []
     assert res["blocked"] == []
-    body = script.read_text().replace(str(RECIPE_C.parent), "RECIPE").replace(str(ROOT / "fucina"), "PACKAGE")
+    body = script.read_text().replace(str(ROOT), "REPO")
     for p in PRIVATE:
         assert p not in body
     assert not (tmp_path / "work").exists(), "a dry run must not create the work tree"
@@ -230,3 +229,35 @@ def test_unpack_is_the_exact_inverse_of_pack(tmp_path):
     res = unpack_planes.unpack(packed, None, order)
     assert res["file_sha256"] == gguf_hash.file_sha256(orig)
     assert res["tensor_digest"] == gguf_hash.tensor_digest(gguf_hash.tensor_hashes(orig))
+
+
+def test_recipe_c_uses_the_bundle_shipped_in_the_repository(tmp_path):
+    """From a clean clone: no --set bundle_src, every bundle: reference found, BUNDLE.json equal to the pinned sha256."""
+    r = R.load(RECIPE_C)
+    (tmp_path / "engine").mkdir()
+    (tmp_path / "venv" / "bin").mkdir(parents=True)
+    roots = runner.configured_roots(r, [f"work={tmp_path / 'work'}", f"engine={tmp_path / 'engine'}",
+                                        f"venv={tmp_path / 'venv'}"])
+    assert Path(roots["bundle_src"]) == ROOT / "bundles" / "thor_recipe_c"
+    res = runner.plan(r, roots, runner.select(r, None, None, None, with_optional=True), forbid=[], show=False)
+    assert res["problems"] == []
+    assert res["blocked"] == ["I8"]          # optional: its corpus is not redistributable
+    assert bundle.verify(roots["bundle_src"]) == []
+
+
+def test_status_line_is_exact(tmp_path, monkeypatch):
+    from fucina.replay import status
+    t = [("a.weight", 0, (4, 2), bytes(range(32)))]
+    _write_gguf(tmp_path / "c.gguf", t, {})
+    digest = gguf_hash.tensor_digest(gguf_hash.tensor_hashes(tmp_path / "c.gguf"))
+    monkeypatch.setattr(status, "fucina_commit", lambda: "0123456789ab")
+    out = tmp_path / "REPLAY_STATUS"
+    assert status.main(["--gguf", str(tmp_path / "c.gguf"), "--expect-digest", digest, "--recorded-mmlu", "73.15",
+                        "--out", str(out)]) == 0
+    import re
+    assert re.fullmatch(r"REPLAY VERIFIED \d{4}-\d{2}-\d{2} 0123456789ab", out.read_text().splitlines()[0])
+    m = tmp_path / "m.json"
+    m.write_text(json.dumps({"acc_B": 71.0, "p_mcnemar_esatto": 0.5, "n": 2000}))
+    assert status.main(["--gguf", str(tmp_path / "c.gguf"), "--expect-digest", "0" * 64, "--mcnemar-json", str(m),
+                        "--recorded-mmlu", "73.15", "--out", str(out)]) == 1
+    assert out.read_text().startswith("REPLAY NOT VERIFIED")

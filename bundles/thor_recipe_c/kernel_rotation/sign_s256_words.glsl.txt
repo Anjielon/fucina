@@ -1,0 +1,8 @@
+        case 0u: return 0x4EE9D1AAu;
+        case 1u: return 0xFFB3E643u;
+        case 2u: return 0x8444B23Bu;
+        case 3u: return 0x18DF7F70u;
+        case 4u: return 0xFCD787DDu;
+        case 5u: return 0x24065AD5u;
+        case 6u: return 0xFF6BF71Eu;
+        case 7u: return 0x9F5B8522u;

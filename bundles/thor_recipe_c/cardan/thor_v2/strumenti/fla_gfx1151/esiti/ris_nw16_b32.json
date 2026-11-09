@@ -1,0 +1,90 @@
+{
+ "l2norm_fwd_kernel": {
+  "num_warps": 4,
+  "num_stages": 1,
+  "vgpr": 25,
+  "scratch": 0,
+  "lds": 32,
+  "wmma": 0
+ },
+ "chunk_local_cumsum_scalar_kernel": {
+  "num_warps": 4,
+  "num_stages": 1,
+  "vgpr": 7,
+  "scratch": 0,
+  "lds": 8,
+  "wmma": 0
+ },
+ "chunk_gated_delta_rule_fwd_kkt_solve_kernel": {
+  "num_warps": 16,
+  "num_stages": 1,
+  "vgpr": 256,
+  "scratch": 420,
+  "lds": 8192,
+  "wmma": 0
+ },
+ "recompute_w_u_fwd_kernel": {
+  "num_warps": 16,
+  "num_stages": 1,
+  "vgpr": 256,
+  "scratch": 1100,
+  "lds": 16384,
+  "wmma": 0
+ },
+ "chunk_gated_delta_rule_fwd_kernel_h_blockdim64": {
+  "num_warps": 16,
+  "num_stages": 1,
+  "vgpr": 256,
+  "scratch": 216,
+  "lds": 16384,
+  "wmma": 0
+ },
+ "chunk_fwd_kernel_o": {
+  "num_warps": 16,
+  "num_stages": 1,
+  "vgpr": 167,
+  "scratch": 0,
+  "lds": 16384,
+  "wmma": 0
+ },
+ "chunk_bwd_kernel_dv_local": {
+  "num_warps": 16,
+  "num_stages": 1,
+  "vgpr": 175,
+  "scratch": 0,
+  "lds": 16384,
+  "wmma": 0
+ },
+ "chunk_gated_delta_rule_bwd_kernel_dhu_blockdim64": {
+  "num_warps": 16,
+  "num_stages": 1,
+  "vgpr": 256,
+  "scratch": 1312,
+  "lds": 16384,
+  "wmma": 0
+ },
+ "chunk_bwd_kernel_dqkwg": {
+  "num_warps": 16,
+  "num_stages": 1,
+  "vgpr": 256,
+  "scratch": 984,
+  "lds": 16384,
+  "wmma": 0
+ },
+ "prepare_wy_repr_bwd_kernel": {
+  "num_warps": 16,
+  "num_stages": 1,
+  "vgpr": 256,
+  "scratch": 1152,
+  "lds": 32768,
+  "wmma": 0
+ },
+ "l2norm_bwd_kernel": {
+  "num_warps": 4,
+  "num_stages": 1,
+  "vgpr": 24,
+  "scratch": 0,
+  "lds": 0,
+  "wmma": 0
+ }
+}

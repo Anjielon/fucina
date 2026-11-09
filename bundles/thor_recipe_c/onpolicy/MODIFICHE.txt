@@ -1,0 +1,33 @@
+11/10/2026 — E2E-C1, modifiche all'albero congelato (copia di CARDAN/codice/recupero_7dabd6f/thor_v2_kqat):
+
+1. thor_v2/e2e_studente.py (originale: e2e_studente.py.bak-1011-c1). Interruttore E2E_DENSI_SSM_AB=1:
+   ssm_alpha / ssm_beta (in_proj_a / in_proj_b del GDN, 2048 -> 32, TQ1_0R_1024 in C0B, relazione perm_righe come
+   attn_qkv) entrano in FAMIGLIE_DENSE IN CODA (indici di registro 13, 14; i dieci di sempre restano 3..12) e nel gruppo
+   "gdn" (quindi in "tutte"). Con l'interruttore spento l'albero e' quello d'origine al bit (prova S0).
+   Perche': in TT2 erano F32 e si allenavano con --allena-f32; in C0B sono ternari, e "scale theta di tutte le famiglie"
+   vuol dire theta (e codici del passo V) anche per loro, con la stessa macchina dei densi ternari (esperto unico).
+   ATTENZIONE: anche export (e2e_esporta, e2e_pv_codici esporta) va lanciato con E2E_DENSI_SSM_AB=1, altrimenti gli
+   indici 13/14 dei registri non hanno nome.
+2. thor_v2/e2e_test_ssm_ab.py (nuovo): prove CPU S0-S4 sul GGUF vero C0B (strato 0, esperti 0-15), schema e soglie di
+   e2e_test_densi_ternari.py. Esito 11/10 16:2x: TUTTE VERDI (../prova_ssm_ab.json):
+   S1 peso spento = trit x d permutato al bit; S2 acceso vs spento B64 rel 6,3e-16 (negativo 3,9e-2);
+   S3 dtheta vs gradiente materializzato B64 6,1e-8 (soglia 1e-6), B32 1,9e-6 (1e-4), negativi 0,8-3,7;
+   S4 kernel triton/triton2 a R = 32 righe: avanti 3,5e-7, dX 0, dd 1,6e-7, modi V 1/2 1,6e-7, candidati uguali,
+      negativo 1 ulp 6e-5.
+3. cardan_kd.py, cardan_kd_moduli.py, residui_ternari.py: copie IDENTICHE (servono solo al cancello d'identita'
+   torch<->motore, --passi 0); recupero_7dabd6f/thor_v2{,_kqat} -> ../thor_v2 perche' cardan_kd.py con
+   E2E_KERNEL_NUOVI=1 carichi QUESTO albero.
+11/10 16:45: aggiunto strumenti/gpu_occupata.sh (copia identica dall'albero vivo): mancava nella copia congelata, E2E-C1 fallito al via
+11/10 16:46: copiata (senza sovrascrivere) tutta strumenti/ dall'albero vivo: la copia congelata ne aveva solo una parte
+
+══ 12/10/2026 — ALBERO ONPOLICY (copia di E2E_C1/codice, rsync senza __pycache__) ══
+Stadio OPD (arXiv 2609.26708, braccio fedele) + varianti dichiarate EdgeRazor 2605.04062, PIVOT-Q 2610.05745,
+media dei pesi 2610.05329 (solo driver). Scheda: ~/tony-forgia/ricette/schede/on_policy_distillation.md.
+1. thor_v2/e2e_onpolicy.py (NUOVO): sorgente con posizioni generate, pesi del micro-lotto, termine fuso, PIVOT, verificatore.
+2. thor_v2/e2e_onpolicy_rollout.py (NUOVO): completioni dello studente via llama-server, impacchettamento, prova CPU.
+3. thor_v2/e2e_test_onpolicy.py (NUOVO): prove CPU O1-O7 (esito ../prova_opd.json: TUTTE VERDI).
+4. thor_v2/e2e_allena.py: agganci dietro --peso-token generati (--opd-beta/--opd-kl/--opd-eakld-k/--opd-pivot);
+   l'originale e' e2e_allena.py.orig-e2ec1 (== E2E_C1, cmp); spento = identico al bit (prova O7).
+5. thor_v2/e2e_dump_logit: copia identica di ~/tony-forgia/thor_v2/e2e_dump_logit (sha 7978b707...), serve a e2e_teacher.
+4/11 01:5x: e2e_esporta.py ricarica: sn portato su d0.device (ricarica di controllo sulla GPU: su CPU fla/Triton muore con «0 active drivers»); byte esportati invariati (--device tocca solo la ricarica)
+4/11 02:1x: la prima correzione (01:52) era stata scritta sul file a collegamenti fisici condiviso con A e con C: C ripristinato al byte (sha af2497ff = SHA_ORIGINE), B e A ora hanno una copia propria con i conti del riferimento della ricarica su CPU (qualunque --device)

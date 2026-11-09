@@ -1,0 +1,1376 @@
+{
+ "maestro": [
+  {
+   "compito": 626,
+   "tipo": "persa",
+   "giusta": 1,
+   "scelta_cpu": 1,
+   "scelta_banco": 1,
+   "lp_cpu": [
+    -5.455,
+    -2.409,
+    -3.349,
+    -6.032
+   ],
+   "lp_banco": [
+    -5.42,
+    -2.405,
+    -3.255,
+    -5.671
+   ]
+  },
+  {
+   "compito": 544,
+   "tipo": "persa",
+   "giusta": 2,
+   "scelta_cpu": 2,
+   "scelta_banco": 2,
+   "lp_cpu": [
+    -7.938,
+    -5.729,
+    -1.572,
+    -5.955
+   ],
+   "lp_banco": [
+    -7.841,
+    -5.638,
+    -1.704,
+    -5.394
+   ]
+  },
+  {
+   "compito": 1566,
+   "tipo": "persa",
+   "giusta": 0,
+   "scelta_cpu": 0,
+   "scelta_banco": 0,
+   "lp_cpu": [
+    -1.934,
+    -5.565,
+    -6.131,
+    -5.834
+   ],
+   "lp_banco": [
+    -1.787,
+    -5.085,
+    -5.773,
+    -5.613
+   ]
+  },
+  {
+   "compito": 1183,
+   "tipo": "persa",
+   "giusta": 2,
+   "scelta_cpu": 3,
+   "scelta_banco": 2,
+   "lp_cpu": [
+    -4.451,
+    -5.455,
+    -2.231,
+    -1.483
+   ],
+   "lp_banco": [
+    -5.566,
+    -5.027,
+    -1.894,
+    -2.066
+   ]
+  },
+  {
+   "compito": 701,
+   "tipo": "persa",
+   "giusta": 0,
+   "scelta_cpu": 0,
+   "scelta_banco": 0,
+   "lp_cpu": [
+    -1.568,
+    -8.251,
+    -6.765,
+    -9.656
+   ],
+   "lp_banco": [
+    -1.59,
+    -7.888,
+    -6.123,
+    -8.704
+   ]
+  },
+  {
+   "compito": 1792,
+   "tipo": "persa",
+   "giusta": 3,
+   "scelta_cpu": 3,
+   "scelta_banco": 3,
+   "lp_cpu": [
+    -4.468,
+    -5.191,
+    -2.937,
+    -2.629
+   ],
+   "lp_banco": [
+    -4.329,
+    -5.222,
+    -2.835,
+    -2.675
+   ]
+  },
+  {
+   "compito": 16,
+   "tipo": "persa",
+   "giusta": 2,
+   "scelta_cpu": 3,
+   "scelta_banco": 3,
+   "lp_cpu": [
+    -2.802,
+    -2.873,
+    -2.787,
+    -1.39
+   ],
+   "lp_banco": [
+    -3.541,
+    -4.228,
+    -2.746,
+    -2.212
+   ]
+  },
+  {
+   "compito": 327,
+   "tipo": "persa",
+   "giusta": 0,
+   "scelta_cpu": 0,
+   "scelta_banco": 0,
+   "lp_cpu": [
+    -1.643,
+    -4.538,
+    -5.43,
+    -6.644
+   ],
+   "lp_banco": [
+    -1.46,
+    -5.027,
+    -5.748,
+    -6.236
+   ]
+  },
+  {
+   "compito": 78,
+   "tipo": "persa",
+   "giusta": 3,
+   "scelta_cpu": 3,
+   "scelta_banco": 3,
+   "lp_cpu": [
+    -4.337,
+    -4.039,
+    -5.655,
+    -1.639
+   ],
+   "lp_banco": [
+    -4.169,
+    -4.182,
+    -5.398,
+    -1.965
+   ]
+  },
+  {
+   "compito": 845,
+   "tipo": "persa",
+   "giusta": 3,
+   "scelta_cpu": 3,
+   "scelta_banco": 3,
+   "lp_cpu": [
+    -8.113,
+    -5.394,
+    -5.842,
+    -1.741
+   ],
+   "lp_banco": [
+    -8.074,
+    -5.157,
+    -5.575,
+    -1.761
+   ]
+  },
+  {
+   "compito": 50,
+   "tipo": "persa",
+   "giusta": 3,
+   "scelta_cpu": 3,
+   "scelta_banco": 3,
+   "lp_cpu": [
+    -6.61,
+    -5.385,
+    -6.641,
+    -1.255
+   ],
+   "lp_banco": [
+    -7.061,
+    -6.097,
+    -7.326,
+    -1.354
+   ]
+  },
+  {
+   "compito": 1024,
+   "tipo": "persa",
+   "giusta": 3,
+   "scelta_cpu": 3,
+   "scelta_banco": 3,
+   "lp_cpu": [
+    -5.215,
+    -3.239,
+    -4.125,
+    -2.031
+   ],
+   "lp_banco": [
+    -4.955,
+    -3.212,
+    -3.986,
+    -2.233
+   ]
+  },
+  {
+   "compito": 1681,
+   "tipo": "persa",
+   "giusta": 2,
+   "scelta_cpu": 2,
+   "scelta_banco": 2,
+   "lp_cpu": [
+    -5.247,
+    -4.377,
+    -1.847,
+    -5.978
+   ],
+   "lp_banco": [
+    -5.103,
+    -4.406,
+    -1.498,
+    -5.665
+   ]
+  },
+  {
+   "compito": 1790,
+   "tipo": "persa",
+   "giusta": 3,
+   "scelta_cpu": 3,
+   "scelta_banco": 3,
+   "lp_cpu": [
+    -4.003,
+    -4.279,
+    -3.611,
+    -2.096
+   ],
+   "lp_banco": [
+    -4.454,
+    -4.429,
+    -3.703,
+    -1.926
+   ]
+  },
+  {
+   "compito": 528,
+   "tipo": "persa",
+   "giusta": 3,
+   "scelta_cpu": 3,
+   "scelta_banco": 3,
+   "lp_cpu": [
+    -7.667,
+    -4.474,
+    -5.427,
+    -1.74
+   ],
+   "lp_banco": [
+    -6.535,
+    -4.352,
+    -4.776,
+    -1.976
+   ]
+  },
+  {
+   "compito": 1809,
+   "tipo": "persa",
+   "giusta": 3,
+   "scelta_cpu": 3,
+   "scelta_banco": 3,
+   "lp_cpu": [
+    -8.328,
+    -5.514,
+    -6.091,
+    -1.678
+   ],
+   "lp_banco": [
+    -8.22,
+    -5.561,
+    -6.104,
+    -1.604
+   ]
+  },
+  {
+   "compito": 1135,
+   "tipo": "tenuta",
+   "giusta": 2,
+   "scelta_cpu": 2,
+   "scelta_banco": 2,
+   "lp_cpu": [
+    -5.011,
+    -6.423,
+    -1.715,
+    -2.759
+   ],
+   "lp_banco": [
+    -5.256,
+    -5.966,
+    -1.826,
+    -2.273
+   ]
+  },
+  {
+   "compito": 246,
+   "tipo": "tenuta",
+   "giusta": 2,
+   "scelta_cpu": 2,
+   "scelta_banco": 2,
+   "lp_cpu": [
+    -8.121,
+    -9.721,
+    -1.722,
+    -7.237
+   ],
+   "lp_banco": [
+    -8.083,
+    -9.641,
+    -1.65,
+    -7.398
+   ]
+  },
+  {
+   "compito": 1391,
+   "tipo": "tenuta",
+   "giusta": 1,
+   "scelta_cpu": 1,
+   "scelta_banco": 1,
+   "lp_cpu": [
+    -2.558,
+    -1.749,
+    -4.842,
+    -4.94
+   ],
+   "lp_banco": [
+    -2.503,
+    -1.73,
+    -4.672,
+    -5.245
+   ]
+  },
+  {
+   "compito": 1370,
+   "tipo": "tenuta",
+   "giusta": 2,
+   "scelta_cpu": 2,
+   "scelta_banco": 2,
+   "lp_cpu": [
+    -4.484,
+    -4.651,
+    -2.015,
+    -3.874
+   ],
+   "lp_banco": [
+    -4.374,
+    -4.4,
+    -1.941,
+    -3.486
+   ]
+  },
+  {
+   "compito": 1315,
+   "tipo": "tenuta",
+   "giusta": 0,
+   "scelta_cpu": 0,
+   "scelta_banco": 0,
+   "lp_cpu": [
+    -1.437,
+    -6.756,
+    -5.605,
+    -7.834
+   ],
+   "lp_banco": [
+    -1.337,
+    -6.833,
+    -6.166,
+    -7.793
+   ]
+  },
+  {
+   "compito": 955,
+   "tipo": "tenuta",
+   "giusta": 0,
+   "scelta_cpu": 0,
+   "scelta_banco": 0,
+   "lp_cpu": [
+    -1.613,
+    -4.987,
+    -5.233,
+    -7.181
+   ],
+   "lp_banco": [
+    -1.647,
+    -5.057,
+    -5.283,
+    -6.836
+   ]
+  },
+  {
+   "compito": 882,
+   "tipo": "tenuta",
+   "giusta": 2,
+   "scelta_cpu": 2,
+   "scelta_banco": 2,
+   "lp_cpu": [
+    -7.189,
+    -8.741,
+    -1.471,
+    -6.539
+   ],
+   "lp_banco": [
+    -7.285,
+    -9.018,
+    -1.457,
+    -6.795
+   ]
+  },
+  {
+   "compito": 1569,
+   "tipo": "tenuta",
+   "giusta": 2,
+   "scelta_cpu": 2,
+   "scelta_banco": 2,
+   "lp_cpu": [
+    -6.284,
+    -8.661,
+    -1.719,
+    -7.603
+   ],
+   "lp_banco": [
+    -6.057,
+    -8.923,
+    -1.743,
+    -7.723
+   ]
+  }
+ ],
+ "base": [
+  {
+   "compito": 626,
+   "tipo": "persa",
+   "giusta": 1,
+   "scelta_cpu": 1,
+   "scelta_banco": 1,
+   "lp_cpu": [
+    -4.486,
+    -3.068,
+    -4.328,
+    -4.781
+   ],
+   "lp_banco": [
+    -4.509,
+    -3.581,
+    -4.324,
+    -4.522
+   ]
+  },
+  {
+   "compito": 544,
+   "tipo": "persa",
+   "giusta": 2,
+   "scelta_cpu": 2,
+   "scelta_banco": 2,
+   "lp_cpu": [
+    -7.589,
+    -7.842,
+    -5.814,
+    -8.131
+   ],
+   "lp_banco": [
+    -7.406,
+    -7.169,
+    -5.137,
+    -7.775
+   ]
+  },
+  {
+   "compito": 1566,
+   "tipo": "persa",
+   "giusta": 0,
+   "scelta_cpu": 0,
+   "scelta_banco": 0,
+   "lp_cpu": [
+    -3.933,
+    -5.525,
+    -5.513,
+    -7.172
+   ],
+   "lp_banco": [
+    -4.292,
+    -5.505,
+    -5.492,
+    -6.788
+   ]
+  },
+  {
+   "compito": 1183,
+   "tipo": "persa",
+   "giusta": 2,
+   "scelta_cpu": 2,
+   "scelta_banco": 2,
+   "lp_cpu": [
+    -3.181,
+    -2.938,
+    -1.37,
+    -2.645
+   ],
+   "lp_banco": [
+    -2.97,
+    -2.854,
+    -1.417,
+    -2.744
+   ]
+  },
+  {
+   "compito": 701,
+   "tipo": "persa",
+   "giusta": 0,
+   "scelta_cpu": 0,
+   "scelta_banco": 0,
+   "lp_cpu": [
+    -4.954,
+    -11.329,
+    -8.52,
+    -7.665
+   ],
+   "lp_banco": [
+    -5.417,
+    -11.862,
+    -8.913,
+    -7.799
+   ]
+  },
+  {
+   "compito": 1792,
+   "tipo": "persa",
+   "giusta": 3,
+   "scelta_cpu": 3,
+   "scelta_banco": 3,
+   "lp_cpu": [
+    -5.195,
+    -6.31,
+    -2.754,
+    -1.748
+   ],
+   "lp_banco": [
+    -5.431,
+    -6.49,
+    -3.122,
+    -2.095
+   ]
+  },
+  {
+   "compito": 16,
+   "tipo": "persa",
+   "giusta": 2,
+   "scelta_cpu": 1,
+   "scelta_banco": 2,
+   "lp_cpu": [
+    -7.25,
+    -3.429,
+    -3.838,
+    -5.383
+   ],
+   "lp_banco": [
+    -6.962,
+    -3.489,
+    -2.719,
+    -4.375
+   ]
+  },
+  {
+   "compito": 327,
+   "tipo": "persa",
+   "giusta": 0,
+   "scelta_cpu": 0,
+   "scelta_banco": 0,
+   "lp_cpu": [
+    -7.095,
+    -13.402,
+    -11.231,
+    -13.512
+   ],
+   "lp_banco": [
+    -6.895,
+    -13.027,
+    -11.125,
+    -13.156
+   ]
+  },
+  {
+   "compito": 78,
+   "tipo": "persa",
+   "giusta": 3,
+   "scelta_cpu": 3,
+   "scelta_banco": 3,
+   "lp_cpu": [
+    -5.396,
+    -6.082,
+    -3.869,
+    -1.923
+   ],
+   "lp_banco": [
+    -5.693,
+    -5.575,
+    -4.295,
+    -2.006
+   ]
+  },
+  {
+   "compito": 845,
+   "tipo": "persa",
+   "giusta": 3,
+   "scelta_cpu": 3,
+   "scelta_banco": 3,
+   "lp_cpu": [
+    -6.435,
+    -8.158,
+    -6.387,
+    -1.716
+   ],
+   "lp_banco": [
+    -6.027,
+    -7.32,
+    -5.792,
+    -1.57
+   ]
+  },
+  {
+   "compito": 50,
+   "tipo": "persa",
+   "giusta": 3,
+   "scelta_cpu": 3,
+   "scelta_banco": 3,
+   "lp_cpu": [
+    -5.54,
+    -4.123,
+    -3.701,
+    -1.16
+   ],
+   "lp_banco": [
+    -5.838,
+    -3.402,
+    -3.753,
+    -1.274
+   ]
+  },
+  {
+   "compito": 1024,
+   "tipo": "persa",
+   "giusta": 3,
+   "scelta_cpu": 1,
+   "scelta_banco": 3,
+   "lp_cpu": [
+    -5.816,
+    -2.578,
+    -3.556,
+    -2.664
+   ],
+   "lp_banco": [
+    -5.834,
+    -2.981,
+    -3.435,
+    -2.472
+   ]
+  },
+  {
+   "compito": 1681,
+   "tipo": "persa",
+   "giusta": 2,
+   "scelta_cpu": 2,
+   "scelta_banco": 2,
+   "lp_cpu": [
+    -8.706,
+    -10.209,
+    -1.313,
+    -6.726
+   ],
+   "lp_banco": [
+    -8.68,
+    -9.71,
+    -1.395,
+    -6.787
+   ]
+  },
+  {
+   "compito": 1790,
+   "tipo": "persa",
+   "giusta": 3,
+   "scelta_cpu": 3,
+   "scelta_banco": 3,
+   "lp_cpu": [
+    -7.688,
+    -9.433,
+    -6.52,
+    -1.618
+   ],
+   "lp_banco": [
+    -8.157,
+    -9.496,
+    -6.46,
+    -1.784
+   ]
+  },
+  {
+   "compito": 528,
+   "tipo": "persa",
+   "giusta": 3,
+   "scelta_cpu": 3,
+   "scelta_banco": 3,
+   "lp_cpu": [
+    -6.896,
+    -10.176,
+    -6.269,
+    -3.525
+   ],
+   "lp_banco": [
+    -7.258,
+    -10.3,
+    -6.548,
+    -3.384
+   ]
+  },
+  {
+   "compito": 1809,
+   "tipo": "persa",
+   "giusta": 3,
+   "scelta_cpu": 3,
+   "scelta_banco": 3,
+   "lp_cpu": [
+    -6.56,
+    -8.2,
+    -6.285,
+    -3.297
+   ],
+   "lp_banco": [
+    -6.94,
+    -8.618,
+    -6.223,
+    -3.928
+   ]
+  },
+  {
+   "compito": 1135,
+   "tipo": "tenuta",
+   "giusta": 2,
+   "scelta_cpu": 2,
+   "scelta_banco": 2,
+   "lp_cpu": [
+    -5.567,
+    -4.443,
+    -1.919,
+    -3.103
+   ],
+   "lp_banco": [
+    -5.366,
+    -4.156,
+    -1.939,
+    -3.286
+   ]
+  },
+  {
+   "compito": 246,
+   "tipo": "tenuta",
+   "giusta": 2,
+   "scelta_cpu": 2,
+   "scelta_banco": 2,
+   "lp_cpu": [
+    -10.022,
+    -13.428,
+    -4.273,
+    -11.098
+   ],
+   "lp_banco": [
+    -11.06,
+    -14.529,
+    -5.072,
+    -12.148
+   ]
+  },
+  {
+   "compito": 1391,
+   "tipo": "tenuta",
+   "giusta": 1,
+   "scelta_cpu": 1,
+   "scelta_banco": 1,
+   "lp_cpu": [
+    -4.483,
+    -2.103,
+    -4.479,
+    -6.195
+   ],
+   "lp_banco": [
+    -5.268,
+    -2.206,
+    -5.449,
+    -7.133
+   ]
+  },
+  {
+   "compito": 1370,
+   "tipo": "tenuta",
+   "giusta": 2,
+   "scelta_cpu": 2,
+   "scelta_banco": 2,
+   "lp_cpu": [
+    -7.108,
+    -5.571,
+    -3.799,
+    -5.853
+   ],
+   "lp_banco": [
+    -6.192,
+    -4.517,
+    -2.914,
+    -4.949
+   ]
+  },
+  {
+   "compito": 1315,
+   "tipo": "tenuta",
+   "giusta": 0,
+   "scelta_cpu": 0,
+   "scelta_banco": 0,
+   "lp_cpu": [
+    -2.628,
+    -10.497,
+    -7.191,
+    -8.336
+   ],
+   "lp_banco": [
+    -2.292,
+    -10.146,
+    -6.864,
+    -8.334
+   ]
+  },
+  {
+   "compito": 955,
+   "tipo": "tenuta",
+   "giusta": 0,
+   "scelta_cpu": 0,
+   "scelta_banco": 0,
+   "lp_cpu": [
+    -0.971,
+    -7.8,
+    -5.536,
+    -7.769
+   ],
+   "lp_banco": [
+    -1.101,
+    -7.585,
+    -5.267,
+    -7.379
+   ]
+  },
+  {
+   "compito": 882,
+   "tipo": "tenuta",
+   "giusta": 2,
+   "scelta_cpu": 2,
+   "scelta_banco": 2,
+   "lp_cpu": [
+    -6.616,
+    -8.492,
+    -2.409,
+    -4.827
+   ],
+   "lp_banco": [
+    -6.9,
+    -9.102,
+    -2.923,
+    -5.175
+   ]
+  },
+  {
+   "compito": 1569,
+   "tipo": "tenuta",
+   "giusta": 2,
+   "scelta_cpu": 2,
+   "scelta_banco": 2,
+   "lp_cpu": [
+    -10.028,
+    -12.106,
+    -2.888,
+    -6.997
+   ],
+   "lp_banco": [
+    -10.403,
+    -12.363,
+    -3.383,
+    -6.804
+   ]
+  }
+ ],
+ "k01": [
+  {
+   "compito": 626,
+   "tipo": "persa",
+   "giusta": 1,
+   "scelta_cpu": 0,
+   "scelta_banco": 0,
+   "lp_cpu": [
+    -3.992,
+    -4.824,
+    -4.92,
+    -6.388
+   ],
+   "lp_banco": [
+    -4.273,
+    -4.461,
+    -4.837,
+    -6.437
+   ]
+  },
+  {
+   "compito": 544,
+   "tipo": "persa",
+   "giusta": 2,
+   "scelta_cpu": 1,
+   "scelta_banco": 1,
+   "lp_cpu": [
+    -6.145,
+    -2.194,
+    -2.582,
+    -5.238
+   ],
+   "lp_banco": [
+    -6.149,
+    -2.299,
+    -2.682,
+    -5.206
+   ]
+  },
+  {
+   "compito": 1566,
+   "tipo": "persa",
+   "giusta": 0,
+   "scelta_cpu": 1,
+   "scelta_banco": 1,
+   "lp_cpu": [
+    -3.042,
+    -2.238,
+    -3.678,
+    -5.57
+   ],
+   "lp_banco": [
+    -2.769,
+    -2.192,
+    -3.663,
+    -5.53
+   ]
+  },
+  {
+   "compito": 1183,
+   "tipo": "persa",
+   "giusta": 2,
+   "scelta_cpu": 1,
+   "scelta_banco": 1,
+   "lp_cpu": [
+    -2.683,
+    -1.716,
+    -1.984,
+    -4.501
+   ],
+   "lp_banco": [
+    -2.414,
+    -1.758,
+    -2.185,
+    -5.077
+   ]
+  },
+  {
+   "compito": 701,
+   "tipo": "persa",
+   "giusta": 0,
+   "scelta_cpu": 1,
+   "scelta_banco": 1,
+   "lp_cpu": [
+    -4.09,
+    -2.649,
+    -3.631,
+    -6.553
+   ],
+   "lp_banco": [
+    -4.095,
+    -2.663,
+    -3.508,
+    -6.847
+   ]
+  },
+  {
+   "compito": 1792,
+   "tipo": "persa",
+   "giusta": 3,
+   "scelta_cpu": 2,
+   "scelta_banco": 2,
+   "lp_cpu": [
+    -3.588,
+    -3.051,
+    -1.602,
+    -1.951
+   ],
+   "lp_banco": [
+    -3.841,
+    -3.47,
+    -1.679,
+    -1.969
+   ]
+  },
+  {
+   "compito": 16,
+   "tipo": "persa",
+   "giusta": 2,
+   "scelta_cpu": 1,
+   "scelta_banco": 1,
+   "lp_cpu": [
+    -3.152,
+    -1.881,
+    -2.735,
+    -4.686
+   ],
+   "lp_banco": [
+    -3.214,
+    -1.703,
+    -3.005,
+    -3.529
+   ]
+  },
+  {
+   "compito": 327,
+   "tipo": "persa",
+   "giusta": 0,
+   "scelta_cpu": 2,
+   "scelta_banco": 2,
+   "lp_cpu": [
+    -3.413,
+    -3.321,
+    -1.957,
+    -6.6
+   ],
+   "lp_banco": [
+    -2.975,
+    -2.768,
+    -2.172,
+    -6.574
+   ]
+  },
+  {
+   "compito": 78,
+   "tipo": "persa",
+   "giusta": 3,
+   "scelta_cpu": 2,
+   "scelta_banco": 2,
+   "lp_cpu": [
+    -3.968,
+    -2.559,
+    -1.887,
+    -2.9
+   ],
+   "lp_banco": [
+    -3.132,
+    -2.43,
+    -2.081,
+    -2.131
+   ]
+  },
+  {
+   "compito": 845,
+   "tipo": "persa",
+   "giusta": 3,
+   "scelta_cpu": 3,
+   "scelta_banco": 1,
+   "lp_cpu": [
+    -5.24,
+    -2.369,
+    -3.228,
+    -2.226
+   ],
+   "lp_banco": [
+    -5.214,
+    -2.301,
+    -3.5,
+    -2.507
+   ]
+  },
+  {
+   "compito": 50,
+   "tipo": "persa",
+   "giusta": 3,
+   "scelta_cpu": 2,
+   "scelta_banco": 2,
+   "lp_cpu": [
+    -3.823,
+    -1.883,
+    -1.511,
+    -3.862
+   ],
+   "lp_banco": [
+    -3.008,
+    -1.968,
+    -1.923,
+    -3.842
+   ]
+  },
+  {
+   "compito": 1024,
+   "tipo": "persa",
+   "giusta": 3,
+   "scelta_cpu": 1,
+   "scelta_banco": 1,
+   "lp_cpu": [
+    -3.851,
+    -1.898,
+    -3.274,
+    -2.971
+   ],
+   "lp_banco": [
+    -3.694,
+    -1.855,
+    -3.158,
+    -2.544
+   ]
+  },
+  {
+   "compito": 1681,
+   "tipo": "persa",
+   "giusta": 2,
+   "scelta_cpu": 1,
+   "scelta_banco": 1,
+   "lp_cpu": [
+    -4.903,
+    -1.683,
+    -2.204,
+    -4.081
+   ],
+   "lp_banco": [
+    -5.213,
+    -1.634,
+    -2.201,
+    -4.662
+   ]
+  },
+  {
+   "compito": 1790,
+   "tipo": "persa",
+   "giusta": 3,
+   "scelta_cpu": 2,
+   "scelta_banco": 2,
+   "lp_cpu": [
+    -1.986,
+    -2.358,
+    -1.926,
+    -3.182
+   ],
+   "lp_banco": [
+    -2.185,
+    -2.182,
+    -2.01,
+    -3.253
+   ]
+  },
+  {
+   "compito": 528,
+   "tipo": "persa",
+   "giusta": 3,
+   "scelta_cpu": 1,
+   "scelta_banco": 2,
+   "lp_cpu": [
+    -4.43,
+    -2.878,
+    -2.92,
+    -2.963
+   ],
+   "lp_banco": [
+    -4.682,
+    -2.784,
+    -2.644,
+    -2.923
+   ]
+  },
+  {
+   "compito": 1809,
+   "tipo": "persa",
+   "giusta": 3,
+   "scelta_cpu": 3,
+   "scelta_banco": 2,
+   "lp_cpu": [
+    -4.655,
+    -3.834,
+    -1.969,
+    -1.759
+   ],
+   "lp_banco": [
+    -4.507,
+    -3.874,
+    -1.798,
+    -1.902
+   ]
+  },
+  {
+   "compito": 1135,
+   "tipo": "tenuta",
+   "giusta": 2,
+   "scelta_cpu": 2,
+   "scelta_banco": 2,
+   "lp_cpu": [
+    -3.057,
+    -2.157,
+    -1.724,
+    -5.353
+   ],
+   "lp_banco": [
+    -3.255,
+    -2.041,
+    -1.911,
+    -5.75
+   ]
+  },
+  {
+   "compito": 246,
+   "tipo": "tenuta",
+   "giusta": 2,
+   "scelta_cpu": 2,
+   "scelta_banco": 2,
+   "lp_cpu": [
+    -7.565,
+    -6.424,
+    -3.063,
+    -6.59
+   ],
+   "lp_banco": [
+    -6.92,
+    -6.321,
+    -2.456,
+    -5.791
+   ]
+  },
+  {
+   "compito": 1391,
+   "tipo": "tenuta",
+   "giusta": 1,
+   "scelta_cpu": 1,
+   "scelta_banco": 1,
+   "lp_cpu": [
+    -2.686,
+    -2.26,
+    -2.66,
+    -6.603
+   ],
+   "lp_banco": [
+    -2.765,
+    -2.16,
+    -2.953,
+    -6.816
+   ]
+  },
+  {
+   "compito": 1370,
+   "tipo": "tenuta",
+   "giusta": 2,
+   "scelta_cpu": 2,
+   "scelta_banco": 2,
+   "lp_cpu": [
+    -3.003,
+    -2.256,
+    -2.055,
+    -6.748
+   ],
+   "lp_banco": [
+    -3.534,
+    -2.126,
+    -2.125,
+    -6.407
+   ]
+  },
+  {
+   "compito": 1315,
+   "tipo": "tenuta",
+   "giusta": 0,
+   "scelta_cpu": 0,
+   "scelta_banco": 0,
+   "lp_cpu": [
+    -1.818,
+    -5.014,
+    -3.481,
+    -4.689
+   ],
+   "lp_banco": [
+    -2.229,
+    -4.827,
+    -3.576,
+    -5.119
+   ]
+  },
+  {
+   "compito": 955,
+   "tipo": "tenuta",
+   "giusta": 0,
+   "scelta_cpu": 0,
+   "scelta_banco": 0,
+   "lp_cpu": [
+    -1.905,
+    -3.032,
+    -3.835,
+    -6.554
+   ],
+   "lp_banco": [
+    -1.831,
+    -4.129,
+    -4.117,
+    -6.625
+   ]
+  },
+  {
+   "compito": 882,
+   "tipo": "tenuta",
+   "giusta": 2,
+   "scelta_cpu": 2,
+   "scelta_banco": 2,
+   "lp_cpu": [
+    -6.294,
+    -8.533,
+    -1.982,
+    -5.85
+   ],
+   "lp_banco": [
+    -6.198,
+    -8.57,
+    -1.853,
+    -5.766
+   ]
+  },
+  {
+   "compito": 1569,
+   "tipo": "tenuta",
+   "giusta": 2,
+   "scelta_cpu": 2,
+   "scelta_banco": 2,
+   "lp_cpu": [
+    -6.206,
+    -4.092,
+    -0.997,
+    -3.151
+   ],
+   "lp_banco": [
+    -6.648,
+    -4.478,
+    -0.976,
+    -3.243
+   ]
+  }
+ ]
+}

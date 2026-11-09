@@ -2,6 +2,8 @@
 # {name} is a recorded root given with --root name=PATH; the build replaces every recorded root inside the copied
 # files by a token that `fucina replay-bundle install` turns into the user's root.
 # `to` is the folder inside the bundle (the recipe refers to bundle:<to>/<file>).
+# Files excluded from every tree: house tests and tools that are not part of the chain (they name machine paths).
+exclude: ["test_guardia*", "e2e_scarica_eb.py", "fondi_densi_v5.py", "avvisa_*", "caccia_pod*"]
 trees:
   - {from: "{models}/gguf/tony-tern/OBIETTIVO_C/codice", to: objective_c}           # C0 alpha/beta, C0B/P2 writers, PTQ2
   - {from: "{models}/gguf/tony-tern/OBIETTIVO_C/codice/c0t_scrivi.py.bak-1011-s1", to: objective_c, name: c0t_scrivi_1010.py}

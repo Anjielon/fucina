@@ -1,0 +1,36 @@
+uint tq1_0r_1024_sign_word(const uint w) {
+    switch (w) {
+        case 0u: return 0x4ee9d1aau;
+        case 1u: return 0xffb3e643u;
+        case 2u: return 0x8444b23bu;
+        case 3u: return 0x18df7f70u;
+        case 4u: return 0xfcd787ddu;
+        case 5u: return 0x24065ad5u;
+        case 6u: return 0xff6bf71eu;
+        case 7u: return 0x9f5b8522u;
+        case 8u: return 0xc998dff5u;
+        case 9u: return 0x6ee3d92du;
+        case 10u: return 0x9c5cf507u;
+        case 11u: return 0x15b1cef6u;
+        case 12u: return 0x97a9a694u;
+        case 13u: return 0x8eb6ac06u;
+        case 14u: return 0x650fe151u;
+        case 15u: return 0xca48d555u;
+        case 16u: return 0x2309815du;
+        case 17u: return 0x01721db6u;
+        case 18u: return 0x90b14a21u;
+        case 19u: return 0x00ccd1f9u;
+        case 20u: return 0x85554b92u;
+        case 21u: return 0xa7ad0a28u;
+        case 22u: return 0x737b15c6u;
+        case 23u: return 0x9196684fu;
+        case 24u: return 0xbc3e4dd3u;
+        case 25u: return 0xc4c90d73u;
+        case 26u: return 0x980b0a9eu;
+        case 27u: return 0x2171c76au;
+        case 28u: return 0x4c4101b8u;
+        case 29u: return 0x186554d3u;
+        case 30u: return 0x7e2a4c8fu;
+        default: return 0x7d28e321u;   // w == 31
+    }
+}
