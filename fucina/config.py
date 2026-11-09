@@ -10,7 +10,7 @@ from a YAML file, looked up in this order:
 
 See ``config.example.yaml`` for the documented keys and ``examples/thor/config.yaml`` for a complete, real setup.
 Environment variables (``$VAR`` or ``${VAR}``; use ``$VAR`` inside YAML flow mappings) are expanded in every string value, so the example setup names
-its machine paths through ``THOR_LAB``, ``THOR_GGUF``, ``THOR_BUILD``, ``THOR_HF``, ``THOR_POD`` and ``THOR_PYTHON``.
+its machine paths through ``THOR_LAB``, ``THOR_GGUF``, ``THOR_BUILD``, ``THOR_HF``, ``THOR_POD``, ``THOR_DEPOT`` and ``THOR_PYTHON``.
 Relative paths in the top-level file-system keys (``runs_dir``, ``database``, ``outputs``, ``tmpdir``,
 ``models_dirs``, ``rules_dirs``, ``cycle_log``, ``lock_script``, ``lock_owner_file``) are resolved against the
 directory of the configuration file.
