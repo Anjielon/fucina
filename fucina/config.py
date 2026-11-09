@@ -9,6 +9,8 @@ from a YAML file, looked up in this order:
 4. built-in defaults (no tool paths: wrappers that need one raise :class:`ConfigError`).
 
 See ``config.example.yaml`` for the documented keys and ``examples/thor/config.yaml`` for a complete, real setup.
+Environment variables (``$VAR`` or ``${VAR}``; use ``$VAR`` inside YAML flow mappings) are expanded in every string value, so the example setup names
+its machine paths through ``THOR_LAB``, ``THOR_GGUF``, ``THOR_BUILD``, ``THOR_HF``, ``THOR_POD`` and ``THOR_PYTHON``.
 Relative paths in the top-level file-system keys (``runs_dir``, ``database``, ``outputs``, ``tmpdir``,
 ``models_dirs``, ``rules_dirs``, ``cycle_log``, ``lock_script``, ``lock_owner_file``) are resolved against the
 directory of the configuration file.
@@ -69,7 +71,7 @@ class Paths(dict):
 class Config:
     def __init__(self, data: Optional[dict] = None, source: Optional[str] = None):
         d = deepcopy(DEFAULTS)
-        d.update(data or {})            # a key given in the file replaces the default as a whole (order matters for job_env)
+        d.update(_expand(data or {}))   # a key given in the file replaces the default as a whole (order matters for job_env)
         base = Path(source).resolve().parent if source else Path.cwd()
         for k in _FS_KEYS:
             if d.get(k):
@@ -109,6 +111,17 @@ class Config:
             raise ConfigError("lock_script is not configured: GPU jobs need a shell file defining "
                               f"{', '.join(DEFAULTS['lock_commands'].values())}")
         return s
+
+
+def _expand(v: Any) -> Any:
+    """Expand ``$VAR``/``${VAR}`` in every string of the file, so a shared config names no machine path."""
+    if isinstance(v, str):
+        return os.path.expandvars(v)
+    if isinstance(v, dict):
+        return {k: _expand(x) for k, x in v.items()}
+    if isinstance(v, list):
+        return [_expand(x) for x in v]
+    return v
 
 
 def _resolve(base: Path, p: str) -> str:

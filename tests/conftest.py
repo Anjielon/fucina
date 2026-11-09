@@ -17,7 +17,7 @@ SNAPSHOT = "2026-10-08T11:00"
 
 @pytest.fixture(scope="session", autouse=True)
 def thor_config(tmp_path_factory):
-    data = yaml.safe_load(THOR_CONFIG.read_text())
+    data = config._expand(yaml.safe_load(THOR_CONFIG.read_text()))
     live = Path(data["import_sources"]["cycles"])
     if live.exists():
         frozen = tmp_path_factory.mktemp("notebook") / "cycles_frozen.tsv"
