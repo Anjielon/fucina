@@ -33,7 +33,7 @@ Homepage = "https://github.com/Anjielon/fucina"
 include = ["fucina*"]
 
 [tool.setuptools.package-data]
-fucina = ["rules/*.yaml", "ternary/data/*.json", "ternary/data/*.npz"]
+fucina = ["rules/*.yaml", "ternary/data/*.json", "ternary/data/*.npz", "replay/FORGE_COMMIT"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

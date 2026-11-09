@@ -102,6 +102,7 @@ class Recipe:
     source: Optional[Path] = None
     description: str = ""
     deviations: list = field(default_factory=list)
+    forge: dict = field(default_factory=dict)
 
     def step(self, sid: str) -> Step:
         for s in self.steps:
@@ -154,7 +155,7 @@ def load(path: str | Path) -> Recipe:
         steps.append(Step(**raw))
     r = Recipe(name=d["name"], title=d.get("title", d["name"]), roots=d.get("roots") or {}, inputs=inputs,
                steps=steps, target=d.get("target") or {}, source=path, description=d.get("description", ""),
-               deviations=_list(d.get("deviations")))
+               deviations=_list(d.get("deviations")), forge=d.get("forge") or {})
     validate(r)
     return r
 

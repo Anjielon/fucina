@@ -19,6 +19,14 @@ RECIPE_C = ROOT / "examples" / "thor" / "recipe_c.yaml"
 PRIVATE = ("/home/angelo", "/mnt/models", "/mnt/deposito", "tony-forgia", "odino-lab")
 
 
+@pytest.fixture(autouse=True)
+def _forge_release(monkeypatch, request):
+    """Plans resolve the forge commit from the recipe's release tag; in the development tree the tag may not be HEAD."""
+    if "forge_commit" not in request.node.name:
+        from fucina.replay import status
+        monkeypatch.setattr(status, "forge_commit", lambda *a, **k: ("0123456789ab", "test"))
+
+
 def _fake_bundle(r: R.Recipe, where: Path) -> Path:
     for s in r.steps:
         for c in s.code:
@@ -250,7 +258,7 @@ def test_status_line_is_exact(tmp_path, monkeypatch):
     t = [("a.weight", 0, (4, 2), bytes(range(32)))]
     _write_gguf(tmp_path / "c.gguf", t, {})
     digest = gguf_hash.tensor_digest(gguf_hash.tensor_hashes(tmp_path / "c.gguf"))
-    monkeypatch.setattr(status, "fucina_commit", lambda: "0123456789ab")
+    monkeypatch.setattr(status, "forge_commit", lambda *a, **k: ("0123456789ab", "test"))
     out = tmp_path / "REPLAY_STATUS"
     assert status.main(["--gguf", str(tmp_path / "c.gguf"), "--expect-digest", digest, "--recorded-mmlu", "73.15",
                         "--out", str(out)]) == 0
@@ -261,3 +269,16 @@ def test_status_line_is_exact(tmp_path, monkeypatch):
     assert status.main(["--gguf", str(tmp_path / "c.gguf"), "--expect-digest", "0" * 64, "--mcnemar-json", str(m),
                         "--recorded-mmlu", "73.15", "--out", str(out)]) == 1
     assert out.read_text().startswith("REPLAY NOT VERIFIED")
+
+
+def test_forge_commit_from_a_release_tarball(tmp_path, monkeypatch):
+    """git archive fills FORGE_COMMIT (export-subst): the verdict then needs no git clone."""
+    from fucina.replay import status
+    f = tmp_path / "FORGE_COMMIT"
+    f.write_text("0123456789abcdef0123456789abcdef01234567\n")
+    monkeypatch.setattr(status, "COMMIT_FILE", f)
+    assert status.forge_commit("thor-recipe-c-v1") == ("0123456789ab", "release tarball (FORGE_COMMIT written by git archive)")
+    f.write_text("$Format:%H$\n")
+    monkeypatch.setattr(status, "_git", lambda *a: "")
+    commit, why = status.forge_commit("thor-recipe-c-v1", strict=False)
+    assert commit == "" and "not a git clone" in why

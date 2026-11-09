@@ -1,0 +1,2 @@
+# `git archive` (release tarballs) writes the commit hash into this file; a clone keeps the placeholder
+fucina/replay/FORGE_COMMIT export-subst

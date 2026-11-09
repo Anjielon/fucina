@@ -19,6 +19,10 @@ description: >
   Ornith-1.5-35B-A3B (qwen35moe, GatedDeltaNet + MoE) ternarized with one ternary plane per tensor (TQ1_0R_1024),
   BitNet convention (token embedding and output head Q8_0, norms/router F32), 8,631,199,776 bytes.
 
+forge:
+  release: thor-recipe-c-v1        # annotated tag of the Fucina repository this recipe belongs to
+  note: "the verdict step V records the forge commit: in a git clone the commit of this tag (HEAD must be it), in a release tarball the commit that git archive writes into fucina/replay/FORGE_COMMIT"
+
 roots:
   work: {doc: "replay output; everything the replay writes goes here"}
   bundle_src: {default: "{recipe_dir}/../../bundles/thor_recipe_c", doc: "the code bundle (shipped in this repository: bundles/thor_recipe_c)"}
@@ -161,13 +165,14 @@ inputs:
     published: "TO UPLOAD (251 files, 295 MB): per-tensor inputs of the dense PTQ step 03"
   student_v20:
     kind: hf
-    repo: Anjielon/Thor-T-35B-A3B-root
+    repo: Anjielon/Thor-T-bench
+    repo_type: dataset
     revision: thor-t-v1
     files: [stats/Thor-v20-downaggr3.gguf]
     path: "{models}/gguf/tony-tern/Thor-v20-downaggr3.gguf"
     sha256: 0f65c16227fa5b83641a35619054c4c159c0b50b6ee1201dbc479d97e3964b11
     size_gib: 11.7
-    published: "TO UPLOAD: the earlier quantized student whose flow defines the per-expert statistics (step I9)"
+    published: "TO UPLOAD (bench dataset, next to corpus_cot.txt): the earlier quantized student whose flow defines the per-expert statistics (optional recapture I9)"
   gq_experts:
     kind: hf
     repo: Anjielon/Thor-T-fold-stats
@@ -199,10 +204,10 @@ inputs:
     repo: Anjielon/Thor-T-bench
     repo_type: dataset
     revision: thor-t-v1
-    files: [logs/chain/mmlu_T400POST50.log]
-    path: "{inputs}/record/mmlu_T400POST50.log"
-    sha256: 28dacfc324995f9977ef5a0d2753d21335a4693f71ec12735a6c200509105fa4
-    published: "TO UPLOAD: per-question MMLU-2000 log of the recorded C (original order, 2000 MCLP rows)"
+    files: [logs/chain/mmlu_C_stored_order.log]
+    path: "{inputs}/record/mmlu_C_stored_order.log"
+    sha256: 89d95c995826fa4f579690b7323275fdd8644b1c95e53f96d3e4e7f74361d81f
+    published: "TO UPLOAD: per-question MMLU-2000 log of the recorded C measured in STORED order (mmlu_00000.bin, as step M1 measures the replay; 2000 MCLP rows, Final result 73.15; same choice on all 2000 questions as the log remapped from the mixed-order run)"
   perm_map:
     kind: package
     path: "{package}/ternary/data/gguf_hf_perm.npz"
@@ -253,10 +258,10 @@ steps:
       - "hf download ornith-ai/Ornith-1.5-35B-A3B --revision 10fbf86fed7ecee4a061f8b499a618f46001cac1 --local-dir {path.bf16}"
       - "hf download cais/mmlu --repo-type dataset --revision c30699e8356da336a370243923dbaf21066bb9fe all/test-00000-of-00001.parquet all/validation-00000-of-00001.parquet all/dev-00000-of-00001.parquet --local-dir {path.mmlu}"
       - "hf download Salesforce/wikitext --repo-type dataset --revision b08601e04326c79dfdd32d625aee71d232d685c3 --include 'wikitext-103-raw-v1/train-*' 'wikitext-103-raw-v1/validation-*' --local-dir {path.wikitext}"
-      - "D={work}/download; mkdir -p $D; hf download Anjielon/Thor-T-35B-A3B-root --revision thor-t-v1 --local-dir $D/root; hf download Anjielon/Thor-T-bench --repo-type dataset --revision thor-t-v1 --include 'teacher/*' 'bench/*' 'corpora/*' --local-dir $D/bench"
+      - "D={work}/download; mkdir -p $D; hf download Anjielon/Thor-T-35B-A3B-root --revision thor-t-v1 --local-dir $D/root; hf download Anjielon/Thor-T-bench --repo-type dataset --revision thor-t-v1 --include 'teacher/*' 'bench/*' 'corpora/*' 'stats/*' --local-dir $D/bench"
       - "hf download Anjielon/Thor-T-fold-stats --repo-type dataset --revision thor-t-v1 --include 'Gq_*.npy' --local-dir {path.gq_experts}"
-      - "hf download Anjielon/Thor-T-bench --repo-type dataset --revision thor-t-v1 --include 'hessians/hessiane-densi-grande/*' 'logs/chain/mmlu_T400POST50.log' --local-dir {work}/download/bench2; mkdir -p $(dirname {path.hess_dense}) $(dirname {path.c_mclp_record}); ln -sfn {work}/download/bench2/hessians/hessiane-densi-grande {path.hess_dense}; ln -sfn {work}/download/bench2/logs/chain/mmlu_T400POST50.log {path.c_mclp_record}"
-      - "D={work}/download; place() { mkdir -p \"$(dirname \"$2\")\"; ln -sfn \"$1\" \"$2\"; }; place $D/root/Thor-T-R2B3m-packed.gguf {path.root_packed}; place $D/root/stats/Thor-v20-downaggr3.gguf {path.student_v20}; place $D/root/tensori_R2B3 $(dirname {path.r2b3_dense_inputs}); place $D/bench/teacher/Ornith-1.5-35B-A3B-Q8_0.gguf {path.teacher_q8}; place $D/bench/bench/mmlu_00000.bin {path.bench}; place $D/bench/bench/mmlu2000_mescolato.bin {path.bench_mixed}; place $D/bench/bench/mmlu2000_mescolato.indice.tsv $(dirname {path.bench_mixed})/mmlu2000_mescolato.indice.tsv; place $D/bench/corpora/calib_auto2_pulito.txt {path.corpus_attn}; place $D/bench/corpora/corpus_cot.txt {path.corpus_cot}; place $D/bench/corpora/e2e_corpus_4096_maestro.pt {path.teacher_corpus}; place $D/bench/corpora/e2e_heldout_4096_maestro.pt $(dirname {path.teacher_corpus})/e2e_heldout_4096_maestro.pt"
+      - "hf download Anjielon/Thor-T-bench --repo-type dataset --revision thor-t-v1 --include 'hessians/hessiane-densi-grande/*' 'logs/chain/mmlu_C_stored_order.log' --local-dir {work}/download/bench2; mkdir -p $(dirname {path.hess_dense}) $(dirname {path.c_mclp_record}); ln -sfn {work}/download/bench2/hessians/hessiane-densi-grande {path.hess_dense}; ln -sfn {work}/download/bench2/logs/chain/mmlu_C_stored_order.log {path.c_mclp_record}"
+      - "D={work}/download; place() { mkdir -p \"$(dirname \"$2\")\"; ln -sfn \"$1\" \"$2\"; }; place $D/root/Thor-T-R2B3m-packed.gguf {path.root_packed}; place $D/bench/stats/Thor-v20-downaggr3.gguf {path.student_v20}; place $D/root/tensori_R2B3 $(dirname {path.r2b3_dense_inputs}); place $D/bench/teacher/Ornith-1.5-35B-A3B-Q8_0.gguf {path.teacher_q8}; place $D/bench/bench/mmlu_00000.bin {path.bench}; place $D/bench/bench/mmlu2000_mescolato.bin {path.bench_mixed}; place $D/bench/bench/mmlu2000_mescolato.indice.tsv $(dirname {path.bench_mixed})/mmlu2000_mescolato.indice.tsv; place $D/bench/corpora/calib_auto2_pulito.txt {path.corpus_attn}; place $D/bench/corpora/corpus_cot.txt {path.corpus_cot}; place $D/bench/corpora/e2e_corpus_4096_maestro.pt {path.teacher_corpus}; place $D/bench/corpora/e2e_heldout_4096_maestro.pt $(dirname {path.teacher_corpus})/e2e_heldout_4096_maestro.pt"
       - "{python} -m fucina.replay.check_inputs {recipe_dir}/recipe_c.yaml --set work={work} --set engine={engine} --set bundle_src={bundle_src} --set venv={venv} --out {work}/state/inputs_checked.json"
     produces:
       - {key: inputs_checked, path: "{work}/state/inputs_checked.json", verify: exists}
@@ -774,6 +779,6 @@ steps:
     status: ported
     needs: [c_post50, c_mcnemar]
     code: ["package:fucina.replay.status"]
-    run: ["{python} -m fucina.replay.status --gguf {path.c_post50} --expect-digest bc36d18b7fd8257403653132fa0fa3db353b51c000304646322ef38c731b036b --mcnemar-json {path.c_mcnemar} --recorded-mmlu 73.15 --band 1.0 --out {work}/REPLAY_STATUS"]
+    run: ["{python} -m fucina.replay.status --forge-release thor-recipe-c-v1 --gguf {path.c_post50} --expect-digest bc36d18b7fd8257403653132fa0fa3db353b51c000304646322ef38c731b036b --mcnemar-json {path.c_mcnemar} --recorded-mmlu 73.15 --band 1.0 --out {work}/REPLAY_STATUS"]
     produces:
       - {key: replay_status, path: "{work}/REPLAY_STATUS", verify: exists}

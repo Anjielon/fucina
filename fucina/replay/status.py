@@ -27,16 +27,39 @@ from pathlib import Path
 from . import gguf_hash
 
 
-def fucina_commit() -> str:
-    here = Path(__file__).resolve().parent
-    r = subprocess.run(["git", "-C", str(here), "rev-parse", "--short=12", "HEAD"], capture_output=True, text=True)
-    if r.returncode or not r.stdout.strip():
-        raise SystemExit("REPLAY_STATUS needs the fucina commit: run from a git clone of the forge")
-    dirty = subprocess.run(["git", "-C", str(here), "status", "--porcelain", "--", str(here.parents[1])],
-                           capture_output=True, text=True).stdout.strip()
-    if dirty:
-        raise SystemExit("the fucina checkout has local changes: a verified replay must name a clean commit")
-    return r.stdout.strip()
+COMMIT_FILE = Path(__file__).resolve().parent / "FORGE_COMMIT"
+
+
+def _git(*args: str) -> str:
+    r = subprocess.run(["git", "-C", str(Path(__file__).resolve().parent), *args], capture_output=True, text=True)
+    return r.stdout.strip() if r.returncode == 0 else ""
+
+
+def forge_commit(release: str | None = None, strict: bool = True) -> tuple[str, str]:
+    """(commit, how). In a release tarball ``git archive`` has written the commit into FORGE_COMMIT (export-subst);
+    in a git clone the commit is HEAD, which must be the commit of the recipe's release tag and have no local changes.
+    With ``strict`` false nothing is raised: an empty commit and the reason are returned (used by the dry run)."""
+    def fail(why: str) -> tuple[str, str]:
+        if strict:
+            raise SystemExit(why)
+        return "", why
+    text = COMMIT_FILE.read_text().strip() if COMMIT_FILE.exists() else ""
+    if text and not text.startswith("$Format"):
+        if not all(c in "0123456789abcdef" for c in text) or len(text) < 7:
+            return fail(f"FORGE_COMMIT holds {text!r}, not a commit hash")
+        return text[:12], "release tarball (FORGE_COMMIT written by git archive)"
+    head = _git("rev-parse", "HEAD")
+    if not head:
+        return fail("cannot name the forge commit: not a git clone and FORGE_COMMIT was not filled by git archive")
+    if release:
+        tagged = _git("rev-parse", f"{release}^{{commit}}")
+        if not tagged:
+            return fail(f"the release tag {release} of the recipe does not exist in this clone")
+        if tagged != head:
+            return fail(f"HEAD {head[:12]} is not the recipe's release {release} ({tagged[:12]}): check out the tag")
+    if _git("status", "--porcelain", "--", str(Path(__file__).resolve().parents[2])):
+        return fail("the forge checkout has local changes: a verified replay must name a clean commit")
+    return head[:12], f"git clone at {release or 'HEAD'}"
 
 
 def verdict(gguf: Path, expect: str, mcnemar: Path | None, recorded: float, band: float) -> tuple[bool, str]:
@@ -64,9 +87,10 @@ def main(argv=None) -> int:
     ap.add_argument("--recorded-mmlu", type=float, required=True)
     ap.add_argument("--band", type=float, default=1.0)
     ap.add_argument("--out", type=Path, required=True)
+    ap.add_argument("--forge-release", help="release tag of the forge named by the recipe")
     a = ap.parse_args(argv)
     ok, why = verdict(a.gguf, a.expect_digest, a.mcnemar_json, a.recorded_mmlu, a.band)
-    commit = fucina_commit()
+    commit, _ = forge_commit(a.forge_release)
     day = time.strftime("%Y-%m-%d")
     line = f"REPLAY VERIFIED {day} {commit}" if ok else f"REPLAY NOT VERIFIED {day} {commit}: {why}"
     a.out.write_text(line + "\n" + ("" if not ok else f"# {why}\n"))
