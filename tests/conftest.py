@@ -17,6 +17,9 @@ SNAPSHOT = "2026-10-08T11:00"
 
 @pytest.fixture(scope="session", autouse=True)
 def thor_config(tmp_path_factory):
+    import os
+    for v in ("THOR_LAB", "THOR_GGUF", "THOR_BUILD", "THOR_HF", "THOR_POD", "THOR_PYTHON"):
+        os.environ.setdefault(v, f"/nonexistent/{v}")   # off the reference machine: lab paths missing -> lab tests skip
     data = config._expand(yaml.safe_load(THOR_CONFIG.read_text()))
     live = Path(data["import_sources"]["cycles"])
     if live.exists():

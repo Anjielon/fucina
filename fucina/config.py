@@ -67,6 +67,12 @@ class Paths(dict):
     def __missing__(self, key: str) -> str:
         raise ConfigError(f"path '{key}' is not configured: add `paths: {{{key}: ...}}` to your fucina config")
 
+    def __getitem__(self, key: str) -> str:
+        v = super().__getitem__(key)
+        if isinstance(v, str) and "$" in v:
+            raise ConfigError(f"path '{key}' = {v}: an environment variable it names is not set")
+        return v
+
 
 class Config:
     def __init__(self, data: Optional[dict] = None, source: Optional[str] = None):
@@ -125,6 +131,8 @@ def _expand(v: Any) -> Any:
 
 
 def _resolve(base: Path, p: str) -> str:
+    if "$" in str(p):
+        raise ConfigError(f"{p}: an environment variable it names is not set")
     q = Path(os.path.expanduser(str(p)))
     return os.path.normpath(str(q if q.is_absolute() else (base / q)))
 

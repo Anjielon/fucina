@@ -151,6 +151,10 @@ GPU lock) comes from a YAML file, found via `--config FILE`, `$FUCINA_CONFIG` or
 - [`examples/thor/`](examples/thor) is the complete configuration of the reference machine (Ryzen AI Max+ 395,
   gfx1151, Vulkan, 128 GB UMA) and the model description of **Thor-T** (Ornith-1.5-35B-A3B, `qwen35moe` hybrid
   GatedDeltaNet + MoE), the model the default phase order and rule base were learned on.
+  Its machine paths are named through environment variables, expanded in every string of the configuration and model
+  files: `THOR_LAB` (lab notebook and scripts), `THOR_GGUF` (model files), `THOR_BUILD` (engine builds), `THOR_HF`
+  (Hugging Face checkpoints), `THOR_POD` (remote trial outputs) and `THOR_PYTHON` (interpreter). A path that still names an
+  unset variable raises a configuration error when it is used, before any job is written.
 
 A model file describes the model type, architecture, starting checkpoint, pieces, named objectives, the candidates
 already built (used to recognise historic measurements) and, optionally, its fitted KL→MMLU law.
