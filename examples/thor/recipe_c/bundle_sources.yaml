@@ -1,0 +1,42 @@
+# Source trees of the code bundle of recipe C (read on the recording machine by `fucina replay-bundle build`).
+# {name} is a recorded root given with --root name=PATH; the build replaces every recorded root inside the copied
+# files by a token that `fucina replay-bundle install` turns into the user's root.
+# `to` is the folder inside the bundle (the recipe refers to bundle:<to>/<file>).
+trees:
+  - {from: "{models}/gguf/tony-tern/OBIETTIVO_C/codice", to: objective_c}           # C0 alpha/beta, C0B/P2 writers, PTQ2
+  - {from: "{models}/gguf/tony-tern/OBIETTIVO_C/codice/c0t_scrivi.py.bak-1011-s1", to: objective_c, name: c0t_scrivi_1010.py}
+  - {from: "{models}/gguf/tony-tern/OBIETTIVO_C/S1_FLUSSO_C_1013/codice", to: s1}    # S1 corpus, flow statistics, gradients
+  - {from: "{models}/gguf/tony-tern/OBIETTIVO_C/S23_SEQUENZIALE_CORRETTO_1014/codice_lento_corretto_1014", to: s2_slow}
+  - {from: "{models}/gguf/tony-tern/OBIETTIVO_C/S23_SEQUENZIALE_CORRETTO_1014/codice_veloce1_1014", to: s2_fast1}
+  - {from: "{models}/gguf/tony-tern/OBIETTIVO_C/S23_SEQUENZIALE_CORRETTO_1014/codice", to: s2_fast2}
+  - {from: "{models}/gguf/tony-tern/OBIETTIVO_C/OBQ_FIBRATO_S4_1014/codice", to: obq}
+  - {from: "{models}/gguf/tony-tern/OBIETTIVO_C/CARDAN_C0B/codice", to: cardan}       # joint CARDAN trainer, folds, base A.1
+  - {from: "{models}/gguf/tony-tern/OBIETTIVO_C/ONPOLICY/codice", to: onpolicy}       # S7 on-policy trainer
+  - {from: "{models}/gguf/tony-tern/OBIETTIVO_C/SINTESI_1025/BPP/codice", to: bpp}    # POST trainer
+  - {from: "{models}/gguf/tony-tern/OBIETTIVO_C/SINTESI_1025/L2/codice", to: l2}      # KL4 rotations, teacher state cache
+  - {from: "{models}/gguf/tony-tern/OBIETTIVO_C/SINTESI_1025/L3/codice/scale_gateup_esporta.py", to: post_tools}
+  - {from: "{models}/gguf/tony-tern/OBIETTIVO_C/SINTESI_1025/F32/codice/f32_esporta.py", to: post_tools}
+  - {from: "{models}/gguf/tony-tern/OBIETTIVO_C/TRIO/sonda.sh", to: launchers}
+  - {from: "{models}/gguf/tony-tern/SELRISP/codice", to: selrisp}
+  - {from: "{models}/gguf/tony-tern/R026/v12/_lav/kl_realizzata.py", to: kl}
+  - {from: "{models}/build/leve/raffina", to: raffina}                                 # patch_gguf.py, comune.py
+  - {from: "{models}/build/llamacpp-tq1-k1024/gguf-py", to: gguf_py_k1024}             # gguf-py of the writers (MIT)
+  - {from: "{models}/build/thor-rexppiani2/gguf-py", to: gguf_py_rexp}
+  - {from: "{depot}/tutto_ternario/codice", to: tutto_ternario}
+  - {from: "{depot}/e2e/codice/TT5-ottimizzato/thor_v2/e2e_dump_logit.cpp", to: dump_logit}
+  - {from: "{depot}/e2e/codice/TT5-ottimizzato/thor_v2/e2e_dump_logit_compila.sh", to: dump_logit}
+  - {from: "{forge}/kernel-rotazione", to: kernel_rotation}
+  - {from: "{forge}/thor/cattura_hessiane_attn_thor.py", to: hessians}               # attention-input Hessians
+  - {from: "{forge}/thor/cattura_hessiane_densi_thor.py", to: hessians}              # dense Hessians, large corpus
+  - {from: "{forge}/thor/cattura_hessiane_down_thor.py", to: hessians}               # shared loader of the two above
+  - {from: "{forge}/thor/cattura_schur_esperti.py", to: hessians}                    # per-expert Gq statistics
+  - {from: "{forge}/stato/tappa_a_delta_1018.py", to: post_tools}
+  - {from: "{forge}/stato/bpost_scale_down_fp32_1026.py", to: post_tools}
+  - {from: "{forge}/stato/bpost_verifica_1026.py", to: post_tools}
+  - {from: "{forge}/stato/parziale_mmlu.py", to: post_tools}
+  - {from: "{forge}/thor_v2/strumenti/mcnemar_mclp.py", to: post_tools}
+  - {from: "{forge}/stato/c_s7_t550_1020.sh", to: launchers}
+  - {from: "{forge}/stato/dopo_tappa_misura_1018.sh", to: launchers}
+  - {from: "{forge}/stato/dopo_tappa_misura_gpu_1021_v10.sh.bak_kl4x4_1024", to: launchers, name: dopo_tappa_misura_gpu_1021_v10.sh}
+  - {from: "{forge}/stato/t400post_tappe_v2_1027.sh", to: launchers}
+  - {from: "{forge}/converti_multiple_choice.py", to: selrisp}

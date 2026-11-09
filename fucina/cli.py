@@ -282,10 +282,53 @@ def build_parser() -> argparse.ArgumentParser:
     q.set_defaults(f=cmd_analyze)
     q.add_argument("gguf")
     q.add_argument("--yaml", help="also write the analysis + plan as YAML")
+    q = s.add_parser("replay", help="replay a recorded chain from public inputs (examples/thor/recipe_c.yaml)")
+    q.set_defaults(f=cmd_replay)
+    q.add_argument("recipe")
+    q.add_argument("--set", action="append", default=[], dest="sets", metavar="ROOT=PATH",
+                   help="value of a root of the recipe (also: `replay:` section of the config, FUCINA_REPLAY_<ROOT>)")
+    g = q.add_mutually_exclusive_group()
+    g.add_argument("--dry-run", action="store_true", help="resolve and check every step, run nothing (default)")
+    g.add_argument("--run", action="store_true", help="run the selected steps, verify and record them")
+    q.add_argument("--steps", help="comma-separated step ids")
+    q.add_argument("--from", dest="first")
+    q.add_argument("--to", dest="last")
+    q.add_argument("--forbid", action="append", default=[], metavar="PREFIX",
+                   help="fail if a resolved command contains this prefix (e.g. a private home directory)")
+    q.add_argument("--script", help="with --dry-run: also write the resolved commands to this bash file")
+    q.add_argument("--quiet", action="store_true", help="with --dry-run: summary only, no commands")
+    q.add_argument("--allow-blocked", action="store_true", help="with --run: also run steps marked blocked")
+    q = s.add_parser("replay-bundle", help="build / install / verify the code bundle of a replay recipe")
+    q.set_defaults(f=cmd_replay_bundle)
+    q.add_argument("args", nargs=argparse.REMAINDER)
     q = s.add_parser("tui", help="terminal user interface")
     q.set_defaults(f=cmd_tui)
     q.add_argument("--run-dir")
     return p
+
+
+def cmd_replay(a) -> None:
+    from .replay import recipe as RR, runner as RU
+    r = RR.load(a.recipe)
+    roots = RU.configured_roots(r, a.sets, (config.current().data.get("replay") or {}) if config.is_active() else {})
+    sel = RU.select(r, a.steps, a.first, a.last, with_optional=True)
+    forbid = a.forbid + [x for x in os.environ.get("FUCINA_REPLAY_FORBID", "").split(":") if x]
+    if a.run:
+        res = RU.plan(r, roots, sel, forbid, show=False)
+        if res["problems"]:
+            raise SystemExit("refusing to run: " + "; ".join(res["problems"][:10]))
+        raise SystemExit(RU.run(r, roots, sel, a.allow_blocked))
+    res = RU.plan(r, roots, sel, forbid, show=not a.quiet, script=Path(a.script) if a.script else None)
+    if a.quiet:
+        print(f"{len(sel)} steps; blocked: {', '.join(res['blocked']) or 'none'}; problems: {len(res['problems'])}")
+        for p in res["problems"]:
+            print(f"  - {p}")
+    raise SystemExit(1 if res["problems"] else 0)
+
+
+def cmd_replay_bundle(a) -> None:
+    from .replay import bundle
+    raise SystemExit(bundle.main(a.args))
 
 
 def cmd_analyze(a) -> None:

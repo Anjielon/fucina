@@ -1,0 +1,7 @@
+#!/bin/bash
+# Development launcher (no installation needed): runs `python -m fucina` from this checkout at low CPU priority.
+# Interpreter: $FUCINA_PY, otherwise python3. Priority: $FUCINA_NICE (default 15).
+D=$(cd "$(dirname "$(readlink -f "$0")")/.." && pwd)
+P=${FUCINA_PY:-python3}
+export PYTHONPATH="$D${PYTHONPATH:+:$PYTHONPATH}" PYTHONDONTWRITEBYTECODE=1 OMP_NUM_THREADS=${OMP_NUM_THREADS:-8}
+exec nice -n "${FUCINA_NICE:-15}" "$P" -m fucina "$@"

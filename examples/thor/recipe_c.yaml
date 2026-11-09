@@ -1,0 +1,701 @@
+# Replay of recipe C: from the released frozen root R2B3m to C, the trunk of Thor-T-35B-A3B-XS.
+#
+#   fucina replay examples/thor/recipe_c.yaml --set work=/data/thor-c --set engine=/opt/llama.cpp/build/bin \
+#        --set bundle_src=/data/thor-c-code --set venv=/data/venv --dry-run
+#
+# Lineage (the record, Oct 2026; every number is MMLU-2000 on the launch engine):
+#   R2B3m -> C0B -> P2 -> S1 -> S2 -> OBQ (69.25) -> joint CARDAN T550 (71.30) -> S7 on-policy g10 (71.70)
+#         -> joint CARDAN T400 (72.40) -> POST 50 steps = C (73.15)
+# C is the trunk of the released XS: 733 of 753 tensors byte-identical, the 20 others are block 40 (MTP head).
+# Steps 14-24 of the recorded runner (the D2 branch: S6 -> N3 -> D2, 71.75) are not ancestors of C and are not here.
+#
+# Paths. The research code of the record (the "bundle", see fucina/replay/bundle.py and docs/REPLAY.md) reads and
+# writes under the directory layout of the recording machine. The replay recreates that layout under {work}/layout:
+# {models}, {forge}, {depot}, ... are the roots of that layout, and the bundle is installed with its recorded roots
+# rewritten to them. No file outside the configured roots is read (checked by --dry-run --forbid ...).
+name: thor-t-c
+title: "Thor-T objective C: frozen root -> C (trunk of XS), single-plane TQ1_0R_1024"
+description: >
+  Ornith-1.5-35B-A3B (qwen35moe, GatedDeltaNet + MoE) ternarized with one ternary plane per tensor (TQ1_0R_1024),
+  BitNet convention (token embedding and output head Q8_0, norms/router F32), 8,631,199,776 bytes.
+
+roots:
+  work: {doc: "replay output; everything the replay writes goes here"}
+  bundle_src: {doc: "the code bundle as published (directory with BUNDLE.json)"}
+  engine: {doc: "bin/ directory of a build of the release engine (Anjielon/llama.cpp tag thor-t-v1): llama-perplexity, llama-server, libllama.so, libggml-base.so"}
+  venv: {doc: "Python environment: torch (ROCm or CUDA), triton, numpy, transformers, pandas, pyarrow, safetensors"}
+  python: {default: "{venv}/bin/python3", doc: "interpreter of that environment"}
+  bundle: {default: "{work}/code", doc: "installed bundle (written by step L0)"}
+  layout: {default: "{work}/layout", doc: "root of the recorded directory layout"}
+  models: {default: "{work}/layout/models"}
+  forge: {default: "{work}/layout/forge"}
+  depot: {default: "{work}/layout/depot"}
+  lavoro: {default: "{work}/layout/lavoro"}
+  home: {default: "{work}/layout/home"}
+  odino: {default: "{work}/layout/odino"}
+  nas: {default: "{work}/layout/nas"}
+  inputs: {default: "{work}/inputs", doc: "public downloads that have no fixed place in the layout"}
+
+target:
+  artifact: c_post50
+  verify: tensors
+  expect: bc36d18b7fd8257403653132fa0fa3db353b51c000304646322ef38c731b036b
+  recorded_file_sha256: adb1ad8b199e82b3d8cdf105edbcfd7e0a52407af63d01943001bdd2a90af7cf
+  mmlu2000: 73.15
+  accept: >
+    Tensor digest equal to the record = exact replay. Otherwise (expected: GPU training steps are not bit-reproducible
+    on gfx1151, S7 samples rollouts) MMLU-2000 within 1.0 point of 73.15 and exact McNemar p >= 0.05 against the
+    recorded per-question log, as in the internal re-run of 31 Oct (72.75 vs 73.15, p 0.43).
+
+deviations:
+  - "Recorded absolute paths are rewritten to the replay layout: the metadata note of the C0B and P2 writers (input paths) differs, so GGUF files are compared by tensor digest, not by file hash."
+  - "Engine binaries come from the release engine (thor-t-v1), not from the development build 94ec619b: the CPU reference quantize/dequantize of TQ1_0R_1024 used by the Python code through ctypes was checked bit-identical (9 Nov); Vulkan results of the teacher dumps and of the S7 server are not bit-identical across builds."
+  - "Step 17 (CARDAN base A.1) runs on OBQ instead of S6: it reads only the expert gate/up codes and H_ffn, which S6 does not change."
+  - "Joint CARDAN steps 25 and 29: fused step from step 1 and patience 1000 (record: unfused for steps 1-50, stop/resume); fixed scales and plan reuse in 29 from step 1 (proven bit-identical on 4 steps)."
+
+inputs:
+  # ── public, pinned ─────────────────────────────────────────────────────────────────────────────────────────────
+  bf16:
+    kind: hf
+    repo: ornith-ai/Ornith-1.5-35B-A3B
+    revision: 10fbf86fed7ecee4a061f8b499a618f46001cac1
+    path: "{models}/gguf/thor-src-hf"
+    manifest: recipe_c/recorded/bf16_source.manifest
+    size_gib: 65
+    note: "bf16 safetensors and tokenizer; upstream later replaced the MTP tensors, so the revision matters"
+  mmlu:
+    kind: hf
+    repo: cais/mmlu
+    repo_type: dataset
+    revision: c30699e8356da336a370243923dbaf21066bb9fe
+    files: [all/test-00000-of-00001.parquet, all/validation-00000-of-00001.parquet, all/dev-00000-of-00001.parquet]
+    path: "{inputs}/mmlu"
+    manifest: recipe_c/recorded/mmlu_parquet.manifest
+  wikitext:
+    kind: hf
+    repo: Salesforce/wikitext
+    repo_type: dataset
+    revision: b08601e04326c79dfdd32d625aee71d232d685c3
+    files: [wikitext-103-raw-v1/train-00000-of-00002.parquet, wikitext-103-raw-v1/train-00001-of-00002.parquet,
+            wikitext-103-raw-v1/validation-00000-of-00001.parquet]
+    path: "{inputs}/wikitext"
+    manifest: recipe_c/recorded/wikitext_parquet.manifest
+  root:
+    kind: hf
+    repo: Anjielon/Thor-T-35B-A3B-root
+    revision: thor-t-v1
+    files: [Thor-T-R2B3m.gguf]
+    path: "{models}/gguf/tony-tern/R2B3m/Thor-T-R2B3m.gguf"
+    sha256: 56cb5bcdd9813a1015a7cad5364b5a80226f990fb8bd561b7cae4727d70efc43
+    size_gib: 8.2
+    published: "at launch (Hugging Face model repo)"
+  teacher_q8:
+    kind: hf
+    repo: Anjielon/Thor-T-bench
+    repo_type: dataset
+    revision: thor-t-v1
+    files: [teacher/Ornith-1.5-35B-A3B-Q8_0.gguf]
+    path: "{models}/gguf/tony-tern/teacher-q8/Ornith-1.5-35B-A3B-Q8_0.gguf"
+    sha256: e1425b9cba1c7514989cefe944fa9f4a68c34f480bcded2eec3549f75eea0fe0
+    size_gib: 35.2
+    published: "at launch (bench dataset)"
+  bench:
+    kind: hf
+    repo: Anjielon/Thor-T-bench
+    repo_type: dataset
+    revision: thor-t-v1
+    files: [bench/mmlu_00000.bin]
+    path: "{forge}/mc_v2/mmlu_00000.bin"
+    sha256: af987cc3369c15f90df9f390def043fd9fa4787e075b3b2170ff697a9dabbc6a
+  bench_mixed:
+    kind: hf
+    repo: Anjielon/Thor-T-bench
+    repo_type: dataset
+    revision: thor-t-v1
+    files: [bench/mmlu2000_mescolato.bin, bench/mmlu2000_mescolato.indice.tsv]
+    path: "{forge}/mc_v2/mmlu2000_mescolato.bin"
+    sha256: 670239392841aa76ff4e48abae6205bb6cc6d86cfab7c55bf7b0bacab901b34e
+    note: "the 2000 questions in mixed order, used by the POST measurement (index sha256 3f1586a2f352587c...)"
+  corpus_attn:
+    kind: hf
+    repo: Anjielon/Thor-T-bench
+    repo_type: dataset
+    revision: thor-t-v1
+    files: [corpora/calib_auto2_pulito.txt]
+    path: "{forge}/calib_auto2_pulito.txt"
+    sha256: a372e3609c70bd7a7aa1532c2f98839baf9293ca79658ca0b589b4cea965e078
+    published: "TO UPLOAD (0.8 MB, generated text, Sept 2026)"
+  corpus_large:
+    kind: hf
+    repo: Anjielon/Thor-T-bench
+    repo_type: dataset
+    revision: thor-t-v1
+    files: [corpora/calib_grande_2026_09_20.txt]
+    path: "{forge}/calib_grande_2026_09_20.txt"
+    sha256: 7b246f11346b6319727aa4437ccec47b6f06a7b73684744ecc823bce8223430f
+    published: "TO UPLOAD (8.6 MB)"
+  corpus_cot:
+    kind: hf
+    repo: Anjielon/Thor-T-bench
+    repo_type: dataset
+    revision: thor-t-v1
+    files: [corpora/corpus_cot.txt]
+    path: "{forge}/thor/cot_calib/corpus_cot.txt"
+    sha256: 74e778b5ca2f0ba7d31f345f1e72f769932476269498b88fb30c50c99a3122d9
+    published: "TO UPLOAD (6.1 MB)"
+  teacher_corpus:
+    kind: hf
+    repo: Anjielon/Thor-T-bench
+    repo_type: dataset
+    revision: thor-t-v1
+    files: [corpora/e2e_corpus_4096_maestro.pt, corpora/e2e_heldout_4096_maestro.pt]
+    path: "{depot}/e2e_corpus_maestro/e2e_corpus_4096_maestro.pt"
+    sha256: 156c2ccff3b60d388411b543033ba033e36e8b50a5de8b532a134421500b9b20
+    published: "TO UPLOAD (2229 documents, 1.69 M tokens; heldout sha256 df7151374c8a5cb0...)"
+    note: "documents of the teacher-distillation corpus (format distill-tokens-v1); not regenerable here"
+  r2b3_dense_inputs:
+    kind: hf
+    repo: Anjielon/Thor-T-35B-A3B-root
+    repo_type: model
+    revision: thor-t-v1
+    files: [tensori_R2B3/]
+    path: "{depot}/tutto_ternario/tensori_R2B3/manifesto.json"
+    sha256: d8e7330b6e529b3e2369dff2bb2dd08635383a1ea2ba4cd01ef302cd0ff3f95f
+    size_gib: 0.3
+    published: "TO UPLOAD (251 files, 295 MB): per-tensor inputs of the dense PTQ step 03"
+  student_v20:
+    kind: hf
+    repo: Anjielon/Thor-T-35B-A3B-root
+    revision: thor-t-v1
+    files: [stats/Thor-v20-downaggr3.gguf]
+    path: "{models}/gguf/tony-tern/Thor-v20-downaggr3.gguf"
+    sha256: 0f65c16227fa5b83641a35619054c4c159c0b50b6ee1201dbc479d97e3964b11
+    size_gib: 11.7
+    published: "TO UPLOAD: the earlier quantized student whose flow defines the per-expert statistics (step I9)"
+  perm_map:
+    kind: package
+    path: "{package}/ternary/data/gguf_hf_perm.npz"
+    sha256: 6114b1f4500b364e13c2b8b0f2d93836080ec75c37158a697265471360e14b16
+
+  # ── produced by the preparation steps below ────────────────────────────────────────────────────────────────────
+  calib: {kind: derived, produced_by: I1, path: "{models}/gguf/tony-tern/SELRISP/calib/calib_mmlu.jsonl"}
+  calib_mclp: {kind: derived, produced_by: I2, path: "{models}/gguf/tony-tern/SELRISP/calib/mclp_maestro.log"}
+  wt103: {kind: derived, produced_by: I3, path: "{models}/gguf/tony-tern/CARDAN_FEDELE/corpus/e2e_corpus_4096_wt103.pt"}
+  dump_tool: {kind: derived, produced_by: I4, path: "{bundle}/dump_logit/e2e_dump_logit"}
+  teacher_cache: {kind: derived, produced_by: I5, path: "{depot}/e2e_teacher/q8-maestro"}
+  teacher_cache_wt103: {kind: derived, produced_by: I6, path: "{models}/gguf/tony-tern/CARDAN_FEDELE/teacher/q8-maestro-wt103"}
+  hess_attn: {kind: derived, produced_by: I7, path: "{models}/gguf/tony-tern/hessiane-attn"}
+  hess_dense: {kind: derived, produced_by: I8, path: "{models}/gguf/tony-tern/hessiane-densi-grande"}
+  gq_experts: {kind: derived, produced_by: I9, path: "{models}/gguf/tony-tern/pod-schur-esperti"}
+  kl4_rotations: {kind: derived, produced_by: I10, path: "{models}/gguf/tony-tern/OBIETTIVO_C/SINTESI_1025/L2/kl4_rotazioni"}
+  teacher_states: {kind: derived, produced_by: I11, path: "{models}/gguf/tony-tern/OBIETTIVO_C/SINTESI_1025/L2/STATI_MAESTRO_wt103_1024tok"}
+
+steps:
+  # ── L0: layout ───────────────────────────────────────────────────────────────────────────────────────────────────
+  - id: L0
+    title: "install the code bundle with the replay roots; link the release engine and the bundle trees at the recorded places"
+    kind: cpu
+    status: ported
+    cpu_hours: 0.05
+    code: ["package:fucina.replay.bundle"]
+    run:
+      - "{python} -m fucina.replay.bundle install {bundle_src} --into {bundle} --root models={models} --root forge={forge} --root depot={depot} --root lavoro={lavoro} --root home={home} --root odino={odino} --root nas={nas} --root venv={venv}"
+      - "OC={models}/gguf/tony-tern/OBIETTIVO_C; mkdir -p $OC {models}/build/leve {models}/build/thor-c0t/build-c0t {models}/build/llamacpp-tq1-k1024/build {models}/build/thor-rexppiani2 {depot}/tutto_ternario {depot}/e2e/codice/TT5-ottimizzato {forge}/thor_v2 {forge}/stato {models}/gguf/tony-tern/R026/v12/_lav {models}/gguf/tony-tern/R026/_bin {models}/gguf/tony-tern/SELRISP $OC/S1_FLUSSO_C_1013 $OC/S23_SEQUENZIALE_CORRETTO_1014 $OC/OBQ_FIBRATO_S4_1014 $OC/CARDAN_C0B $OC/ONPOLICY $OC/SINTESI_1025/BPP $OC/SINTESI_1025/L2 $OC/SINTESI_1025/L3/codice $OC/SINTESI_1025/F32/codice $OC/TRIO"
+      - "ln -sfn {engine} {models}/build/thor-c0t/build-c0t/bin; ln -sfn {engine} {models}/build/llamacpp-tq1-k1024/build/bin"
+      - "ln -sfn {bundle}/gguf_py_k1024 {models}/build/llamacpp-tq1-k1024/gguf-py; ln -sfn {bundle}/gguf_py_rexp {models}/build/thor-rexppiani2/gguf-py"
+      - "ln -sfn {bundle}/raffina {models}/build/leve/raffina; ln -sfn {bundle}/tutto_ternario {depot}/tutto_ternario/codice; ln -sfn {bundle}/kernel_rotation {forge}/kernel-rotazione"
+      - "OC={models}/gguf/tony-tern/OBIETTIVO_C; ln -sfn {bundle}/objective_c $OC/codice; ln -sfn {bundle}/s1 $OC/S1_FLUSSO_C_1013/codice; ln -sfn {bundle}/s2_fast2 $OC/S23_SEQUENZIALE_CORRETTO_1014/codice; ln -sfn {bundle}/s2_slow $OC/S23_SEQUENZIALE_CORRETTO_1014/codice_lento_corretto_1014; ln -sfn {bundle}/s2_fast1 $OC/S23_SEQUENZIALE_CORRETTO_1014/codice_veloce1_1014; ln -sfn {bundle}/obq $OC/OBQ_FIBRATO_S4_1014/codice; ln -sfn {bundle}/cardan $OC/CARDAN_C0B/codice; ln -sfn {bundle}/onpolicy $OC/ONPOLICY/codice; ln -sfn {bundle}/bpp $OC/SINTESI_1025/BPP/codice; ln -sfn {bundle}/l2 $OC/SINTESI_1025/L2/codice"
+      - "OC={models}/gguf/tony-tern/OBIETTIVO_C; ln -sfn {bundle}/post_tools/scale_gateup_esporta.py $OC/SINTESI_1025/L3/codice/; ln -sfn {bundle}/post_tools/f32_esporta.py $OC/SINTESI_1025/F32/codice/; ln -sfn {bundle}/launchers/sonda.sh $OC/TRIO/sonda.sh; ln -sfn {bundle}/selrisp {models}/gguf/tony-tern/SELRISP/codice; ln -sfn {bundle}/kl/kl_realizzata.py {models}/gguf/tony-tern/R026/v12/_lav/kl_realizzata.py"
+      - "for f in tappa_a_delta_1018.py bpost_scale_down_fp32_1026.py bpost_verifica_1026.py parziale_mmlu.py; do ln -sfn {bundle}/post_tools/$f {forge}/stato/$f; done; mkdir -p {forge}/thor_v2/strumenti; ln -sfn {bundle}/post_tools/mcnemar_mclp.py {forge}/thor_v2/strumenti/mcnemar_mclp.py; ln -sfn {bundle}/hessians {forge}/thor; ln -sfn {bundle}/selrisp/converti_multiple_choice.py {forge}/converti_multiple_choice.py"
+    produces:
+      - {key: bundle_installed, path: "{bundle}/INSTALLED.json", verify: exists}
+
+  # ── fetch ────────────────────────────────────────────────────────────────────────────────────────────────────────
+  - id: F0
+    title: "download the public inputs at their pinned revisions and check their hashes"
+    kind: fetch
+    status: ported
+    needs: [bundle_installed]
+    code: ["package:fucina.replay.runner"]
+    note: "needs the huggingface_hub CLI (`hf`); ~120 GB"
+    run:
+      - "hf download ornith-ai/Ornith-1.5-35B-A3B --revision 10fbf86fed7ecee4a061f8b499a618f46001cac1 --local-dir {path.bf16}"
+      - "hf download cais/mmlu --repo-type dataset --revision c30699e8356da336a370243923dbaf21066bb9fe all/test-00000-of-00001.parquet all/validation-00000-of-00001.parquet all/dev-00000-of-00001.parquet --local-dir {path.mmlu}"
+      - "hf download Salesforce/wikitext --repo-type dataset --revision b08601e04326c79dfdd32d625aee71d232d685c3 --include 'wikitext-103-raw-v1/train-*' 'wikitext-103-raw-v1/validation-*' --local-dir {path.wikitext}"
+      - "D={work}/download; mkdir -p $D; hf download Anjielon/Thor-T-35B-A3B-root --revision thor-t-v1 --local-dir $D/root; hf download Anjielon/Thor-T-bench --repo-type dataset --revision thor-t-v1 --include 'teacher/*' 'bench/*' 'corpora/*' --local-dir $D/bench"
+      - "D={work}/download; place() { mkdir -p \"$(dirname \"$2\")\"; ln -sfn \"$1\" \"$2\"; }; place $D/root/Thor-T-R2B3m.gguf {path.root}; place $D/root/stats/Thor-v20-downaggr3.gguf {path.student_v20}; place $D/root/tensori_R2B3 $(dirname {path.r2b3_dense_inputs}); place $D/bench/teacher/Ornith-1.5-35B-A3B-Q8_0.gguf {path.teacher_q8}; place $D/bench/bench/mmlu_00000.bin {path.bench}; place $D/bench/bench/mmlu2000_mescolato.bin {path.bench_mixed}; place $D/bench/bench/mmlu2000_mescolato.indice.tsv $(dirname {path.bench_mixed})/mmlu2000_mescolato.indice.tsv; place $D/bench/corpora/calib_auto2_pulito.txt {path.corpus_attn}; place $D/bench/corpora/calib_grande_2026_09_20.txt {path.corpus_large}; place $D/bench/corpora/corpus_cot.txt {path.corpus_cot}; place $D/bench/corpora/e2e_corpus_4096_maestro.pt {path.teacher_corpus}; place $D/bench/corpora/e2e_heldout_4096_maestro.pt $(dirname {path.teacher_corpus})/e2e_heldout_4096_maestro.pt"
+      - "{python} -m fucina.replay.check_inputs {recipe_dir}/recipe_c.yaml --set work={work} --set engine={engine} --set bundle_src={bundle_src} --set venv={venv} --out {work}/state/inputs_checked.json"
+    produces:
+      - {key: inputs_checked, path: "{work}/state/inputs_checked.json", verify: exists}
+
+  # ── I: intermediates regenerated from public inputs ──────────────────────────────────────────────────────────────
+  - id: I1
+    title: "MMLU calibration selection (SELRISP): validation+dev, disjoint from test and bench, 1779 questions"
+    kind: cpu
+    status: ported
+    determinism: bitwise
+    cpu_hours: 0.01
+    needs: [mmlu, bench, bf16]
+    code: ["package:fucina.replay.inputs.mmlu_calibration"]
+    run:
+      - "{python} -m fucina.replay.inputs.mmlu_calibration --mmlu {path.mmlu} --bench {path.bench} --tokenizer {path.bf16} --out $(dirname {path.calib})"
+    produces:
+      - {key: calib_jsonl, path: "{models}/gguf/tony-tern/SELRISP/calib/calib_mmlu.jsonl", verify: sha256, expect: cc773ec667d59bfafb9d2e11ed5af13a49bd050172cec6412a83d20aa78e0dbd}
+      - {key: calib_bin, path: "{models}/gguf/tony-tern/SELRISP/calib/calib_mmlu.bin", verify: sha256, expect: 226532c016d227ae656da383f75d2a07cb98582bf52b848eed303f5370c8ffab}
+  - id: I2
+    title: "teacher per-question answer log-probs on the calibration set (KL4 targets)"
+    kind: measure
+    status: bundle
+    determinism: tolerance
+    gpu_hours: 0.3
+    vram_gib: 40
+    needs: [calib, teacher_q8]
+    code: ["engine:llama-perplexity"]
+    run:
+      - "env LD_LIBRARY_PATH={engine} GGML_VK_DISABLE_GRAPH_OPTIMIZE=1 {engine}/llama-perplexity -m {path.teacher_q8} -ngl 999 -c 4096 -np 4 -ub 512 -dev {vk_dev} --multiple-choice --multiple-choice-tasks 100000 -f $(dirname {path.calib})/calib_mmlu.bin > {path.calib_mclp} 2>&1"
+    produces:
+      - {key: calib_mclp_log, path: "{models}/gguf/tony-tern/SELRISP/calib/mclp_maestro.log", verify: exists, tolerance: "1779 MCLP rows; release engine differs from the recording build in Q8_0 Vulkan reductions"}
+  - id: I3
+    title: "WikiText-103 distillation corpus (10,000 + 64 windows of 256 tokens, seed 20261010)"
+    kind: cpu
+    status: ported
+    determinism: bitwise
+    cpu_hours: 0.3
+    needs: [wikitext, mmlu, bf16]
+    code: ["package:fucina.replay.inputs.wikitext_windows"]
+    run:
+      - "{python} -m fucina.replay.inputs.wikitext_windows --wikitext {path.wikitext}/wikitext-103-raw-v1 --mmlu-test {path.mmlu}/all/test-00000-of-00001.parquet --tokenizer {path.bf16} --out $(dirname {path.wt103})"
+    produces:
+      - {key: wt103_corpus, path: "{models}/gguf/tony-tern/CARDAN_FEDELE/corpus/e2e_corpus_4096_wt103.pt", verify: sha256, expect: 6b70ad22d8b9046dcbf0821c7d0dd85bddb96e4990b0d6e39119ffcfa96fb056}
+      - {key: wt103_heldout, path: "{models}/gguf/tony-tern/CARDAN_FEDELE/corpus/e2e_heldout_4096_wt103.pt", verify: sha256, expect: c26bc437f994306beffcb6bb9328a1994ebddeb4bd83b7fc79575eb7c30869ef}
+  - id: I4
+    title: "build the teacher dump tool (e2e_dump_logit) against the release engine"
+    kind: cpu
+    status: bundle
+    cpu_hours: 0.01
+    needs: [bundle_installed]
+    code: ["bundle:dump_logit/e2e_dump_logit.cpp"]
+    note: "compiled and linked against the release headers on 9 Nov (CPU only; public llama.h API)"
+    run:
+      - "LL=$(dirname {engine}); LL=$(dirname $LL); g++ -std=c++17 -O3 -DNDEBUG -DLLAMA_SHARED -DGGML_SHARED -I$LL/include -I$LL/ggml/include -I$LL/vendor {bundle}/dump_logit/e2e_dump_logit.cpp -o {path.dump_tool} -L{engine} -lllama -lggml -lggml-base -Wl,-rpath,{engine}"
+      - "for t in cardan/thor_v2 onpolicy/thor_v2 bpp/thor_v2 l2/thor_v2 s1/thor_v2; do [ -d {bundle}/$t ] && ln -sfn {path.dump_tool} {bundle}/$t/e2e_dump_logit; done; ln -sfn {path.dump_tool} {models}/gguf/tony-tern/R026/_bin/e2e_dump_logit_p2"
+    produces:
+      - {key: dump_tool_bin, path: "{bundle}/dump_logit/e2e_dump_logit", verify: exists}
+  - id: I5
+    title: "teacher cache q8-maestro: hidden states after output_norm on the teacher corpus (segments mode, bf16)"
+    kind: gpu
+    status: bundle
+    determinism: tolerance
+    gpu_hours: 0.2
+    vram_gib: 36
+    needs: [teacher_q8, teacher_corpus, dump_tool]
+    code: ["bundle:cardan/thor_v2/e2e_teacher.py"]
+    run:
+      - "cd {bundle}/cardan/thor_v2 && {python} e2e_teacher.py prepara --corsa q8-maestro --radice $(dirname {path.teacher_cache}) --corpus-dir $(dirname {path.teacher_corpus}) --variante maestro --lati heldout,train --modo segmenti --ub 1024 --salva-tipo bf16 --modello {path.teacher_q8}"
+      - "cd {bundle}/cardan/thor_v2 && {python} e2e_teacher.py esegui --corsa q8-maestro --radice $(dirname {path.teacher_cache})"
+    produces:
+      - {key: teacher_cache_dir, path: "{depot}/e2e_teacher/q8-maestro", verify: manifest, expect: recipe_c/recorded/teacher_cache_q8.manifest, tolerance: "bf16 hidden states from a different engine build: expect byte differences; compare with compare_tol (relative Frobenius <= 1e-2)"}
+  - id: I6
+    title: "teacher cache q8-maestro-wt103 on the WikiText corpus"
+    kind: gpu
+    status: bundle
+    determinism: tolerance
+    gpu_hours: 1.0
+    vram_gib: 36
+    needs: [teacher_q8, wt103, dump_tool]
+    code: ["bundle:cardan/thor_v2/e2e_teacher.py"]
+    run:
+      - "cd {bundle}/cardan/thor_v2 && {python} e2e_teacher.py prepara --corsa q8-maestro-wt103 --radice $(dirname {path.teacher_cache_wt103}) --corpus-dir $(dirname {path.wt103}) --variante wt103 --lati heldout,train --modo segmenti --ub 1024 --salva-tipo bf16 --modello {path.teacher_q8}"
+      - "cd {bundle}/cardan/thor_v2 && {python} e2e_teacher.py esegui --corsa q8-maestro-wt103 --radice $(dirname {path.teacher_cache_wt103})"
+    produces:
+      - {key: teacher_cache_wt103_dir, path: "{models}/gguf/tony-tern/CARDAN_FEDELE/teacher/q8-maestro-wt103", verify: manifest, expect: recipe_c/recorded/teacher_cache_wt103.manifest, tolerance: "as I5 (recorded: 3538 s, 2.58 M tokens)"}
+  - id: I7
+    title: "attention-input Hessians H_LL (input_layernorm output, 40 layers, 2048x2048) from the bf16 model"
+    kind: gpu
+    status: bundle
+    determinism: tolerance
+    gpu_hours: 1.5
+    vram_gib: 35
+    needs: [bf16, corpus_attn]
+    code: ["bundle:hessians/cattura_hessiane_attn_thor.py", "bundle:hessians/cattura_hessiane_down_thor.py"]
+    run:
+      - "cd {bundle}/hessians && env THOR_SORGENTE_HF={path.bf16} THOR_HESS_ATTN_OUT={path.hess_attn} THOR_CORPUS={path.corpus_attn} {python} cattura_hessiane_attn_thor.py"
+    produces:
+      - {key: hess_attn_dir, path: "{models}/gguf/tony-tern/hessiane-attn", verify: manifest, expect: recipe_c/recorded/hessians_attn.manifest, tolerance: "GPU reductions in fp32: compare with compare_tol npy-dir (rel. Frobenius <= 1e-5)"}
+  - id: I8
+    title: "dense Hessians on the large corpus (H_attn_LL, H_ffn_LL), 40 layers"
+    kind: gpu
+    status: bundle
+    determinism: tolerance
+    gpu_hours: 3.0
+    vram_gib: 35
+    needs: [bf16, corpus_large]
+    code: ["bundle:hessians/cattura_hessiane_densi_thor.py"]
+    run:
+      - "cd {bundle}/hessians && env THOR_SORGENTE_HF={path.bf16} THOR_HESS_OUT={path.hess_dense} THOR_CORPUS={path.corpus_large} {python} cattura_hessiane_densi_thor.py"
+    produces:
+      - {key: hess_dense_dir, path: "{models}/gguf/tony-tern/hessiane-densi-grande", verify: manifest, expect: recipe_c/recorded/hessians_dense_large.manifest, tolerance: "as I7"}
+  - id: I9
+    title: "per-expert input statistics Gq_LL in the flow of the earlier quantized student (layers 0-31; read by the expert folds)"
+    kind: gpu
+    status: blocked
+    determinism: tolerance
+    gpu_hours: 12.0
+    vram_gib: 90
+    disk_gib: 230
+    needs: [bf16, student_v20, corpus_cot]
+    code: ["bundle:hessians/cattura_schur_esperti.py"]
+    blockers:
+      - "no recorded hash of the 32 Gq files (128 GiB; the folder holds 225 GB with the unused C_/Mqr_ arrays): hash them before publishing"
+      - "the recorded capture ran on a rented GPU with no registered time; 12 GPU h is an estimate, not a measurement"
+      - "student Thor-v20-downaggr3.gguf (12.6 GB, sha256 0f65c162...) must be uploaded first"
+    run:
+      - "cd {bundle}/hessians && env THOR_HF_DIR={path.bf16} THOR_GPTQ_BASE={path.student_v20} THOR_CORPUS={path.corpus_cot} FINESTRA_SCHUR_OUT={path.gq_experts} THOR_STRATI=0-31 {python} cattura_schur_esperti.py"
+    produces:
+      - {key: gq_dir, path: "{models}/gguf/tony-tern/pod-schur-esperti", verify: exists, tolerance: "GPU accumulation; the fold reads Gq only"}
+  - id: I10
+    title: "KL4 rotations of the calibration set (4 orderings) and the teacher log-probs on each"
+    kind: measure
+    status: bundle
+    determinism: tolerance
+    gpu_hours: 0.8
+    vram_gib: 40
+    needs: [calib, calib_mclp, teacher_q8]
+    code: ["bundle:l2/kl4_rotazioni.py"]
+    run:
+      - "cd {bundle}/l2 && {python} kl4_rotazioni.py costruisci --uscita {path.kl4_rotations} --rotazioni 4"
+      - "cd {bundle}/l2 && {python} kl4_rotazioni.py comandi --uscita {path.kl4_rotations} --rotazioni 4 | bash"
+    produces:
+      - {key: kl4_rotations_dir, path: "{models}/gguf/tony-tern/OBIETTIVO_C/SINTESI_1025/L2/kl4_rotazioni/calib_mmlu_rot1.bin", verify: exists}
+  - id: I11
+    title: "teacher hidden-state cache on WikiText (40 layers, 1024 tokens, 625 rows, seed 20261007) for the CKA alignment of POST"
+    kind: gpu
+    status: bundle
+    determinism: tolerance
+    gpu_hours: 1.1
+    vram_gib: 40
+    disk_gib: 99
+    needs: [teacher_q8, wt103, dump_tool]
+    code: ["bundle:l2/cattura_stati_maestro.py"]
+    run:
+      - "cd {bundle}/l2 && {python} cattura_stati_maestro.py prepara --uscita {path.teacher_states} --strati 0-39 --token 1024 --n-righe 625 --seme 20261007"
+      - "cd {bundle}/l2 && {python} cattura_stati_maestro.py esegui --uscita {path.teacher_states}"
+    produces:
+      - {key: teacher_states_dir, path: "{models}/gguf/tony-tern/OBIETTIVO_C/SINTESI_1025/L2/STATI_MAESTRO_wt103_1024tok/piano_stati.json", verify: exists}
+
+  # ── the chain ───────────────────────────────────────────────────────────────────────────────────────────────────
+  - id: "00"
+    title: "verify the frozen root R2B3m"
+    kind: check
+    status: ported
+    needs: [root, inputs_checked]
+    run: ["test \"$(sha256sum {path.root} | cut -c1-64)\" = 56cb5bcdd9813a1015a7cad5364b5a80226f990fb8bd561b7cae4727d70efc43"]
+  - id: "01"
+    title: "C0: ssm_alpha/ssm_beta F32 -> TQ1_0R_1024 (60 tensors; GPTQ + exact ternary coordinate descent, H = attention-input Hessian)"
+    kind: cpu
+    status: bundle
+    technique: "GPTQ (arXiv 2210.17323) + exact coordinate descent on trits and scales"
+    cpu_hours: 0.06
+    needs: [root, hess_attn, bf16]
+    code: ["bundle:objective_c/c0_alpha_beta.py"]
+    run: ["OC={models}/gguf/tony-tern/OBIETTIVO_C; cd $OC/codice && env HIP_VISIBLE_DEVICES= CUDA_VISIBLE_DEVICES= TT_DEVICE=cpu OMP_NUM_THREADS=4 {python} c0_alpha_beta.py $OC/C0/tensori"]
+    produces:
+      - {key: c0_tensors, path: "{models}/gguf/tony-tern/OBIETTIVO_C/C0/tensori", verify: manifest, expect: recipe_c/recorded/c0_tensors.manifest}
+  - id: "02"
+    title: "C0B: R2B3m first planes + C0 + teacher Q8_0 token_embd/output (BitNet convention)"
+    kind: cpu
+    status: bundle
+    cpu_hours: 0.02
+    needs: [c0_tensors, teacher_q8]
+    code: ["bundle:objective_c/c0t_scrivi_1010.py"]
+    note: "C0B/tensori/manifesto_c0b.json is the hand-written copy list of the two teacher tensors (recreated here with the replay path)"
+    run:
+      - "OC={models}/gguf/tony-tern/OBIETTIVO_C; mkdir -p $OC/C0B/tensori; {python} -c \"import json; n = 'C0B: convenzione BitNet (Angelo 9/10 21:25), embedding e testa Q8_0 del maestro, copiati al byte'; json.dump({t: {'sorgente_gguf': '{path.teacher_q8}', 'tensore': t, 'nota': n} for t in ('token_embd.weight', 'output.weight')}, open('$OC/C0B/tensori/manifesto_c0b.json', 'w'), indent=1, ensure_ascii=False)\""
+      - "OC={models}/gguf/tony-tern/OBIETTIVO_C; mkdir -p $OC/C0B && cd $OC/codice && env HIP_VISIBLE_DEVICES= TT_DEVICE=cpu {python} c0t_scrivi_1010.py --tensori $OC/C0/tensori $OC/C0B/tensori --uscita $OC/C0B/Thor-T-C0B.gguf --tetto 9470184864 --nota 'C0B: C0 con token_embd/output Q8_0 del maestro (convenzione BitNet, Angelo 9/10 21:25)'"
+    produces:
+      - {key: c0b, path: "{models}/gguf/tony-tern/OBIETTIVO_C/C0B/Thor-T-C0B.gguf", verify: tensors, tolerance: "recorded file sha256 a49bb0f24e956b00 (equal only with the recorded roots)"}
+  - id: "03"
+    title: "P1+P2: 250 dense codes, balanced GPTQ K=1 + faithful JARQ + DRQ (variant p_bil1jarqdrq)"
+    kind: cpu
+    status: bundle
+    technique: "balanced grid (arXiv 2608.08910) + JARQ Alg. 1 (arXiv 2609.38599) + DRQ (arXiv 2610.11226)"
+    cpu_hours: 14.6
+    needs: [c0b, r2b3_dense_inputs, bf16, perm_map]
+    code: ["bundle:objective_c/ptq2_costruttori.py", "bundle:raffina/comune.py"]
+    note: "14.6 CPU h, split in shards of 4 threads (FUCINA_PTQ2_SHARDS); each tensor is solved independently"
+    run:
+      - "OC={models}/gguf/tony-tern/OBIETTIVO_C; V=$OC/varianti_ptq2; S=${FUCINA_PTQ2_SHARDS:-2}; NAMES=$(env HIP_VISIBLE_DEVICES= {python} -c \"import sys; sys.path.insert(0, '{models}/build/leve/raffina'); import comune as CM; src = CM.gp.GGUFPlaneSource(CM.R2B3M, layers=list(range(40))); r = CM.elenco_densi(src); print(' '.join(','.join(r[i::$S]) for i in range($S)))\")"
+      - "OC={models}/gguf/tony-tern/OBIETTIVO_C; V=$OC/varianti_ptq2; i=0; pids=; for L in $NAMES; do i=$((i+1)); mkdir -p $V/scheggia$i; ( cd $OC/codice && env HIP_VISIBLE_DEVICES= TT_DEVICE=cpu OMP_NUM_THREADS=4 LEVE_THREADS=4 {python} ptq2_costruttori.py --out $V/scheggia$i --solo \"$L\" >> $V/shard$i.log 2>&1 ) & pids=\"$pids $!\"; done; for p in $pids; do wait $p; done"
+      - "OC={models}/gguf/tony-tern/OBIETTIVO_C; {python} -m fucina.replay.merge_shards $OC/varianti_ptq2 p_bil1jarqdrq"
+    produces:
+      - {key: p2_dense, path: "{models}/gguf/tony-tern/OBIETTIVO_C/varianti_ptq2/p_bil1jarqdrq/tensori", verify: manifest, expect: recipe_c/recorded/p2_dense_tensors.manifest}
+  - id: "04"
+    title: "P2: C0B with the 250 dense tensors"
+    kind: cpu
+    status: bundle
+    cpu_hours: 0.02
+    needs: [c0b, c0_tensors, p2_dense]
+    code: ["bundle:objective_c/c0t_scrivi.py"]
+    run: ["OC={models}/gguf/tony-tern/OBIETTIVO_C; mkdir -p $OC/PTQ2 && cd $OC/codice && env HIP_VISIBLE_DEVICES= TT_DEVICE=cpu {python} c0t_scrivi.py --base $OC/C0B/Thor-T-C0B.gguf --tensori $OC/C0/tensori $OC/varianti_ptq2/p_bil1jarqdrq/tensori --uscita $OC/PTQ2/Thor-T-C-p_bil1jarqdrq.gguf --nota \"$({python} -c \"import json; print(json.load(open('{recipe_dir}/recipe_c/recorded/gguf_notes.json'))['p2_note'])\")\""]
+    produces:
+      - {key: p2, path: "{models}/gguf/tony-tern/OBIETTIVO_C/PTQ2/Thor-T-C-p_bil1jarqdrq.gguf", verify: tensors, tolerance: "recorded file sha256 9994e118da0d7e23; MMLU-2000 64.65"}
+  - id: "05"
+    title: "S1a: knowledge corpus + 13-gram decontamination against MMLU, the bench and the calibration set"
+    kind: cpu
+    status: bundle
+    cpu_hours: 0.01
+    needs: [p2, calib]
+    code: ["bundle:s1/s1/s1_corpus.py"]
+    run: ["OC={models}/gguf/tony-tern/OBIETTIVO_C; env HIP_VISIBLE_DEVICES= E2E_DENSI_SSM_AB=1 OMP_NUM_THREADS=4 {python} $OC/S1_FLUSSO_C_1013/codice/s1/s1_corpus.py --out $OC/S1_FLUSSO_C_1013/corpus --thor-v2 $OC/S1_FLUSSO_C_1013/codice/thor_v2"]
+    produces:
+      - {key: s1_corpus, path: "{models}/gguf/tony-tern/OBIETTIVO_C/S1_FLUSSO_C_1013/corpus", verify: manifest, expect: recipe_c/recorded/s1_corpus.manifest}
+  - id: "06"
+    title: "S1b: flow statistics of P2 (dense H, cross term M, router-weighted expert H), halves A and B"
+    kind: gpu
+    status: bundle
+    determinism: tolerance
+    technique: "GPTAQ (arXiv 2504.02692) / QEP (arXiv 2504.09629) cross term; AGQ of MoEQuant (arXiv 2505.03804)"
+    gpu_hours: 4.4
+    vram_gib: 44
+    disk_gib: 176
+    needs: [p2, s1_corpus]
+    code: ["bundle:s1/s1/s1_cattura.py"]
+    run:
+      - "OC={models}/gguf/tony-tern/OBIETTIVO_C; S=$OC/S1_FLUSSO_C_1013; for m in A B; do env E2E_DENSI_SSM_AB=1 {gpu_env} {python} $S/codice/s1/s1_cattura.py --ospite $OC/PTQ2/Thor-T-C-p_bil1jarqdrq.gguf --corpus $S/corpus/corpus.pt --out $S/cattura --meta $m --thor-v2 $S/codice/thor_v2 --fedeli $S/codice/fedeli --device cuda --motore triton --tetto 44 >> $S/cattura_$m.log 2>&1; done"
+    produces:
+      - {key: s1_flow, path: "{models}/gguf/tony-tern/OBIETTIVO_C/S1_FLUSSO_C_1013/cattura", verify: exists, tolerance: "no recorded hash: the record kept these arrays on the NAS; step 08 gates them"}
+  - id: "07"
+    title: "S1c: K-FAC factors of the full-text KL (cal + disjoint ctl, 32 rows each)"
+    kind: gpu
+    status: bundle
+    determinism: tolerance
+    technique: "empirical Fisher / path Fisher (G2PTQ arXiv 2609.31009, YAQA arXiv 2505.22988)"
+    gpu_hours: 2.2
+    vram_gib: 54
+    disk_gib: 74
+    needs: [p2, s1_corpus, teacher_cache_wt103]
+    code: ["bundle:s1/s1/s1_gradienti.py"]
+    run:
+      - "OC={models}/gguf/tony-tern/OBIETTIVO_C; S=$OC/S1_FLUSSO_C_1013; for i in cal ctl; do env E2E_SENZA_COESISTENZA=1 E2E_GDN=veloce E2E_GDN_MODULO=gdn_veloce_corsa_v5 E2E_MOTORE=triton2 E2E_KQAT=cache_densi,silu,tile,amax,mm16_grande,guardia E2E_KERNEL_NUOVI=1 E2E_DENSI_SSM_AB=1 {gpu_env} {python} $S/codice/s1/s1_gradienti.py --ospite $OC/PTQ2/Thor-T-C-p_bil1jarqdrq.gguf --corpus-json $S/corpus/corpus.json --cache {path.teacher_cache_wt103} --out $S/gradienti --insieme $i --thor-v2 $S/codice/thor_v2 --device cuda --motore triton2 --cammino diretta >> $S/gradienti_$i.log 2>&1; done"
+    produces:
+      - {key: s1_grad, path: "{models}/gguf/tony-tern/OBIETTIVO_C/S1_FLUSSO_C_1013/gradienti", verify: exists, tolerance: "as 06"}
+  - id: "08"
+    title: "S1d: statistic controls (A/B stability, cosines, bridge to the manifest)"
+    kind: cpu
+    status: bundle
+    determinism: measurement
+    cpu_hours: 0.9
+    needs: [s1_flow, s1_grad]
+    code: ["bundle:s1/s1/s1_controlli.py"]
+    run: ["OC={models}/gguf/tony-tern/OBIETTIVO_C; S=$OC/S1_FLUSSO_C_1013; env HIP_VISIBLE_DEVICES= OMP_NUM_THREADS=4 {python} $S/codice/s1/s1_controlli.py --radice $S --strati 0-39 > $S/controlli.log 2>&1"]
+    produces:
+      - {key: s1_controls, path: "{models}/gguf/tony-tern/OBIETTIVO_C/S1_FLUSSO_C_1013/controlli.json", verify: exists, tolerance: "the record was accepted with the bridge flag false"}
+  - id: "09"
+    title: "S2: corrected sequential pass over 40 layers (quantized prefix propagated), three code phases as recorded"
+    kind: gpu
+    status: bundle
+    determinism: tolerance
+    gpu_hours: 8.7
+    vram_gib: 82
+    needs: [p2, s1_corpus, s1_grad, s1_controls]
+    code: ["bundle:s2_slow/s23/s23_passata.py", "bundle:s2_fast1/s23/s23_passata.py", "bundle:s2_fast2/s23/s23_passata.py"]
+    env: {S23_KBEST: "1", S23_KBEST_SEME: "20261013", S23_ALFE: "0,0.5,1", S23_ALFE_ESPERTI: "0,0.5", S23_GUARDIA: sim, S23_ENERGIA_MIN: "0.9", S23_ENERGIA_MAX: "1.1", S23_ENERGIA_RELATIVA: "1", S23_PESO_KW: "3.5", E2E_DENSI_SSM_AB: "1"}
+    run:
+      - "OC={models}/gguf/tony-tern/OBIETTIVO_C; S1=$OC/S1_FLUSSO_C_1013; W=$OC/S23_SEQUENZIALE_CORRETTO_1014; for ph in 'codice_lento_corretto_1014 70 --strati 0-5' 'codice_veloce1_1014 70 --strati 0-7' 'codice 82'; do set -- $ph; T=$1; cap=$2; shift 2; env PYTHONPATH=$S1/codice/thor_v2:$S1/codice/fedeli {gpu_env} {python} $W/$T/s23/s23_passata.py --partenza $OC/PTQ2/Thor-T-C-p_bil1jarqdrq.gguf --corpus $S1/corpus/corpus.pt --out $W --thor-v2 $S1/codice/thor_v2 --fedeli $S1/codice/fedeli --rif $W/$T/rif --grad-cal $S1/gradienti/cal --grad-ctl $S1/gradienti/ctl --device cuda --motore triton --cache-maestro 1 --tetto $cap \"$@\" >> $W/passata.log 2>&1; done"
+    produces:
+      - {key: s2_layers, path: "{models}/gguf/tony-tern/OBIETTIVO_C/S23_SEQUENZIALE_CORRETTO_1014/strati", verify: manifest, expect: recipe_c/recorded/s2_layers.manifest, tolerance: "packed trits: identical or <= 1e-5 differing bytes; then step 10 decides"}
+  - id: "10"
+    title: "S2 writer, arm s2 (310 tensors)"
+    kind: cpu
+    status: bundle
+    cpu_hours: 0.04
+    needs: [p2, s2_layers]
+    code: ["bundle:s2_fast2/s23/s23_scrivi.py"]
+    run: ["OC={models}/gguf/tony-tern/OBIETTIVO_C; W=$OC/S23_SEQUENZIALE_CORRETTO_1014; mkdir -p $W/gguf; env HIP_VISIBLE_DEVICES= E2E_DENSI_SSM_AB=1 OMP_NUM_THREADS=4 {python} $W/codice/s23/s23_scrivi.py --partenza $OC/PTQ2/Thor-T-C-p_bil1jarqdrq.gguf --strati $W/strati --braccio s2 --uscita $W/gguf/Thor-T-C-S23-s2.gguf"]
+    produces:
+      - {key: s2, path: "{models}/gguf/tony-tern/OBIETTIVO_C/S23_SEQUENZIALE_CORRETTO_1014/gguf/Thor-T-C-S23-s2.gguf", verify: tensors, tolerance: "recorded file sha256 82113036dad75a37; MMLU-2000 66.80"}
+  - id: "11"
+    title: "S4b-a: K-FAC factors of the answer-token KL (KL4), cal + ctl, 448 questions each"
+    kind: gpu
+    status: bundle
+    determinism: tolerance
+    technique: "K-FAC (arXiv 1503.05671) of the KL on the answer token"
+    gpu_hours: 0.55
+    vram_gib: 58
+    disk_gib: 30
+    needs: [s2, calib, calib_mclp]
+    code: ["bundle:obq/fib_gradienti_kl4.py"]
+    run:
+      - "OC={models}/gguf/tony-tern/OBIETTIVO_C; W=$OC/OBQ_FIBRATO_S4_1014; C=$(dirname {path.calib}); for i in cal ctl; do env E2E_SENZA_COESISTENZA=1 E2E_GDN=veloce E2E_GDN_MODULO=gdn_veloce_corsa_v5 E2E_MOTORE=triton2 E2E_KQAT=cache_densi,silu,tile,amax,mm16_grande,guardia E2E_KERNEL_NUOVI=1 E2E_DENSI_SSM_AB=1 PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True {gpu_env} {python} $W/codice/fib_gradienti_kl4.py --ospite $OC/S23_SEQUENZIALE_CORRETTO_1014/gguf/Thor-T-C-S23-s2.gguf --thor-v2 $OC/CARDAN_C0B/codice/recupero_7dabd6f/thor_v2 --calib-jsonl $C/calib_mmlu.jsonl --calib-maestro $C/mclp_maestro.log --out $W/fattori --insieme $i --n-usate 896 --device cuda --motore triton2 >> $W/fattori_$i.log 2>&1; done"
+    produces:
+      - {key: obq_factors, path: "{models}/gguf/tony-tern/OBIETTIVO_C/OBQ_FIBRATO_S4_1014/fattori", verify: manifest, expect: recipe_c/recorded/obq_factors.manifest, tolerance: "relative Frobenius error <= 1e-5 (two control questions of the original run were anomalous; the 31 Oct re-run recomputed them)"}
+  - id: "12"
+    title: "S4b-b: fibred OBQ (exact GPTQ under M = H (x) I + 0.3 A (x) B) + per-tensor guard"
+    kind: cpu
+    status: bundle
+    technique: "OBQ/GPTQ (arXiv 2208.11580, 2210.17323) under a K-FAC metric (YAQA arXiv 2505.22988)"
+    cpu_hours: 1.5
+    needs: [s2, obq_factors]
+    code: ["bundle:obq/fib_risolvi.py"]
+    run: ["OC={models}/gguf/tony-tern/OBIETTIVO_C; W=$OC/OBQ_FIBRATO_S4_1014; env HIP_VISIBLE_DEVICES= OMP_NUM_THREADS=6 LEVE_THREADS=6 E2E_DENSI_SSM_AB=1 {python} $W/codice/fib_risolvi.py --ospite $OC/S23_SEQUENZIALE_CORRETTO_1014/gguf/Thor-T-C-S23-s2.gguf --fattori $W/fattori --out $W/risolvi --lam 0.3 --errh-max 0.10 --solo \"$(ls $W/fattori/cal/ | grep -E 'B_blk\\.[0-9]+\\.(attn_gate|attn_qkv|attn_q|attn_k|attn_v|attn_output|ssm_out|ffn_gate_shexp|ffn_up_shexp|ffn_down_shexp)\\.weight\\.npy$' | sed 's/^B_//; s/\\.npy$//' | paste -sd,)\" --fili 6 >> $W/risolvi.log 2>&1"]
+    produces:
+      - {key: obq_tensors, path: "{models}/gguf/tony-tern/OBIETTIVO_C/OBQ_FIBRATO_S4_1014/risolvi/tensori", verify: manifest, expect: recipe_c/recorded/obq_solve_tensors.manifest}
+  - id: "13"
+    title: "OBQ writer (242 accepted dense tensors)"
+    kind: cpu
+    status: bundle
+    cpu_hours: 0.08
+    needs: [s2, obq_tensors]
+    code: ["bundle:obq/fib_scrivi.py"]
+    run: ["OC={models}/gguf/tony-tern/OBIETTIVO_C; W=$OC/OBQ_FIBRATO_S4_1014; env HIP_VISIBLE_DEVICES= OMP_NUM_THREADS=6 LEVE_THREADS=6 E2E_DENSI_SSM_AB=1 {python} $W/codice/fib_scrivi.py --ospite $OC/S23_SEQUENZIALE_CORRETTO_1014/gguf/Thor-T-C-S23-s2.gguf --tensori $W/risolvi/tensori --uscita $W/Thor-T-C-S23-s2-OBQFIB.gguf"]
+    produces:
+      - {key: obq, path: "{models}/gguf/tony-tern/OBIETTIVO_C/OBQ_FIBRATO_S4_1014/Thor-T-C-S23-s2-OBQFIB.gguf", verify: tensors, tolerance: "recorded file sha256 5b9a02dabade59c6; MMLU-2000 69.25"}
+  - id: 13k
+    title: "engine KL24 of OBQ against the teacher cache (start value of the joint trainer's coherence gate)"
+    kind: measure
+    status: bundle
+    determinism: measurement
+    gpu_hours: 0.1
+    vram_gib: 24
+    needs: [obq, teacher_cache, dump_tool]
+    code: ["bundle:kl/kl_realizzata.py"]
+    run: ["OC={models}/gguf/tony-tern/OBIETTIVO_C; mkdir -p $OC/DENSI_CARDAN_OBQ_1016/kl_host; env LD_LIBRARY_PATH={engine} GGML_VK_TQ1R_Q8=1 GGML_VK_DISABLE_GRAPH_OPTIMIZE=1 {gpu_env} {python} {models}/gguf/tony-tern/R026/v12/_lav/kl_realizzata.py --thor-v2 $OC/CARDAN_C0B/codice/thor_v2 --cache {path.teacher_cache} --dump-bin {path.dump_tool} --out $OC/DENSI_CARDAN_OBQ_1016/kl_host --righe 24 OBQ=$OC/OBQ_FIBRATO_S4_1014/Thor-T-C-S23-s2-OBQFIB.gguf"]
+    produces:
+      - {key: obq_kl24, path: "{models}/gguf/tony-tern/OBIETTIVO_C/DENSI_CARDAN_OBQ_1016/kl_host/kl_OBQ.json", verify: exists, tolerance: "recorded 0.79462"}
+  - id: "17"
+    title: "CARDAN base A.1: closed-form initial C (rank 16, expert gate/up, H_ffn)"
+    kind: cpu
+    status: bundle
+    technique: "CARDAN Appendix A.1 (arXiv 2609.21137)"
+    cpu_hours: 0.45
+    needs: [obq, hess_dense]
+    code: ["bundle:cardan/cardan_costruisci.py"]
+    run: ["OC={models}/gguf/tony-tern/OBIETTIVO_C; D=$OC/S5_CARDAN_DC600_1017/base_A1_r16; mkdir -p $D; cd $OC/CARDAN_C0B/codice && env HIP_VISIBLE_DEVICES= OMP_NUM_THREADS=4 {python} cardan_costruisci.py --gguf $OC/OBQ_FIBRATO_S4_1014/Thor-T-C-S23-s2-OBQFIB.gguf --out $D --strati 0-39 --rango 16 --thread 4 >> $D/log.txt 2>&1"]
+    produces:
+      - {key: base_a1_obq, path: "{models}/gguf/tony-tern/OBIETTIVO_C/S5_CARDAN_DC600_1017/base_A1_r16", verify: manifest, expect: recipe_c/recorded/n3_base_a1.manifest, tolerance: "recorded on S6, which has the same expert codes: bitwise expected"}
+  - id: "25"
+    title: "joint CARDAN on OBQ: expert gate/up (rank 16) + attention/GDN dense residuals (rank 16), 550 steps -> T550"
+    kind: gpu
+    status: bundle
+    determinism: tolerance
+    technique: "CARDAN (arXiv 2609.21137, faithful K=1 loss: KL + 0.5 CE, top-256) + answer-token KL4, one joint step"
+    gpu_hours: 15.5
+    vram_gib: 60
+    disk_gib: 20
+    needs: [obq, obq_kl24, base_a1_obq, teacher_cache, teacher_cache_wt103, calib, calib_mclp]
+    code: ["bundle:cardan/cardan_congiunto.py"]
+    run: ["OC={models}/gguf/tony-tern/OBIETTIVO_C; W=$OC/CARDAN_CONGIUNTO_1018; mkdir -p $W/cache_dequant $W/allena/tappe; KLP=$({python} -c \"import json; print(json.load(open('$OC/DENSI_CARDAN_OBQ_1016/kl_host/kl_OBQ.json'))['kl_media'])\"); cd $OC/CARDAN_C0B/codice && for k in 1 2 3 4; do [ -s $W/allena/tappe/cardan_550.pt ] && break; R=; [ -s $W/allena/ottimizzatori_ultimo.pt ] && R=--riprendi; env E2E_GDN=veloce E2E_GDN_MODULO=gdn_veloce_corsa_v5 E2E_MOTORE=triton2 E2E_CONV_DIRETTA=1 E2E_SENZA_COESISTENZA=1 E2E_CACHE_DEQUANT=$W/cache_dequant E2E_DENSI_PIEGATI=x2 E2E_PIEGA_GEMM=triton E2E_DENSI_SSM_AB=1 {gpu_env} {python} cardan_congiunto.py --uscita $W/allena --gguf $OC/OBQ_FIBRATO_S4_1014/Thor-T-C-S23-s2-OBQFIB.gguf --nome C-S4b-CONGIUNTO --base-a1 $OC/S5_CARDAN_DC600_1017/base_A1_r16 --init-c a1 --strati 0-39 --rango-esperti 16 --famiglie attn,gdn --rango-densi 16 --lr-densi 1e-5 --lr-gamma 1e-4 --tau 1.0 --lambda-ce 0.5 --topk 256 --kl4-peso 1 --kl-peso 0 --kl4-n 896 --modo congiunto --passi 550 --heldout-ogni 50 --pazienza 1000 --selezione kl4 --guardia-kl24 0.02 --kl-partenza-motore $KLP --vram-tetto 88 --ore-max 18 --fuso --tappe-dir $W/allena/tappe $R >> $W/corsa.log 2>&1 || true; done"]
+    produces:
+      - {key: t550_ckpt, path: "{models}/gguf/tony-tern/OBIETTIVO_C/CARDAN_CONGIUNTO_1018/allena/tappe/residui_550.pt", verify: exists, tolerance: "training registry at steps 50..550 within 1 % of the record; not bit-reproducible on gfx1151"}
+  - id: "26"
+    title: "fold T550: expert corrections into the TQ1_0R_1024 planes (per-expert Gq metric), dense residuals into the dense tensors"
+    kind: gpu
+    status: bundle
+    technique: "our zero-byte fold (described in the paper, section 3)"
+    gpu_hours: 3.5
+    vram_gib: 24
+    needs: [t550_ckpt, gq_experts, hess_dense]
+    code: ["bundle:post_tools/tappa_a_delta_1018.py", "bundle:cardan/cardan_piega.py", "bundle:cardan/cardan_piega_densi.py", "bundle:raffina/patch_gguf.py"]
+    run:
+      - "OC={models}/gguf/tony-tern/OBIETTIVO_C; W=$OC/CARDAN_CONGIUNTO_1018; T=$W/tappa_550; B=$OC/OBQ_FIBRATO_S4_1014/Thor-T-C-S23-s2-OBQFIB.gguf; mkdir -p $T; {python} {forge}/stato/tappa_a_delta_1018.py $W/allena/tappe/residui_550.pt $T/residui_delta.pt 550"
+      - "OC={models}/gguf/tony-tern/OBIETTIVO_C; W=$OC/CARDAN_CONGIUNTO_1018; T=$W/tappa_550; B=$OC/OBQ_FIBRATO_S4_1014/Thor-T-C-S23-s2-OBQFIB.gguf; cd $OC/CARDAN_C0B/codice && env PIEGA_ALGEBRA=cpu OMP_NUM_THREADS=10 LEVE_DT=float32 LEVE_THREADS=10 PIEGA_ORIGINALE_DIR=$OC/CARDAN_C0B/codice {gpu_env} {python} -X faulthandler cardan_piega.py --pt $W/allena/tappe/cardan_550.pt --gguf $B --out $T/piega_e --device cuda --lotto 16 > $T/piega_e.out 2>&1"
+      - "OC={models}/gguf/tony-tern/OBIETTIVO_C; W=$OC/CARDAN_CONGIUNTO_1018; T=$W/tappa_550; B=$OC/OBQ_FIBRATO_S4_1014/Thor-T-C-S23-s2-OBQFIB.gguf; {python} {models}/build/leve/raffina/patch_gguf.py --dir $T/piega_e/tensori --out $T/piega_e/Thor-T-C-S4b-CONG-E.gguf --base $B"
+      - "OC={models}/gguf/tony-tern/OBIETTIVO_C; W=$OC/CARDAN_CONGIUNTO_1018; T=$W/tappa_550; cd $OC/CARDAN_C0B/codice && env HIP_VISIBLE_DEVICES= PIEGA_ALGEBRA=cpu OMP_NUM_THREADS=10 LEVE_THREADS=10 {python} -X faulthandler cardan_piega_densi.py --delta $T/residui_delta.pt --gguf $T/piega_e/Thor-T-C-S4b-CONG-E.gguf --out $T/piega_d --device cpu > $T/piega_d.out 2>&1"
+      - "OC={models}/gguf/tony-tern/OBIETTIVO_C; W=$OC/CARDAN_CONGIUNTO_1018; T=$W/tappa_550; {python} {models}/build/leve/raffina/patch_gguf.py --dir $T/piega_d/tensori --out $T/piega_d/Thor-T-C-S4b-CONGIUNTO.gguf --base $T/piega_e/Thor-T-C-S4b-CONG-E.gguf"
+    produces:
+      - {key: t550, path: "{models}/gguf/tony-tern/OBIETTIVO_C/CARDAN_CONGIUNTO_1018/tappa_550/piega_d/Thor-T-C-S4b-CONGIUNTO.gguf", verify: tensors, tolerance: "753 tensors, 210 changed vs OBQ (gate/up experts + attn/GDN dense); MMLU-2000 71.30 recorded"}
+  - id: "27"
+    title: "S7 on-policy distillation (QAOPD), 10 rounds x 2 steps on T550 -> g10"
+    kind: gpu
+    status: blocked
+    determinism: stochastic
+    technique: "QAOPD (arXiv 2609.26708), official reward"
+    gpu_hours: 8.6
+    vram_gib: 60
+    disk_gib: 73
+    needs: [t550, teacher_cache, dump_tool]
+    code: ["bundle:launchers/c_s7_t550_1020.sh", "bundle:onpolicy/thor_v2/e2e_onpolicy.py", "bundle:onpolicy/thor_v2/e2e_allena.py"]
+    blockers:
+      - "the recorded launcher (402 lines) starts the student llama-server and the probe as `systemd-run --user` units and writes the house activity log; it must be rewritten as a child-process loop (rollouts -> teacher -> 2 steps -> export) before it runs elsewhere"
+      - "sampled rollouts: not reproducible; the 31 Oct internal re-run measured the effect (GSM8K start 57.81 vs 48.83 on the same engine)"
+      - "server patch of the development build (raw text instead of HTTP 500 when the chat parser fails, thor-c0t uncommitted diff of tools/server/server-task.cpp): upstream rewrote that code (chat_session.feed/finish); check that /completion never returns 500 on the release engine, or port the try/catch"
+    run: ["OC={models}/gguf/tony-tern/OBIETTIVO_C; env OPD_OSPITE=$OC/CARDAN_CONGIUNTO_1018/tappa_550/piega_d/Thor-T-C-S4b-CONGIUNTO.gguf OPD_SENZA_S4=1 bash {bundle}/launchers/c_s7_t550_1020.sh"]
+    produces:
+      - {key: g10, path: "{models}/gguf/tony-tern/OBIETTIVO_C/S7_CONGIUNTO_T550_1020/Thor-T-C-S7-T550-g10.gguf", verify: tensors, tolerance: "recorded sha 7ba0b57f...; trits unchanged vs T550, scales in 430 tensors, 301 F32; MMLU-2000 71.70"}
+  - id: 27k
+    title: "engine KL24 of g10"
+    kind: measure
+    status: bundle
+    determinism: measurement
+    gpu_hours: 0.1
+    needs: [g10, teacher_cache, dump_tool]
+    code: ["bundle:kl/kl_realizzata.py"]
+    run: ["OC={models}/gguf/tony-tern/OBIETTIVO_C; mkdir -p $OC/DENSI2_SU_S7T550_1020/kl; env LD_LIBRARY_PATH={engine} GGML_VK_TQ1R_Q8=1 GGML_VK_DISABLE_GRAPH_OPTIMIZE=1 {gpu_env} {python} {models}/gguf/tony-tern/R026/v12/_lav/kl_realizzata.py --thor-v2 $OC/CARDAN_C0B/codice/thor_v2 --cache {path.teacher_cache} --dump-bin {path.dump_tool} --out $OC/DENSI2_SU_S7T550_1020/kl --righe 24 C-S7-T550-g10=$OC/S7_CONGIUNTO_T550_1020/Thor-T-C-S7-T550-g10.gguf"]
+    produces:
+      - {key: g10_kl24, path: "{models}/gguf/tony-tern/OBIETTIVO_C/DENSI2_SU_S7T550_1020/kl/kl_C-S7-T550-g10.json", verify: exists, tolerance: "recorded 0.6808007821325285"}
+  - id: "28"
+    title: "CARDAN base A.1 on g10 (S7 changed the gate/up scales)"
+    kind: cpu
+    status: bundle
+    cpu_hours: 0.55
+    needs: [g10, hess_dense]
+    code: ["bundle:cardan/cardan_costruisci.py"]
+    run: ["OC={models}/gguf/tony-tern/OBIETTIVO_C; D=$OC/S5_SU_S7T550_1020/base_A1_r16; mkdir -p $D; cd $OC/CARDAN_C0B/codice && env HIP_VISIBLE_DEVICES= OMP_NUM_THREADS=4 {python} cardan_costruisci.py --gguf $OC/S7_CONGIUNTO_T550_1020/Thor-T-C-S7-T550-g10.gguf --out $D --strati 0-39 --rango 16 --thread 4 >> $D/log.txt 2>&1"]
+    produces:
+      - {key: base_a1_g10, path: "{models}/gguf/tony-tern/OBIETTIVO_C/S5_SU_S7T550_1020/base_A1_r16/info.json", verify: exists}
+  - id: "29"
+    title: "joint CARDAN on g10 to step 400 -> T400 (fixed scales + plan reuse)"
+    kind: gpu
+    status: bundle
+    determinism: tolerance
+    gpu_hours: 14.5
+    vram_gib: 60
+    disk_gib: 20
+    needs: [g10, g10_kl24, base_a1_g10, teacher_cache, teacher_cache_wt103, calib, calib_mclp]
+    code: ["bundle:cardan/cardan_congiunto.py"]
+    run: ["OC={models}/gguf/tony-tern/OBIETTIVO_C; W=$OC/CARDAN_CONGIUNTO_S7T550_1020; mkdir -p $W/cache_dequant $W/allena/tappe; KLP=$({python} -c \"import json; print(json.load(open('$OC/DENSI2_SU_S7T550_1020/kl/kl_C-S7-T550-g10.json'))['kl_media'])\"); cd $OC/CARDAN_C0B/codice && for k in 1 2 3 4; do [ -s $W/allena/tappe/cardan_400.pt ] && break; R=; [ -s $W/allena/ottimizzatori_ultimo.pt ] && R=--riprendi; env E2E_SCALE_FISSE=1 E2E_RIUSO=1 E2E_GDN=veloce E2E_GDN_MODULO=gdn_veloce_corsa_v5 E2E_MOTORE=triton2 E2E_CONV_DIRETTA=1 E2E_SENZA_COESISTENZA=1 E2E_CACHE_DEQUANT=$W/cache_dequant E2E_DENSI_PIEGATI=x2 E2E_PIEGA_GEMM=triton E2E_DENSI_SSM_AB=1 {gpu_env} {python} cardan_congiunto.py --uscita $W/allena --gguf $OC/S7_CONGIUNTO_T550_1020/Thor-T-C-S7-T550-g10.gguf --nome C-S7T550-CONGIUNTO --base-a1 $OC/S5_SU_S7T550_1020/base_A1_r16 --init-c a1 --strati 0-39 --rango-esperti 16 --famiglie attn,gdn --rango-densi 16 --lr-densi 1e-5 --lr-gamma 1e-4 --tau 1.0 --lambda-ce 0.5 --topk 256 --kl4-peso 1 --kl-peso 0 --kl4-n 896 --modo congiunto --passi 400 --heldout-ogni 50 --pazienza 1000 --selezione kl24_paper --guardia-kl24 0.02 --kl-partenza-motore $KLP --vram-tetto 88 --ore-max 18 --fuso --tappe-dir $W/allena/tappe $R >> $W/corsa.log 2>&1 || true; done"]
+    produces:
+      - {key: t400_ckpt, path: "{models}/gguf/tony-tern/OBIETTIVO_C/CARDAN_CONGIUNTO_S7T550_1020/allena/tappe/cardan_400.pt", verify: exists, tolerance: "registry within 1 % of the record; not bit-reproducible"}
+  - id: "30"
+    title: "fold T400 (fast fold, Babai rounding in Triton, one process)"
+    kind: gpu
+    status: bundle
+    gpu_hours: 0.7
+    vram_gib: 30
+    needs: [t400_ckpt, gq_experts, hess_dense]
+    code: ["bundle:post_tools/tappa_a_delta_1018.py", "bundle:cardan/cardan_piega_veloce.py", "bundle:cardan/cardan_piega_densi_gpu_veloce.py", "bundle:raffina/patch_gguf.py"]
+    run:
+      - "OC={models}/gguf/tony-tern/OBIETTIVO_C; W=$OC/CARDAN_CONGIUNTO_S7T550_1020; T=$W/tappa_400; mkdir -p $T; {python} {forge}/stato/tappa_a_delta_1018.py $W/allena/tappe/residui_400.pt $T/residui_delta.pt 400"
+      - "OC={models}/gguf/tony-tern/OBIETTIVO_C; W=$OC/CARDAN_CONGIUNTO_S7T550_1020; T=$W/tappa_400; B=$OC/S7_CONGIUNTO_T550_1020/Thor-T-C-S7-T550-g10.gguf; cd $OC/CARDAN_C0B/codice && env FORGIA_BABAI_TRITON=1 PIEGA_ALGEBRA=cpu OMP_NUM_THREADS=4 PIEGA_PREP_FILI=6 LEVE_DT=float32 LEVE_THREADS=4 PIEGA_ORIGINALE_DIR=$OC/CARDAN_C0B/codice {gpu_env} {python} -X faulthandler cardan_piega_veloce.py --pt $W/allena/tappe/cardan_400.pt --gguf $B --out $T/piega_e --device cuda --lotto 16 --strati 0-39 > $T/piega_e.out 2>&1"
+      - "OC={models}/gguf/tony-tern/OBIETTIVO_C; W=$OC/CARDAN_CONGIUNTO_S7T550_1020; T=$W/tappa_400; B=$OC/S7_CONGIUNTO_T550_1020/Thor-T-C-S7-T550-g10.gguf; {python} {models}/build/leve/raffina/patch_gguf.py --dir $T/piega_e/tensori --out $T/piega_e/Thor-T-C-S4b-CONG-E.gguf --base $B"
+      - "OC={models}/gguf/tony-tern/OBIETTIVO_C; W=$OC/CARDAN_CONGIUNTO_S7T550_1020; T=$W/tappa_400; B=$OC/S7_CONGIUNTO_T550_1020/Thor-T-C-S7-T550-g10.gguf; cd $OC/CARDAN_C0B/codice && env {gpu_env} {python} cardan_piega_densi_gpu_veloce.py --delta $T/residui_delta.pt --gguf $B --out $T/piega_d --device cuda --dtype float32 --lotto 8 > $T/piega_d.out 2>&1"
+      - "OC={models}/gguf/tony-tern/OBIETTIVO_C; W=$OC/CARDAN_CONGIUNTO_S7T550_1020; T=$W/tappa_400; {python} {models}/build/leve/raffina/patch_gguf.py --dir $T/piega_d/tensori --out $T/piega_d/Thor-T-C-S4b-CONGIUNTO.gguf --base $T/piega_e/Thor-T-C-S4b-CONG-E.gguf"
+    produces:
+      - {key: t400, path: "{models}/gguf/tony-tern/OBIETTIVO_C/CARDAN_CONGIUNTO_S7T550_1020/tappa_400/piega_d/Thor-T-C-S4b-CONGIUNTO.gguf", verify: tensors, tolerance: "recorded file sha f118d59a61b29db7; 210 tensors changed vs g10; MMLU-2000 72.40"}
+  - id: "31"
+    title: "POST: 50 joint steps on T400 (gate/up and down scales, all 301 F32, dense residuals, KL4 rotations, CKA alignment), export and fold -> C"
+    kind: gpu
+    status: blocked
+    determinism: tolerance
+    gpu_hours: 1.5
+    vram_gib: 88
+    disk_gib: 60
+    needs: [t400, kl4_rotations, teacher_states, teacher_cache, teacher_cache_wt103, calib, bench_mixed]
+    code: ["bundle:bpp/cardan_congiunto_scale.py", "bundle:post_tools/bpost_scale_down_fp32_1026.py", "bundle:post_tools/f32_esporta.py", "bundle:post_tools/scale_gateup_esporta.py", "bundle:cardan/cardan_piega_densi_gpu_veloce.py", "bundle:launchers/t400post_tappe_v2_1027.sh"]
+    blockers:
+      - "the export/patch/measure sequence after training (H1 scales + F32 export, dense fold, mixed-order MMLU and remap) exists only as the internal runner's post.py, which imports the private layout module; it must be ported into this package (~300 lines) or the recorded t400post_tappe_v2_1027.sh launcher must be freed of the house lock and activity log"
+    run: ["OC={models}/gguf/tony-tern/OBIETTIVO_C; W=$OC/CARDAN_T400POST_1027; E=$W/allena; mkdir -p $E/tappe $W/cache_dequant; cd $OC/SINTESI_1025/BPP/codice && env CARDAN_GRUPPI=1 E2E_RIUSO=1 E2E_GDN=veloce E2E_GDN_MODULO=gdn_veloce_corsa_v5 E2E_MOTORE=triton2 E2E_CONV_DIRETTA=1 E2E_SENZA_COESISTENZA=1 E2E_CACHE_DEQUANT=$W/cache_dequant E2E_DENSI_PIEGATI=x2 E2E_PIEGA_GEMM=triton E2E_DENSI_SSM_AB=1 {gpu_env} {python} cardan_congiunto_scale.py --uscita $E --gguf $OC/CARDAN_CONGIUNTO_S7T550_1020/tappa_400/piega_d/Thor-T-C-S4b-CONGIUNTO.gguf --nome C-T400POST --scale-down-lr 1e-4 --strati 0-39 --rango-esperti 0 --famiglie attn,gdn --rango-densi 16 --lr-densi 1e-5 --lr-gamma 1e-4 --tau 1.0 --lambda-ce 0.5 --topk 256 --kl4-peso 1 --kl-peso 0 --kl4-n 896 --modo congiunto --passi 50 --heldout-ogni 50 --pazienza 1000 --selezione kl24_paper --guardia-kl24 0.02 --tappe-dir $E/tappe --fuso --kl4-rotazioni 4 --kl4-rotazioni-modo ciclo --kl4-rotazioni-dir {path.kl4_rotations} --allinea-peso 0.3 --allinea-modo rapporto --allinea-metrica cka --allinea-strati 0-39 --allinea-cache {path.teacher_states} --scale-gateup-lr 1e-4 --ricetta B3 --vram-tetto 88 --ore-max 20 --allena-f32 tutte >> $E/corsa.log 2>&1"]
+    produces:
+      - {key: c_post50, path: "{models}/gguf/tony-tern/OBIETTIVO_C/CARDAN_T400POST_1027/tappa_50/Thor-T-C-T400POST-T50.gguf", verify: tensors, expect: bc36d18b7fd8257403653132fa0fa3db353b51c000304646322ef38c731b036b, tolerance: "exact match unlikely (GPU training); acceptance: MMLU-2000 within 1.0 of 73.15 and McNemar p >= 0.05"}
+  - id: M1
+    title: "MMLU-2000 of the replayed C on the release engine"
+    kind: measure
+    status: ported
+    determinism: measurement
+    gpu_hours: 0.3
+    vram_gib: 16
+    needs: [c_post50, bench]
+    code: ["engine:llama-perplexity"]
+    run: ["env LD_LIBRARY_PATH={engine} GGML_VK_DISABLE_GRAPH_OPTIMIZE=1 {engine}/llama-perplexity -m {path.c_post50} -ngl 999 -c 4096 -np 4 -ub 512 -dev {vk_dev} --multiple-choice --multiple-choice-tasks 100000 -f {path.bench} > {work}/mmlu_C_replay.log 2>&1"]
+    produces:
+      - {key: c_mmlu, path: "{work}/mmlu_C_replay.log", verify: mmlu, expect: "73.15", tolerance: "band=1.0"}

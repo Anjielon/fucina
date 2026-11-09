@@ -9,6 +9,9 @@
 
 ---
 
+> **Name.** This Fucina is a quantization *forge* for ternary language models. It is unrelated to
+> [matteo-grella/fucina](https://github.com/matteo-grella/fucina), an LLM inference engine with the same name.
+
 **Fucina** (Italian for *forge*) builds a ternary version (`T ∈ {-1, 0, +1}`) of a pre-trained language model by
 deciding, **for each family of tensors**, which quantization techniques measurably help, in which order, and with
 which parameters — and by recording every measurement so that the final recipe can be replayed with one command on a
@@ -109,6 +112,21 @@ automatic runs until `fucina enable <name>`.
 | `tesseraq` | F4 | attn, gdn, shexp, experts_gate_up, experts_down | arXiv 2410.19103 (TesseraQ, Alg. 1) | faithful | PREPARED | opt-in |
 | `int8` | F5 | whole model | in-house lever (GGML_VK_TQ1R_Q8): MMLU 74.65 vs 74.60, tg 50.4 -> 56.3 | — | — | on |
 | `mtp` | F5 | mtp | plan of 8 Oct: MTP head to be measured (acceptance and tok/s) on PV12P/RILQ | — | — | on |
+
+## Replaying a published chain
+
+`fucina replay` re-runs a recorded chain from public inputs and checks every step against the record. The reference is
+the chain from the released frozen root of Thor-T to **C**, the trunk of `Thor-T-35B-A3B-XS`
+([`examples/thor/recipe_c.yaml`](examples/thor/recipe_c.yaml), documentation in [`docs/REPLAY.md`](docs/REPLAY.md)):
+
+```bash
+fucina replay examples/thor/recipe_c.yaml --dry-run --set work=/data/thor-c --set engine=/opt/llama.cpp/build/bin \
+    --set bundle_src=/data/thor-c-code --set venv=/data/venv      # plan + checks, nothing runs
+fucina replay examples/thor/recipe_c.yaml --run   --set ...      # run, verify, resume
+```
+
+The dry run shows, per step, whether it runs from code in this package, from the frozen research code bundle, or is
+still blocked (and why), with the estimated GPU hours.
 
 ## Installation
 

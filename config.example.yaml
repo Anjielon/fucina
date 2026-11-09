@@ -54,3 +54,10 @@ techniques:
 
 # Lab-notebook sources read by `fucina import` (the bundled importers parse the Thor-T notebook format).
 import_sources: {}
+
+# Roots of `fucina replay` recipes (each can also be given with --set NAME=PATH or FUCINA_REPLAY_<NAME>).
+replay:
+  work: /data/thor-c                    # replay output
+  engine: /opt/llama.cpp/build/bin      # build of the release engine (Anjielon/llama.cpp, tag thor-t-v1)
+  bundle_src: /data/thor-c-code         # the published code bundle
+  venv: /data/venv                      # Python environment with torch/triton/transformers

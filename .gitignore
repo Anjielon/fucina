@@ -1,0 +1,14 @@
+__pycache__/
+*.egg-info/
+build/
+dist/
+.pytest_cache/
+runs/
+measurements.sqlite
+forge-outputs/
+fucina.yaml
+
+# port equivalence checks (machine-local settings and outputs)
+scripts/equivalence_paths.env
+.equivalence_pytest/
+equivalence-logs/
