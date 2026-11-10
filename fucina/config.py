@@ -89,6 +89,7 @@ class Config:
             d[k] = [_resolve(base, p) for p in (d.get(k) or [])]
         self.data = d
         self.source = source
+        check_unset(d.get("job_env") or {}, "job_env")
         if isinstance(d.get("python"), str) and "$" in d["python"]:
             raise ConfigError(f"python = {d['python']}: an environment variable it names is not set")
         self.paths = Paths(d.get("paths") or {})
@@ -164,7 +165,7 @@ def load(path: Optional[str] = None) -> Config:
         return Config()
     f = Path(p)
     if not f.exists():
-        raise FileNotFoundError(f"fucina config not found: {f}")
+        raise ConfigError(f"fucina config not found: {f}")
     return Config(yaml.safe_load(f.read_text()) or {}, str(f.resolve()))
 
 
