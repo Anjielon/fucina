@@ -354,11 +354,14 @@ def cmd_analyze(a) -> None:
 def main(argv: Optional[list] = None) -> None:
     p = build_parser()
     a = p.parse_args(argv)
-    if a.config or not config.is_active():
-        config.activate(a.config)
-    if getattr(a, "answer", None) is None and getattr(a, "id", None):
-        p.error("decide ID needs an answer: enable | disable | defer")
-    a.f(a)
+    try:
+        if a.config or not config.is_active():
+            config.activate(a.config)
+        if getattr(a, "answer", None) is None and getattr(a, "id", None):
+            p.error("decide ID needs an answer: enable | disable | defer")
+        a.f(a)
+    except config.ConfigError as e:
+        p.exit(2, f"fucina: configuration error: {e}\n")
 
 
 if __name__ == "__main__":

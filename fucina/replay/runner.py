@@ -206,6 +206,7 @@ def plan(r: Recipe, roots: dict, sel: list[Step], forbid: list[str], show: bool 
     if show:
         print("\n".join(lines))
     if script:
+        script.parent.mkdir(parents=True, exist_ok=True)
         script.write_text("\n".join(sh) + "\n")
         script.chmod(0o755)
     return {"problems": problems, "blocked": blocked, "totals": tot}

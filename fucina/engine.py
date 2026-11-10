@@ -145,6 +145,7 @@ def load_model(name_or_file: str) -> dict:
     if not p.exists():
         raise FileNotFoundError(f"model {name_or_file}: {p} not found (set models_dirs in the fucina config)")
     d = config._expand(yaml.safe_load(p.read_text()))
+    config.check_unset(d, f"model file {p}")
     d["_file"] = str(p)
     return d
 

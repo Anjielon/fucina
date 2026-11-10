@@ -138,6 +138,19 @@ def _expand(v: Any) -> Any:
     return v
 
 
+def check_unset(v: Any, where: str) -> None:
+    """Raise if a string still names an environment variable after expansion (an unset variable)."""
+    if isinstance(v, str):
+        if "$" in v:
+            raise ConfigError(f"{where}: {v}: an environment variable it names is not set")
+    elif isinstance(v, dict):
+        for x in v.values():
+            check_unset(x, where)
+    elif isinstance(v, list):
+        for x in v:
+            check_unset(x, where)
+
+
 def _resolve(base: Path, p: str) -> str:
     if "$" in str(p):
         raise ConfigError(f"{p}: an environment variable it names is not set")
