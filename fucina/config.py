@@ -73,6 +73,9 @@ class Paths(dict):
             raise ConfigError(f"path '{key}' = {v}: an environment variable it names is not set")
         return v
 
+    def get(self, key: str, default=None):
+        return self[key] if key in self else default
+
 
 class Config:
     def __init__(self, data: Optional[dict] = None, source: Optional[str] = None):
@@ -102,7 +105,10 @@ class Config:
 
     def resolve(self, key_or_path: str) -> str:
         """A key of ``paths`` or a literal path (old ``AMB.get(x, x)`` idiom)."""
-        return self.paths.get(key_or_path, key_or_path)
+        v = self.paths.get(key_or_path, key_or_path)
+        if isinstance(v, str) and "$" in v:
+            raise ConfigError(f"{v}: an environment variable it names is not set")
+        return v
 
     def technique(self, name: str) -> dict:
         return (self.data.get("techniques") or {}).get(name) or {}
