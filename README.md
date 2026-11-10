@@ -121,7 +121,7 @@ the chain from the released frozen root of Thor-T to **C**, the trunk of `Thor-T
 
 ```bash
 fucina replay examples/thor/recipe_c.yaml --dry-run --set work=/data/thor-c --set engine=/opt/llama.cpp/build/bin \
-    --set bundle_src=/data/thor-c-code --set venv=/data/venv      # plan + checks, nothing runs
+    --set venv=/data/venv      # plan + checks, nothing runs
 fucina replay examples/thor/recipe_c.yaml --run   --set ...      # run, verify, resume
 ```
 

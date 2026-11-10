@@ -86,6 +86,8 @@ class Config:
             d[k] = [_resolve(base, p) for p in (d.get(k) or [])]
         self.data = d
         self.source = source
+        if isinstance(d.get("python"), str) and "$" in d["python"]:
+            raise ConfigError(f"python = {d['python']}: an environment variable it names is not set")
         self.paths = Paths(d.get("paths") or {})
 
     def __getitem__(self, key: str) -> Any:

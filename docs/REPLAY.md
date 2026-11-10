@@ -14,7 +14,7 @@ git clone --branch thor-t-v1 https://github.com/Anjielon/llama.cpp && cmake -S l
 # 1. plan and check everything, run nothing (CPU, seconds)
 fucina replay examples/thor/recipe_c.yaml --dry-run \
     --set work=/data/thor-c --set engine=$PWD/llama.cpp/build/bin \
-    --set bundle_src=/data/thor-c-code --set venv=/data/venv --script /data/thor-c/commands.sh
+    --set venv=/data/venv --script /data/thor-c/commands.sh
 
 # 2. run (resumable; a verified step is skipped)
 fucina replay examples/thor/recipe_c.yaml --run --set ...      # same --set values

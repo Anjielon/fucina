@@ -1,7 +1,7 @@
 # Replay of recipe C: from the released frozen root R2B3m to C, the trunk of Thor-T-35B-A3B-XS.
 #
 #   fucina replay examples/thor/recipe_c.yaml --set work=/data/thor-c --set engine=/opt/llama.cpp/build/bin \
-#        --set bundle_src=/data/thor-c-code --set venv=/data/venv --dry-run
+#        --set venv=/data/venv --dry-run
 #
 # Lineage (the record, Oct 2026; every number is MMLU-2000 on the launch engine):
 #   R2B3m -> C0B -> P2 -> S1 -> S2 -> OBQ (69.25) -> joint CARDAN T550 (71.30) -> S7 on-policy g10 (71.70)
