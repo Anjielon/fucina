@@ -1,0 +1,1 @@
+gguf-py tree digest (sha256 of sorted 'sha256sum' lines of *.py) c8f452f1dfdd290367c4b5ecddbc24d658a8f470b4cd5f3edcabafb41c0e93dc ; git HEAD of /mnt/models/build/thor-pub-q8 23968667e4c5aace6876623c31280b4122de7570

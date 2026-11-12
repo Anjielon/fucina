@@ -1,0 +1,14 @@
+b7f9b705064800d18e9f1adba33915e2ade44adfd28a33590c57f7805c3b4354  /mnt/models/build/leve/raffina/patch_gguf.py
+38bea283218eb7ddcfe112c446df88bd391a14fd0c9c4de98deacd56eafb40b4  /mnt/models/build/wt-r022b/thor_v2/rd_ternary/analizza_gruppo_scala.py
+9251ade6bcb4586d51a7bc47cfb064ff4756ba0c73831dd64394b8b7a0cfe4d4  /mnt/models/build/wt-r022b/thor_v2/rd_ternary/costruisci_g64.py
+cc3370fed0d7177572232f384fbd15e33e6ee99b80bceb5de449b388fc29d27d  /mnt/models/build/wt-r022b/thor_v2/rd_ternary/dimensiona_scala_vera.py
+0357a9a6054c8d32a1265c3558a73095b36e140fca82c5829f09efe4b59dfc40  /mnt/models/build/wt-r022b/thor_v2/rd_ternary/dkl_raccogli.py
+098a1aa83bf4dcf9190d0fe1ff0404d8a89a15d26a6a0b888e2a0bca02dd11b9  /mnt/models/build/wt-r022b/thor_v2/rd_ternary/simula_piani_ternari.py
+e842ace5d616a113a63950fcd9d504798c64771e7419bd9a900b85afe1e7e7fa  /mnt/models/build/wt-r022b/thor_v2/rd_ternary/stima_gruppo_scala.py
+2256f7184599a649b320d3e73b92c0d96c41364465ca24d72f5daac3bc1e1dc6  /mnt/models/gguf/tony-tern/CARDAN/cardan_corsa.sh
+8abfd66189717f80c5ce48e83f50b771cf578855fe8e9f0ae77264192b9ad268  /mnt/models/gguf/tony-tern/CARDAN/cardan_ospite.sh
+64bab16b94a5e162272aaa0793b1aaaecd0cfafb488d6613367ab8f5d48e73b3  /mnt/models/gguf/tony-tern/CARDAN/codice/cardan_kd.py
+dd45c13493be3e26b96356d7bf60de95cc1b80638a1042c76fa7c94626780de1  /mnt/models/gguf/tony-tern/CARDAN/codice/cardan_kd_moduli.py
+38ba8a69a1dd71021b426d15ce8dd3dfcbc37e5003e4197ffe64dcecf2793247  /mnt/models/gguf/tony-tern/CARDAN/codice/cardan_kd_paper.py
+87cf4588add99d631d8fcdd6903332ba2aedf468defa0065925e9729b1163235  /mnt/models/gguf/tony-tern/CARDAN/codice/cardan_piega.py
+59aa99f7cc8064a2d78d5e99c498656113ee07aa052f3a90667486a267a8a18b  /mnt/models/gguf/tony-tern/CARDAN/codice/cardan_piega_densi.py

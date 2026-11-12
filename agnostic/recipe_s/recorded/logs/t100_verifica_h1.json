@@ -1,0 +1,28 @@
+{
+ "prima": "/mnt/models/gguf/tony-tern/BANCO_1031/Thor-T-eb882K-SEL_pred_CARDAN.gguf",
+ "dopo": "/mnt/models/gguf/tony-tern/B_POST_1101/tappa_100/ospite_H1.gguf",
+ "tensori": 1576,
+ "cambiati": 421,
+ "per_famiglia": {
+  "attn_k_norm": 10,
+  "attn_norm": 40,
+  "attn_q_norm": 10,
+  "ffn_down_exps": 40,
+  "ffn_gate_exps": 40,
+  "ffn_gate_inp": 40,
+  "ffn_gate_inp_shexp": 40,
+  "ffn_up_exps": 40,
+  "output_norm.weight": 1,
+  "post_attention_norm": 40,
+  "ssm_a": 30,
+  "ssm_conv1d": 30,
+  "ssm_dt": 30,
+  "ssm_norm": 30
+ },
+ "fuori": [],
+ "codici_diversi": [],
+ "f32_non_finiti": [],
+ "intestazione_diversa": [],
+ "codici_controllati": 120,
+ "esito": true
+}

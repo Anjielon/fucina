@@ -1,0 +1,4 @@
+b7f9b705064800d18e9f1adba33915e2ade44adfd28a33590c57f7805c3b4354  /mnt/models/build/leve/raffina/patch_gguf.py
+619f89a69dbc9a11b7eecf8b63b52aba809b6450bdca2db293443fd6e90140ba  /mnt/models/build/thor-pub-q8/tools/ternary/pack_planes.py
+2c7044e38b8c17816a301584196a8694f64bf52f304968ab7a4d750a863e5b0e  /home/angelo/tony-forgia/pubblicazioni/LANCIO_FINALE_1102/strumenti/pulisci_intestazione.py
+972a77ba2531e1738f6b412863a6db20119ac3333bf6f3df91de42e1d2185438  /home/angelo/tony-forgia/fucina_en/fucina/replay/gguf_hash.py

@@ -1,0 +1,3 @@
+codice 64bab16b94a5e162 dd45c13493be3e26 87cf4588add99d63 0a8b92a1b8df3552 
+motore 05589d47fe2e16fddd9a23012d9ec6ded52d62e2 llama-perplexity 6ab99a99e34ee172
+ospite /mnt/models/gguf/tony-tern/TUTTE/eb882K.gguf 9470184864 B

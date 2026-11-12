@@ -1,0 +1,4 @@
+PIENO	79.4000	2000	a6775fbea9c80ce5062f775d0a8784a4b078b362e7b9530bb1ab5c139d549ca8	/mnt/models/gguf/tony-tern/PIENO/mmlu_int8.log
+A	80.3000	2000	84af7e21dea0217b0e7d4c94cf5857280daeb9f9b94262bad6d811b96a62b179	/mnt/models/gguf/tony-tern/CARDAN_FEDELE/kd/mmlu_CARDAN.log
+A-base-shuffled-bench	n/a	2000	4b08de61fa669babd85bb5d1334ff4ffae44bf7b5837e1459e254feecff169d2	/mnt/models/gguf/tony-tern/A_POST_1101/base/mmlu_A_base.log
+A-POST-T50	n/a	2000	39a6ef67ab106140f5aabc4b8a92a25883f64d404787d75f476414f600658c06	/mnt/models/gguf/tony-tern/A_POST_1101/tappa_50/mmlu_APOST50.log

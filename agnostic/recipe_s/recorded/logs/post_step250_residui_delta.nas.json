@@ -1,0 +1,6 @@
+{
+ "sorgente": "/mnt/models/gguf/tony-tern/B_POST_1101/allena/residui_delta.pt",
+ "nas": "/mnt/nas/CACHEDEV1_DATA/modelli-fp/obiettivo_c_1022/B_POST_1101/allena/residui_delta.pt",
+ "sha256": "b63ce76101b915114d954b291a05b260e5815fdbcd0b4f55c03ed799dfd1a74c",
+ "byte": 5117091347
+}

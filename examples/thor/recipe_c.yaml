@@ -23,7 +23,7 @@ description: >
   BitNet convention (token embedding and output head Q8_0, norms/router F32), 8,631,199,776 bytes.
 
 forge:
-  release: thor-recipe-c-v1        # annotated tag of the Fucina repository this recipe belongs to
+  release: thor-recipe-c-v1.1        # annotated tag of the Fucina repository this recipe belongs to
   note: "the verdict step V records the forge commit: in a git clone the commit of this tag (HEAD must be it), in a release tarball the commit that git archive writes into fucina/replay/FORGE_COMMIT"
 
 roots:
@@ -196,7 +196,7 @@ inputs:
   code_bundle:
     kind: package
     path: "{bundle_src}/BUNDLE.json"
-    sha256: 92b97fc524b8289689a04964f425cd4d212c807ba561cece31f84435dfdcafee
+    sha256: 558b67a6d80042511e8f82bb4b142a5224100257d6fb691ed2a0aab5b5c8fea7
     note: "frozen research code of the recorded run (5,173 files), shipped in this repository; BUNDLE.json lists the sha256 of every file and `replay-bundle install` refuses any file that differs"
   hess_dense:
     kind: hf
@@ -788,6 +788,6 @@ steps:
     status: ported
     needs: [c_post50, c_mcnemar]
     code: ["package:fucina.replay.status"]
-    run: ["{python} -m fucina.replay.status --forge-release thor-recipe-c-v1 --gguf {path.c_post50} --expect-digest bc36d18b7fd8257403653132fa0fa3db353b51c000304646322ef38c731b036b --mcnemar-json {path.c_mcnemar} --recorded-mmlu 73.15 --band 1.0 --out {work}/REPLAY_STATUS"]
+    run: ["{python} -m fucina.replay.status --forge-release thor-recipe-c-v1.1 --gguf {path.c_post50} --expect-digest bc36d18b7fd8257403653132fa0fa3db353b51c000304646322ef38c731b036b --mcnemar-json {path.c_mcnemar} --recorded-mmlu 73.15 --band 1.0 --out {work}/REPLAY_STATUS"]
     produces:
       - {key: replay_status, path: "{work}/REPLAY_STATUS", verify: exists}

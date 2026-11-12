@@ -1,0 +1,14 @@
+{
+ "A": "/mnt/models/gguf/tony-tern/B_POST_1101/base/mmlu_B_base.log",
+ "B": "/mnt/models/gguf/tony-tern/B_POST_1101/tappa_100/mmlu_BPOST100.log",
+ "n": 2000,
+ "acc_A": 76.05,
+ "acc_B": 77.8,
+ "delta_B_meno_A": 1.750000000000007,
+ "A_giusta_B_sbagliata": 78,
+ "B_giusta_A_sbagliata": 113,
+ "p_mcnemar_esatto": 0.013677049688766797,
+ "scelte_uguali": 1752,
+ "finale_A": null,
+ "finale_B": null
+}

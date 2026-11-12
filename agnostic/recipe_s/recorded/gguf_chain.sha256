@@ -1,0 +1,10 @@
+# sha256  role  path   (measured 12/11/2026 unless marked RECORDED-ONLY)
+56cb5bcdd9813a1015a7cad5364b5a80226f990fb8bd561b7cae4727d70efc43  R2B3m_root  /mnt/models/gguf/tony-tern/R2B3m/Thor-T-R2B3m.gguf   (value of recipe_c_d2; re-measured below)
+247395e18124889dcd2147f2c0af0edbd231e8e1c91426a28cd4b2aeff7397b7  eb882  RECORDED-ONLY (R026/v33b_script.log: file no longer on disk)
+099f1ececa3381aaf808af303d767d0b09839c70c96100a98d67241b6ff63262  eb882K  /mnt/models/gguf/tony-tern/TUTTE/eb882K.gguf (= NAS R029/eb882_K1.045.gguf, identical)
+dae59b0f2c2dfe9092e64608c122193dbd3c86bfb5f1c1b2fc980606e6015142  eb882K-CARDAN  /mnt/models/gguf/tony-tern/CARDAN/kd_r16_eb882K/Thor-T-eb882K-CARDAN.gguf
+6bdceb310b5113f2dc160a2b2d50b541f6ab9449a894ae83ddcd06939f1390c3  eb882K-SEL_pred  RECORDED-ONLY (COMBINAZIONE_eb882K/SEL_pred/*.sha256; GGUF deleted)
+4e4f94087067858f0437de7cfc6d12fc7a9657563cfa83ab40f840734dc9c867  B=eb882K-SEL_pred_CARDAN  /mnt/models/gguf/tony-tern/BANCO_1031/Thor-T-eb882K-SEL_pred_CARDAN.gguf
+60e2d7da44e96b5627ea80990e9a681a9f49fb35e98ef32db82285cb9bcfe69b  B-POST-T100  /mnt/models/gguf/tony-tern/B_POST_1101/tappa_100/Thor-T-B-POST-T100.gguf
+39a0f0a3caae71d0910bf063f58eac5e412212d94b69e111e66d954eaf7be6d9  B-POST-T100-packed  regenerated 12/11 by pack_planes.py (intermediate, not kept)
+9d5afbf85afd0613dc67940c8c56e774790cc580f919a716445bd479cc6d65f9  S_release  Thor-T-35B-A3B-S.gguf (launch file; NAS copy removed, lives on the Aragorn archive; regenerated bit-identical 12/11)

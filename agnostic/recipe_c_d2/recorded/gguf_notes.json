@@ -1,0 +1,4 @@
+{
+ "c0b": "C0B: C0 con token_embd/output Q8_0 del maestro (convenzione BitNet, Angelo 9/10 21:25). Ospite /mnt/models/gguf/tony-tern/R2B3m/Thor-T-R2B3m.gguf; tolti i piani aggiuntivi; sostituiti da /mnt/models/gguf/tony-tern/OBIETTIVO_C/C0/tensori, /mnt/models/gguf/tony-tern/OBIETTIVO_C/C0B/tensori",
+ "p2": "C-p_bil1jarqdrq: C0B con i 250 densi (h) (c) + DRQ; Cor. Ospite /mnt/models/gguf/tony-tern/OBIETTIVO_C/C0B/Thor-T-C0B.gguf; tolti i piani aggiuntivi; sostituiti da /mnt/models/gguf/tony-tern/OBIETTIVO_C/C0/tensori, /mnt/models/gguf/tony-tern/OBIETTIVO_C/varianti_ptq2/p_bil1jarqdrq/tensori"
+}

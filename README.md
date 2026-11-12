@@ -128,6 +128,20 @@ fucina replay examples/thor/recipe_c.yaml --run   --set ...      # run, verify, 
 The dry run shows, per step, whether it runs from code in this package, from the frozen research code bundle, or is
 still blocked (and why), with the estimated GPU hours.
 
+### The released sizes S and M
+
+`fucina replay` covers the route to **C**, the trunk of `Thor-T-35B-A3B-XS`. The two larger released sizes have their own
+recipes, written from the recorded runs that produced them, with every step's input and output sha256:
+
+| size | recipe | runner | verified on 12 Nov 2026 |
+|---|---|---|---|
+| `Thor-T-35B-A3B-S` (lineage B) | [`agnostic/RECIPE_S.md`](agnostic/RECIPE_S.md) | `agnostic/run_recipe_s.py --verify` | 24/24 recorded artifacts match; the last four steps re-run bit for bit and regenerate the released file (sha256 `9d5afbf8…`) |
+| `Thor-T-35B-A3B-M` (lineage A) | [`agnostic/RECIPE_M.md`](agnostic/RECIPE_M.md) | `agnostic/run_recipe_m.py --dry-run / --steps` | every chain hash matches; steps 13–15 regenerate the released file bit for bit (`6f568589…`); step 16 measures 80.65 against the recorded 81.05 (paired McNemar p = 0.185) |
+
+Both runners verify recorded artifacts by sha256 and re-run the deterministic steps; the GPU training steps are
+documented with their exact commands and recorded checkpoints, but are not bit-reproducible (see each recipe, §3).
+The machine paths of the recorded runs are overridable through the `FORGIA_*` variables listed at the top of each runner.
+
 ## Installation
 
 ```bash

@@ -1,0 +1,14 @@
+{
+ "A": "/mnt/models/gguf/tony-tern/CARDAN/kd_r16_eb882K/mmlu_eb882K.log",
+ "B": "/mnt/models/gguf/tony-tern/CARDAN/kd_r16_eb882K/mmlu_CARDAN.log",
+ "n": 2000,
+ "acc_A": 74.9,
+ "acc_B": 75.14999999999999,
+ "delta_B_meno_A": 0.24999999999999467,
+ "A_giusta_B_sbagliata": 25,
+ "B_giusta_A_sbagliata": 30,
+ "p_mcnemar_esatto": 0.5900533317766357,
+ "scelte_uguali": 1923,
+ "finale_A": "74.9000 +/- 0.9698",
+ "finale_B": "75.1500 +/- 0.9665"
+}

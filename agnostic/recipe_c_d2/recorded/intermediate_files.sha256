@@ -1,0 +1,8 @@
+4dbf96fd424a6dc3c1d3145bae71f4c2b1ed6e890b5f3ce25fc2eefb731cd1e3  /mnt/models/gguf/tony-tern/OBIETTIVO_C/DENSI_CARDAN_OBQ_1016/thor/allena/residui_delta.pt
+16c67a76e8b5622e0d70fa348d397ec1cd80e3a455b1393c51cddeaaa766bf08  /mnt/models/gguf/tony-tern/OBIETTIVO_C/S5_CARDAN_DC600_1017/kd/allena/cardan_migliore.pt
+de06badc09710b827e7da01d5c2a8a5a7a0d2ae94b8d158d419100eeabaa2c94  /mnt/models/gguf/tony-tern/OBIETTIVO_C/DENSI2_SU_N3_1017/thor/allena/residui_delta.pt
+8e67b6403e289e32f520ff38725604c114022a74df54221cb155d83024132645  /mnt/models/gguf/tony-tern/OBIETTIVO_C/S1_FLUSSO_C_1013/corpus/corpus.pt
+af987cc3369c15f90df9f390def043fd9fa4787e075b3b2170ff697a9dabbc6a  /home/angelo/tony-forgia/mc_v2/mmlu_00000.bin
+6114b1f4500b364e13c2b8b0f2d93836080ec75c37158a697265471360e14b16  /home/angelo/tony-forgia/thor_v2/mappa_completa_gguf_hf_perm.npz
+d8e7330b6e529b3e2369dff2bb2dd08635383a1ea2ba4cd01ef302cd0ff3f95f  /mnt/deposito/tutto_ternario/tensori_R2B3/manifesto.json
+e1425b9cba1c7514989cefe944fa9f4a68c34f480bcded2eec3549f75eea0fe0  /mnt/models/gguf/tony-tern/teacher-q8/Ornith-1.5-35B-A3B-Q8_0.gguf

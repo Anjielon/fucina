@@ -1,0 +1,5 @@
+672250513cd4c6852b60daa67c787011e1db63005ff0a6933013e48f09789b24  /mnt/models/build/thor-c0t/build-c0t/bin/llama-perplexity
+c0f3c9d57a8b2cb17c04db2381c7afd6aec27bdff77e2f4f9f302f4bbf7df630  /mnt/models/build/thor-c0t/build-c0t/bin/llama-bench
+349a78f08157729b146004026fb56f2322c4408c12cf60780db9d3d87aaac637  /mnt/models/build/thor-c0t/build-c0t/bin/libggml-vulkan.so
+31d842eccd58a80f8c0b7584bb219074f71e824aad822afeed9f126bd909479e  /mnt/models/build/thor-c0t/build-c0t/bin/libllama.so
+b7f9b705064800d18e9f1adba33915e2ade44adfd28a33590c57f7805c3b4354  /mnt/models/build/leve/raffina/patch_gguf.py

@@ -25865,6 +25865,11 @@
    "sha256": "96d1f3061b9430a0c9ef9314b34e87aca48ab45a8a0be13210b6e58c7c019792",
    "source": "@@ROOT:depot@@/tutto_ternario/codice/verifica_sorgente.py",
    "source_sha256": "6369ce7c6b5745c5fb48c8bd656fa6bf7377f6343ac264eb49be3c228d531603"
+  },
+  "post_tools/mmlu_depurato.py": {
+   "sha256": "5dd774ec4f6d53be5228983d6b5585550072ebadc329a181a586c47f17132608",
+   "source": "@@ROOT:forge@@/thor_v2/strumenti/mmlu_depurato.py",
+   "source_sha256": "5dd774ec4f6d53be5228983d6b5585550072ebadc329a181a586c47f17132608"
   }
  },
  "recorded_roots": [

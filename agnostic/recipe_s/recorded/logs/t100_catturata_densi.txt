@@ -1,0 +1,1 @@
+79.2 (attn_gate 73, attn_k 81, attn_output 93, attn_q 86, attn_qkv 71, attn_v 92, ssm_out 85)

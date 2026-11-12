@@ -1,0 +1,1 @@
+tappa 100: cardan rango 0 vuoto; down basso rango assente/vuoto; 130 residui densi rango 16 ['attn_gate', 'attn_k', 'attn_output', 'attn_q', 'attn_qkv', 'attn_v', 'ssm_out']; scale down 40 strati; scale gate/up 40 strati (allenate su cuda); F32 301 tensori
