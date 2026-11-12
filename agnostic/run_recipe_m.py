@@ -41,11 +41,11 @@ REC = AUX / "recorded"
 HASHTOOL = AUX / "hashtool.py"
 COMPARE = AUX / "compare_tol.py"
 
-TT = "/mnt/models/gguf/tony-tern"
+TT = os.environ.get("FORGIA_TT", "/mnt/models/gguf/tony-tern")   # recorded
 OC = f"{TT}/OBIETTIVO_C"
-FORGE = "/home/angelo/tony-forgia"
-NAS = "/mnt/nas/CACHEDEV1_DATA/modelli-fp/obiettivo_c_1022"
-BUILD = "/mnt/models/build"
+FORGE = os.environ.get("FORGIA_ROOT", "/home/angelo/tony-forgia")   # recorded machine path; override on yours
+NAS = os.environ.get("FORGIA_NAS", "/mnt/nas/CACHEDEV1_DATA/modelli-fp/obiettivo_c_1022")   # recorded
+BUILD = os.environ.get("FORGIA_BUILD", "/mnt/models/build")   # recorded
 PY = os.environ.get("FORGIA_PY", "/home/angelo/venv-catq/bin/python3")
 RAFF = f"{BUILD}/leve/raffina"
 RD = f"{BUILD}/wt-r022b/thor_v2/rd_ternary"            # rd_ternary package (unisci, scrivi_piano_gguf)
