@@ -25,7 +25,7 @@ generation speed, file size), and asks you when a result is ambiguous instead of
 The full design is in [`docs/SPEC.md`](docs/SPEC.md).
 
 **This release (tag `thor-recipe-c-v1.1`)** accompanies the paper *Toolchain for MoE Models That Run on a Consumer APU*
-(arXiv, November 2026 — link on the model page) and the models [`Anjielon/Thor-T-35B-A3B`](https://huggingface.co/Anjielon/Thor-T-35B-A3B) (sizes XS, S, M).
+([PDF](https://huggingface.co/Anjielon/Thor-T-35B-A3B/blob/main/Thor-T-35B-A3B-paper.pdf), November 2026) and the models [`Anjielon/Thor-T-35B-A3B`](https://huggingface.co/Anjielon/Thor-T-35B-A3B) (sizes XS, S, M).
 It contains the forge engine, the replay recipe of **XS** and the recipes of **S** and **M**
 ([Replaying a published chain](#replaying-a-published-chain)).
 
