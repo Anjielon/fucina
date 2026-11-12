@@ -24,6 +24,11 @@ generation speed, file size), and asks you when a result is ambiguous instead of
 
 The full design is in [`docs/SPEC.md`](docs/SPEC.md).
 
+**This release (tag `thor-recipe-c-v1.1`)** accompanies the paper *Toolchain for MoE Models That Run on a Consumer APU*
+(arXiv, November 2026 — link on the model page) and the models [`Anjielon/Thor-T-35B-A3B`](https://huggingface.co/Anjielon/Thor-T-35B-A3B) (sizes XS, S, M).
+It contains the forge engine, the replay recipe of **XS** and the recipes of **S** and **M**
+([Replaying a published chain](#replaying-a-published-chain)).
+
 ## What it does
 
 Given a model (dense, MoE, hybrid attention/GatedDeltaNet, ...) and an objective such as
@@ -135,8 +140,8 @@ recipes, written from the recorded runs that produced them, with every step's in
 
 | size | recipe | runner | verified on 12 Nov 2026 |
 |---|---|---|---|
-| `Thor-T-35B-A3B-S` (lineage B) | [`agnostic/RECIPE_S.md`](agnostic/RECIPE_S.md) | `agnostic/run_recipe_s.py --verify` | 24/24 recorded artifacts match; the last four steps re-run bit for bit and regenerate the released file (sha256 `9d5afbf8…`) |
-| `Thor-T-35B-A3B-M` (lineage A) | [`agnostic/RECIPE_M.md`](agnostic/RECIPE_M.md) | `agnostic/run_recipe_m.py --dry-run / --steps` | every chain hash matches; steps 13–15 regenerate the released file bit for bit (`6f568589…`); step 16 measures 80.65 against the recorded 81.05 (paired McNemar p = 0.185) |
+| `Thor-T-35B-A3B-S` (lineage B) | [`recipes/RECIPE_S.md`](recipes/RECIPE_S.md) | `recipes/run_recipe_s.py --verify` | 24/24 recorded artifacts match; the last four steps re-run bit for bit and regenerate the released file (sha256 `9d5afbf8…`) |
+| `Thor-T-35B-A3B-M` (lineage A) | [`recipes/RECIPE_M.md`](recipes/RECIPE_M.md) | `recipes/run_recipe_m.py --dry-run / --steps` | every chain hash matches; steps 13–15 regenerate the released file bit for bit (`6f568589…`); step 16 measures 80.65 against the recorded 81.05 (paired McNemar p = 0.185) |
 
 Both runners verify recorded artifacts by sha256 and re-run the deterministic steps; the GPU training steps are
 documented with their exact commands and recorded checkpoints, but are not bit-reproducible (see each recipe, §3).
@@ -262,6 +267,14 @@ Both are run by `scripts/run_equivalence_after_passata.sh`, configured through `
 
 ## Status and limitations
 
+- **Verified for this release (12 Nov 2026, AMD Ryzen AI Max+ 395, gfx1151, Vulkan):** the replay of C, the trunk of XS,
+  ends with `REPLAY VERIFIED` (MMLU-2000 73.05 against the recorded 73.15, paired McNemar p = 0.87, tensor digest equal to
+  the record) — the last steps were executed with `fucina replay --run`, the earlier ones by the from-scratch
+  reproduction reported in the paper; the S and M recipes regenerate the released files bit for bit from their recorded
+  checkpoints, and M measures 80.65 against the recorded 81.05 (p = 0.185).
+- GPU training steps are not bit-reproducible: a full replay reproduces the recipe and the measured quality, not the bytes.
+- The automatic search for a *new* model (`fucina auto`) is validated on Thor-T only; a model-agnostic generalisation
+  is in development and is not part of this release.
 - The technique wrappers call scripts validated on `qwen35moe`; other architectures are recognised and excluded with
   a reason until a wrapper exists (see `examples/thor/models/qwen3-0.6b.yaml`).
 - The bundled importers parse the Thor-T lab notebook; other projects will write their own importer or record
