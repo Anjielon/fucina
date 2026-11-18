@@ -7,7 +7,7 @@ name = "fucina"
 version = "0.2.0"
 description = "Measured, per-tensor-family ternary quantization recipes for pre-trained language models"
 readme = "README.md"
-license = {text = "MIT"}
+license = {text = "PolyForm-Noncommercial-1.0.0"}
 authors = [{name = "Angelo Mogavero"}]
 requires-python = ">=3.10"
 dependencies = ["pyyaml>=6", "rich>=13"]

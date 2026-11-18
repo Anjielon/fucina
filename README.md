@@ -2,7 +2,7 @@
 <p align="center"><em>Measured, per-tensor-family ternary recipes for pre-trained language models</em></p>
 
 <p align="center">
-  <a href="#license"><img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-blue.svg"></a>
+  <a href="#license"><img alt="License: PolyForm Noncommercial 1.0.0" src="https://img.shields.io/badge/license-PolyForm%20Noncommercial%201.0.0-blue.svg"></a>
   <img alt="Python 3.10+" src="https://img.shields.io/badge/python-3.10%2B-3776AB.svg">
   <img alt="Status: research" src="https://img.shields.io/badge/status-research-orange.svg">
 </p>
@@ -283,4 +283,4 @@ Both are run by `scripts/run_equivalence_after_passata.sh`, configured through `
 
 ## License
 
-[MIT](LICENSE) © 2026 Angelo Mogavero.
+[PolyForm Noncommercial 1.0.0](LICENSE) © 2026 Angelo Mogavero: free to use, study, modify and share for any noncommercial purpose; commercial use needs a separate license from the author. From 18 Nov 2026; versions published earlier under MIT remain available under MIT. Third-party code keeps its own license: see [THIRD_PARTY.md](THIRD_PARTY.md).
